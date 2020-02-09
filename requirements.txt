@@ -1,0 +1,14 @@
+discord
+flask
+praw
+asyncio 
+colorama
+Pillow
+pillow
+gitpython
+ffmpeg
+youtube_dl
+lxml
+pynacl
+urllib3
+
