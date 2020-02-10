@@ -43,7 +43,12 @@ reddit = praw.Reddit(
 
 def commit(sp_msg: str()):
    
-    os.rename("./Database/gothy", "./Database/.git")
+    try:
+        os.rename("./Database/gothy", "./Database/.git")
+    except Exception as e:
+        if not os.path.exists("./Database/.git"):
+            print(e)
+            return
 
     now = datetime.now()
     date_time = now.strftime("%d/%m/%Y %H:%M:%S")
@@ -64,7 +69,12 @@ def commit(sp_msg: str()):
 
 
 def reset():
-    os.rename("./Database/gothy", "./Database/.git")
+    try:
+        os.rename("./Database/gothy", "./Database/.git")
+    except Exception as e:
+        if not os.path.exists("./Database/.git"):
+            print(e)
+            return
 
     g = git.Git("./Database")
     

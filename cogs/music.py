@@ -50,7 +50,26 @@ class Music(commands.Cog):
     # ! url of the image of thumbnail (vTube)
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
 
-    # * INIT AND PREREQUISITIES
+
+
+
+
+
+
+
+
+   #* ------------------------------------------------------------------------------PREREQUISITES--------------------------------------------------------------------------------------------------------------
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     def __init__(self, client):
         self.client = client
         self.auto_pause.start()  # ! starting loops for auto pause and disconnect
@@ -203,11 +222,17 @@ class Music(commands.Cog):
 
                 self.log(f"\nSong done, playing {self.queues[0][2]}")
                 self.log(f"Songs still in queue: {len(self.queues)}")
+                
+                try:
+                    self.queues[1][1] = self.download_music(self.queues[1][0],self.queues[1][1],"./Queue","webm")
+                    self.log("Downloaded next song.")
+                except:
+                    self.log("Last song.")
 
                 voice.play(discord.FFmpegPCMAudio(self.queues[0][1]),
                            after=lambda e: check_queue())
                 voice.source = discord.PCMVolumeTransformer(voice.source)
-                voice.source.volume = 0.4
+                
             else:
                 self.queues.clear()
                 # await ctx.send(">>> All songs played. No more songs to play.")
@@ -242,7 +267,85 @@ class Music(commands.Cog):
             pass
         return queue_path
 
-    # * COMMANDS
+    #? SEARCHING
+    async def searching(self,ctx,query):
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+
+        results = self.url_get(query, all=True)
+        results_filtered: List[str] = []
+        wait_time = 60
+
+        reactions = {"1️⃣": 1, "2️⃣": 2, "3️⃣": 3, "4️⃣": 4, "5️⃣": 5}
+
+        for result in results:
+            if result not in results_filtered:
+                results_filtered.append(result)
+
+        embed = discord.Embed(title="Search returned the following",
+                              color=discord.Colour.dark_green())
+            
+        embed.set_author(name="Me!Me!Me!",
+                         icon_url=self.client.user.avatar_url)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                         icon_url=ctx.message.author.avatar_url)
+        embed.set_thumbnail(url=self.music_logo)
+
+        for index, result in enumerate(results_filtered):
+            embed.add_field(name=f"*{index + 1}.*",
+                            value=f"**{self.get_title(result)}**", inline=False)
+            if index == 4:
+                break
+        
+        embed_msg = await ctx.send(embed=embed)
+        embed_msg: discord.Message
+        
+        def check(reaction: discord.Reaction, user):  
+            return user == ctx.author and reaction.message.id == embed_msg.id
+
+        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()))
+
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+            except TimeoutError:
+                await ctx.send(f">>> I guess no ones wants to play.")
+                await embed_msg.delete()
+
+                return None
+
+            else: 
+                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
+
+                if str(reaction.emoji) in reactions.keys():
+                    await embed_msg.delete(delay=3)
+                    return results_filtered[reactions[str(reaction.emoji)] - 1]
+
+
+
+
+
+
+
+
+
+
+
+
+    #*---------------------------------------------------------------------------------------------COMMANDS-------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
     # ? JOIN
     @commands.command()
@@ -319,122 +422,58 @@ class Music(commands.Cog):
         embed.set_image(url=thumbnail)
         embed.set_thumbnail(url=self.music_logo)
         await ctx.send(embed=embed)
-        if self.queues == []:
-            l = 1
-        else:
-            l = int(self.queues[-1][1].split("\\")[-1].split(".")[0][4:])+1
-
-        self.log("Song added to queue")
-
-        path = self.download_music(url, f"song{l}", "./Queue", "webm")
-        self.queues += [[url, path, title, thumbnail]]
-        self.log("Downloaded")
 
         if len(self.queues) == 1:
+            
+            l = int(self.queues[0][1].split("\\")[-1].split(".")[0][4:])
+
+            path = self.download_music(url, f"song{l+1}", "./Queue", "webm")
+            self.log("Next Song Downloaded")        
+
+            self.queues += [[url, path, title, thumbnail]]
+            self.log("Song added to queue")
+        
+
+        elif len(self.queues) == 0:
+            
+            path = self.download_music(url, f"song1", "./Queue", "webm")
+            self.log("Downloaded")
+
+            self.queues += [[url, path, title, thumbnail]]
+            self.log("Song added to queue")
+                        
             thrd = Thread(target=self.player, args=(voice,))
             thrd.start()
 
+        else:
+            l = int(self.queues[0][1].split("\\")[-1].split(".")[0][4:])
+            self.queues += [[url, f"song{l+1}", title, thumbnail]]
+            self.log("Song added to queue")
+
     #? SEARCH
     @commands.command()
-    @vc_check()
+    
     async def search(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
         
-        if not (await ctx.invoke(self.client.get_command("join"))):
-            return
-
-        async def reactions_add(message, reactions):
-            for reaction in reactions:
-                await message.add_reaction(reaction)
-
-        results = self.url_get(query, all=True)
-        results_filtered: List[str] = []
-        wait_time = 60
-
-        reactions = {"1️⃣": 1, "2️⃣": 2, "3️⃣": 3, "4️⃣": 4, "5️⃣": 5}
-
-        for result in results:
-            if result not in results_filtered:
-                results_filtered.append(result)
-
-        embed = discord.Embed(title="Search returned the following",
-                              color=discord.Colour.dark_green())
-            
-        embed.set_author(name="Me!Me!Me!",
-                         icon_url=self.client.user.avatar_url)
-        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
-                         icon_url=ctx.message.author.avatar_url)
-        embed.set_thumbnail(url=self.music_logo)
-
-        for index, result in enumerate(results_filtered):
-            embed.add_field(name=f"*{index + 1}.*",
-                            value=f"**{self.get_title(result)}**", inline=False)
-            if index == 4:
-                break
         
-        embed_msg = await ctx.send(embed=embed)
-        embed_msg: discord.Message
-        
-        def check(reaction: discord.Reaction, user):  
-            return user == ctx.author and reaction.message.id == embed_msg.id
 
-        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()))
-
-        while True:
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
-            except TimeoutError:
-                await ctx.send(f">>> I guess no ones wants to play.")
-                await embed_msg.delete()
-
+        result = await self.searching(ctx,query)
+        if result:
+            if not (await ctx.invoke(self.client.get_command("join"))):
                 return
+            play_command = self.client.get_command("play")
+            await ctx.invoke(play_command, query=result)
 
-            else: 
-                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
 
-                if str(reaction.emoji) in reactions.keys():
-                    await embed_msg.delete(delay=3)
-                    play_command = self.client.get_command("play")
-                    await ctx.invoke(play_command, query=results_filtered[reactions[str(reaction.emoji)] - 1])
 
-    # ? LOOP
 
-    @commands.command(aliases=['lp'])
-    @vc_check()
-    async def loop(self, ctx, toggle=""):
-        '''Loops the current song, doesn't affect the skip command tho. If on/off not passed it will toggle it.'''
 
-        if toggle.lower() == "on":
-            self.loop_song = True
-            await ctx.send(">>> **Looping current song now**")
 
-        elif toggle.lower() == 'off':
-            self.loop_song = False
-            await ctx.send(">>> **NOT Looping current song now**")
 
-        else:
 
-            if self.loop_song:
-                self.loop_song = False
-                await ctx.send(">>> **NOT Looping current song now**")
 
-            else:
-                self.loop_song = True
-                await ctx.send(">>> **Looping current song now**")
-    # ? RESTART
-
-    @commands.command()
-    @vc_check()
-    async def restart(self, ctx):
-        '''Restarts the current song.'''
-
-        temp = self.loop_song
-        self.loop_song = True
-        voice = get(self.client.voice_clients, guild=ctx.guild)
-        voice.stop()
-        await asyncio.sleep(0.1)
-        self.loop_song = temp
-
+#*-------------------------------------------------------QUEUE------------------------------------------------------------------------------------------------------------------------
     # ? QUEUE
 
     @commands.group(aliases=['q'])
@@ -517,6 +556,64 @@ class Music(commands.Cog):
             return
         await ctx.invoke(self.client.get_command("next"))
 
+
+
+
+
+
+
+
+#*----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+       # ? LOOP
+
+    @commands.command(aliases=['lp'])
+    @vc_check()
+    async def loop(self, ctx, toggle=""):
+        '''Loops the current song, doesn't affect the skip command tho. If on/off not passed it will toggle it.'''
+
+        if toggle.lower() == "on":
+            self.loop_song = True
+            await ctx.send(">>> **Looping current song now**")
+
+        elif toggle.lower() == 'off':
+            self.loop_song = False
+            await ctx.send(">>> **NOT Looping current song now**")
+
+        else:
+
+            if self.loop_song:
+                self.loop_song = False
+                await ctx.send(">>> **NOT Looping current song now**")
+
+            else:
+                self.loop_song = True
+                await ctx.send(">>> **Looping current song now**")
+    # ? RESTART
+
+    @commands.command()
+    @vc_check()
+    async def restart(self, ctx):
+        '''Restarts the current song.'''
+
+        temp = self.loop_song
+        self.loop_song = True
+        voice = get(self.client.voice_clients, guild=ctx.guild)
+        voice.stop()
+        await asyncio.sleep(0.1)
+        self.loop_song = temp
+
+   
    # ? PAUSE
     @commands.command(aliases=['p'])
     @vc_check()
@@ -623,6 +720,15 @@ class Music(commands.Cog):
             await ctx.send(">>> Enter the amount of mesages to be cleared if you dont want spanky / or do (depending on who you are)")
         elif isinstance(error, commands.UserInputError):
             await ctx.send(">>> We are numericons' people not Texticons, you traitor.")
+   
+   
+   
+   
+   
+   
+   
+   #* ----------------------------------------------------------PLAYLIST------------------------------------------------------------------------------------------------------------------------
+   
     #? PLAYLIST
     @commands.group(aliases=["pl"])
     async def playlist(self,ctx):
@@ -651,71 +757,23 @@ class Music(commands.Cog):
     @playlist.command()
     async def add(self,ctx,*,query):
         '''Adds a song to your Playlist.'''
-        async def reactions_add(message, reactions):
-            for reaction in reactions:
-                await message.add_reaction(reaction)
-
-        results = self.url_get(query, all=True)
-        results_filtered: List[str] = []
-        wait_time = 60
-
-        reactions = {"1️⃣": 1, "2️⃣": 2, "3️⃣": 3, "4️⃣": 4, "5️⃣": 5}
-
-        for result in results:
-            if result not in results_filtered:
-                results_filtered.append(result)
-
-        embed = discord.Embed(title="Search returned the following",
-                              color=discord.Colour.dark_green())
-            
-        embed.set_author(name="Me!Me!Me!",
-                         icon_url=self.client.user.avatar_url)
-        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
-                         icon_url=ctx.message.author.avatar_url)
-        embed.set_thumbnail(url=self.music_logo)
-
-        for index, result in enumerate(results_filtered):
-            embed.add_field(name=f"*{index + 1}.*",
-                            value=f"**{self.get_title(result)}**", inline=False)
-            if index == 4:
-                break
         
-        embed_msg = await ctx.send(embed=embed)
-        embed_msg: discord.Message
-        
-        def check(reaction: discord.Reaction, user):  
-            return user == ctx.author and reaction.message.id == embed_msg.id
+        url = await self.searching(ctx,query)
 
-        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()))
+        if url:
 
-        while True:
+            playlist_db = gen.db_receive("playlist")
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
-            except TimeoutError:
-                await ctx.send(f">>> I guess no ones wants to play.")
-                await embed_msg.delete()
-
-                return
-
-            else: 
-                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
-
-                if str(reaction.emoji) in reactions.keys():
-                    await embed_msg.delete(delay=3)
-                    url = results_filtered[reactions[str(reaction.emoji)] - 1]
-                    
-                    playlist_db = gen.db_receive("playlist")
-                    try:
-                        playlist_db[str(ctx.author.id)]
-                    except:  
-                        playlist_db[str(ctx.author.id)] = []
-                    playlist_db[str(ctx.author.id)] += [[url, self.get_title(url),self.get_thumbnail(url)]]
-                    await ctx.send(f"**{self.get_title(url)}** added to your Playlist")
-
-                    gen.db_update("playlist",playlist_db)
+                playlist_db[str(ctx.author.id)]
+            except:  
+                playlist_db[str(ctx.author.id)] = []
+            playlist_db[str(ctx.author.id)] += [[url, self.get_title(url),self.get_thumbnail(url)]]
+            await ctx.send(f"**{self.get_title(url)}** added to your Playlist")
+            self.log(f"altered {ctx.author.name}'s playlist")
+            gen.db_update("playlist",playlist_db)
     
     #? PLAYLIST REARRANGE
-    @playlist.command(aliases = ["re","change","replace"])
+    @playlist.command(aliases = ["re","change","replace","switch"])
     async def rearrange(self,ctx,P1:int,P2:int):
         playlist_db = gen.db_receive("playlist")
         
@@ -736,8 +794,102 @@ class Music(commands.Cog):
             
             playlist_db[str(ctx.author.id)][P1-1],playlist_db[str(ctx.author.id)][P2-1]=playlist_db[str(ctx.author.id)][P2-1],playlist_db[str(ctx.author.id)][P1-1]
             await ctx.send(f"Number {P1} and {P2} have been rearranged.")
+            self.log(f"altered {ctx.author.name}'s playlist")
 
         gen.db_update("playlist",playlist_db)
+
+    #? PLAYLIST REMOVE
+    @playlist.command(aliases = ["rem"])
+    async def remove(self,ctx,R:int):
+        playlist_db = gen.db_receive("playlist")
+        
+        try:
+            playlist_db[str(ctx.author.id)]
+        except:  
+            playlist_db[str(ctx.author.id)] = []
+            await ctx.send("Your playlist has been created.")
+            return
+                         
+        else:
+            if len(playlist_db[str(ctx.author.id)])<1:
+                await ctx.send("Your playlist too smol for alteration.")
+                return
+            
+            if R<1 or R>len(playlist_db[str(ctx.author.id)]):
+                return
+            
+            playlist_db[str(ctx.author.id)].pop(R-1)
+            await ctx.send(f"Number {R} has been removed.")
+            self.log(f"altered {ctx.author.name}'s playlist")
+
+        gen.db_update("playlist",playlist_db)
+
+    #? PLAYLIST PLAY
+    @playlist.command(aliases = ["pp"])
+    async def pplay(self,ctx):
+        playlist_db = gen.db_receive("playlist")
+        
+        try:
+            playlist_db[str(ctx.author.id)]
+        except:  
+            playlist_db[str(ctx.author.id)] = []
+            await ctx.send("Your playlist has been created.")
+            return
+                         
+        else:
+            if len(playlist_db[str(ctx.author.id)])<1:
+                await ctx.send("Your playlist doesn't have any songs to play")
+                return
+            
+            else:
+                if not (await ctx.invoke(self.client.get_command("join"))):
+                    return
+
+                voice = get(self.client.voice_clients, guild=ctx.guild)
+                playlist =  playlist_db[str(ctx.author.id)]
+                
+                if len(self.queues)==0:
+                    l=0
+                else:
+                    l = int(self.queues[0][1].split("\\")[-1].split(".")[0][4:])
+
+                for index,song in enumerate(playlist):
+                    
+                    self.queues+=[[song[0],f"song{l+1+index}",song[1],song[2]]]
+                if l == 0:
+                    self.queues[0][1] = self.download_music(self.queues[0][0],"song1","./Queue","webm")
+                    self.log("Downloaded First song.")
+                    try:
+                        self.queues[1][1] = self.download_music(self.queues[1][0],"song2","./Queue","webm")
+                        self.log("Downloaded next song.")
+                    except:
+                        
+                        pass
+                    
+                    thrd = Thread(target=self.player, args=(voice,))
+                    thrd.start()
+                if self.queues[1][1] == "song2":
+                    self.queues[1][1] = self.download_music(self.queues[1][0],"song2","./Queue","webm")
+                    self.log("Downloaded next song.")
+                
+                await ctx.send("Your Playlist has been added to the Queue.")
+               
+                    
+                
+                    
+
+            
+
+
+
+#*------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+#*------------------------------------DOWNLOAD----------------------------------------------------------------------------------------------------------------------------------------------------
 
 
     # ? DOWNLOAD
@@ -773,6 +925,8 @@ class Music(commands.Cog):
 
         await ctx.channel.send(file=mp3)
         os.remove(path)
+
+#*---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 def setup(client):
