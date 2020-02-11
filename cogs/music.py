@@ -38,6 +38,119 @@ def vc_check():
             return False
     return commands.check(predicate)
 
+class YoutubeVideo:
+    def __init__(self, url: str):
+        self.url = url
+        self._title = self.title
+        self._id = self.id
+        self._creator = self.creator
+        self._duration = self.duration
+
+    @classmethod
+    def from_id(cls, id_arg: str):
+        url = f"https://www.youtube.com/watch?v={id_arg}"
+
+        return cls(url)
+
+    @classmethod
+    def from_query(cls, query: str):
+        return cls(YoutubeVideo.url_get(query))
+
+    @staticmethod
+    def url_get(query: str, all=False):
+        is_url = query.startswith("https://") or query.startswith("http://")
+
+        if not is_url:
+            query_string = urllib.parse.urlencode({"search_query": query})
+            html_content = urllib.request.urlopen(
+                "http://www.youtube.com/results?" + query_string)
+            search_results = re.findall(
+                r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
+            if not all:
+                url = "http://www.youtube.com/watch?v=" + search_results[0]
+            if all:
+                url = []
+                for result in search_results:
+                    url.append(f"http://www.youtube.com/watch?v={result}")
+        else:
+            url = query
+        return url
+
+    @staticmethod
+    def info(url: str):
+        ydl_opts = {
+            'format': 'bestaudio/best',
+            'quiet': True,
+            'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+            }],
+        }
+
+        with YoutubeDL(ydl_opts) as ydl:
+            _info = ydl.extract_info(url, download=False)
+
+        return _info
+
+    def __len__(self) -> int:
+        return self._duration
+
+    def __lt__(self, other) -> bool:
+        if not isinstance(other, YoutubeVideo):
+            return NotImplemented
+        
+        return self._duration < other._duration
+
+    def __gt__(self, other) -> bool:
+        if not isinstance(other, YoutubeVideo):
+            return NotImplemented
+
+        return self._duration > other._duration
+
+    def __eq__(self, other) -> bool:   # type: ignore
+        if not isinstance(other, YoutubeVideo):
+            return NotImplemented
+
+        return self._id == other._id
+
+    def __ne__(self, other) -> bool:   # type: ignore
+        if not isinstance(other, YoutubeVideo):
+            return NotImplemented
+
+        return self._id != other._id
+
+    def __str__(self) -> str:
+        return f"{self._title} ({self._duration}) --- {self._creator}"
+
+    @property
+    def creator(self) -> str:
+        self._creator = self.info(self.url).get("uploader", None)
+
+        return self._creator
+
+    @property
+    def id(self) -> str:
+        self._id = self.url[32:]
+        return self._id
+    
+    @property
+    def thumbnail(self) -> str:
+        self._thumbnail = "http://img.youtube.com/vi/%s/0.jpg" % self._id
+
+        return self._thumbnail
+
+    @property
+    def title(self) -> str:
+        self._title = self.info(self.url).get('title', None)
+
+        return self._title
+
+    @property
+    def duration(self) -> int:
+        self._duration = self.info(self.url).get('duration', None)
+
+        return self._duration
+
 
 class Music(commands.Cog):
     ''':musical_note: The title says it all, commands related to music and stuff.'''
