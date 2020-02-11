@@ -38,6 +38,7 @@ def vc_check():
             return False
     return commands.check(predicate)
 
+
 class YoutubeVideo:
     def __init__(self, url: str):
         self.url = url
@@ -98,7 +99,7 @@ class YoutubeVideo:
     def __lt__(self, other) -> bool:
         if not isinstance(other, YoutubeVideo):
             return NotImplemented
-        
+
         return self._duration < other._duration
 
     def __gt__(self, other) -> bool:
@@ -132,7 +133,7 @@ class YoutubeVideo:
     def id(self) -> str:
         self._id = self.url[32:]
         return self._id
-    
+
     @property
     def thumbnail(self) -> str:
         self._thumbnail = "http://img.youtube.com/vi/%s/0.jpg" % self._id
@@ -166,23 +167,11 @@ class Music(commands.Cog):
 
 
 
+   # * ------------------------------------------------------------------------------PREREQUISITES--------------------------------------------------------------------------------------------------------------
 
 
 
 
-
-   #* ------------------------------------------------------------------------------PREREQUISITES--------------------------------------------------------------------------------------------------------------
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
     def __init__(self, client):
         self.client = client
         self.auto_pause.start()  # ! starting loops for auto pause and disconnect
@@ -198,7 +187,8 @@ class Music(commands.Cog):
         if debug_info[cog_name] == 1:
             return gen.error_message(msg, gen.cog_colours[cog_name])
 
-    def disconnect_check(self, voice):  # ! chech if there is no one listening to the bot
+    # ! chech if there is no one listening to the bot
+    def disconnect_check(self, voice) -> bool:
         flag = False
         if voice and voice.is_connected():
 
@@ -208,46 +198,8 @@ class Music(commands.Cog):
                     flag = False
         return flag
 
-    def get_title(self, url: str):  # ! gets YouTube title
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'quiet': True,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-            }],
-        }
-
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-
-            return info.get('title', None)
-
-    def get_thumbnail(self, url: str):  # ! getsYouTube thumbnail
-        return "http://img.youtube.com/vi/%s/0.jpg" % url[31:]
-
-    def join_list(self, ls):  # ! joins list
+    def join_list(self, ls) -> str:  # ! joins list
         return " ".join(ls)
-
-    def url_get(self, query, all=False):  # ! searches and gives out the url of the requested song
-        is_url = query.startswith("https://") or query.startswith("http://")
-
-        if not is_url:
-            query_string = urllib.parse.urlencode({"search_query": query})
-            html_content = urllib.request.urlopen(
-                "http://www.youtube.com/results?" + query_string)
-            search_results = re.findall(
-                r'href=\"\/watch\?v=(.{11})', html_content.read().decode())
-            if not all:
-                url = "http://www.youtube.com/watch?v=" + search_results[0]
-            if all:
-                url = []
-                for result in search_results:
-                    url.append(f"http://www.youtube.com/watch?v={result}")
-        else:
-            url = query
-        return url
-
 
     def queue_delete(self):  # ! Deleting Queue folder
 
@@ -256,7 +208,7 @@ class Music(commands.Cog):
         if Queue_infile:
             shutil.rmtree("./Queue")
 
-    #* ERROR HANDLER
+    # * ERROR HANDLER
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if isinstance(error, commands.CheckFailure):
@@ -264,8 +216,8 @@ class Music(commands.Cog):
         else:
             pass
 
-    
     # * TASKS
+
     @tasks.loop(seconds=2)
     async def auto_pause(self):  # ! auto pauses the player if it no one is in the vc
         guild = self.client.get_guild(gen.server_id)
@@ -335,9 +287,10 @@ class Music(commands.Cog):
 
                 self.log(f"\nSong done, playing {self.queues[0][2]}")
                 self.log(f"Songs still in queue: {len(self.queues)}")
-                
+
                 try:
-                    self.queues[1][1] = self.download_music(self.queues[1][0],self.queues[1][1],"./Queue","webm")
+                    self.queues[1][1] = self.download_music(
+                        self.queues[1][0], self.queues[1][1], "./Queue", "webm")
                     self.log("Downloaded next song.")
                 except:
                     self.log("Last song.")
@@ -345,7 +298,7 @@ class Music(commands.Cog):
                 voice.play(discord.FFmpegPCMAudio(self.queues[0][1]),
                            after=lambda e: check_queue())
                 voice.source = discord.PCMVolumeTransformer(voice.source)
-                
+
             else:
                 self.queues.clear()
                 # await ctx.send(">>> All songs played. No more songs to play.")
@@ -359,7 +312,7 @@ class Music(commands.Cog):
         voice.source.volume = 0.4
 
     # ? DOWNLOADER
-    def download_music(self, url, name, path, mtype):
+    def download_music(self, url, name, path, mtype) -> str:
 
         queue_path = os.path.abspath(f"{path}/{name}.{mtype}")
         ydl_opts = {
@@ -380,13 +333,13 @@ class Music(commands.Cog):
             pass
         return queue_path
 
-    #? SEARCHING
-    async def searching(self,ctx,query):
+    # ? SEARCHING
+    async def searching(self, ctx, query):
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
 
-        results = self.url_get(query, all=True)
+        results = YoutubeVideo.url_get(query=query, all=True)
         results_filtered: List[str] = []
         wait_time = 60
 
@@ -398,7 +351,7 @@ class Music(commands.Cog):
 
         embed = discord.Embed(title="Search returned the following",
                               color=discord.Colour.dark_green())
-            
+
         embed.set_author(name="Me!Me!Me!",
                          icon_url=self.client.user.avatar_url)
         embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
@@ -407,17 +360,18 @@ class Music(commands.Cog):
 
         for index, result in enumerate(results_filtered):
             embed.add_field(name=f"*{index + 1}.*",
-                            value=f"**{self.get_title(result)}**", inline=False)
+                            value=f"**{YoutubeVideo(result).title}**", inline=False)
             if index == 4:
                 break
-        
+
         embed_msg = await ctx.send(embed=embed)
         embed_msg: discord.Message
-        
-        def check(reaction: discord.Reaction, user):  
+
+        def check(reaction: discord.Reaction, user):
             return user == ctx.author and reaction.message.id == embed_msg.id
 
-        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()))
+        self.client.loop.create_task(
+            reactions_add(embed_msg, reactions.keys()))
 
         while True:
             try:
@@ -428,7 +382,7 @@ class Music(commands.Cog):
 
                 return None
 
-            else: 
+            else:
                 await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
 
                 if str(reaction.emoji) in reactions.keys():
@@ -438,31 +392,15 @@ class Music(commands.Cog):
 
 
 
-
-
-
-
-
-
-
-
-    #*---------------------------------------------------------------------------------------------COMMANDS-------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
+    # *---------------------------------------------------------------------------------------------COMMANDS-------------------------------------------------------------------------------------------------------------
 
 
 
 
     # ? JOIN
+
     @commands.command()
-    async def join(self, ctx):
+    async def join(self, ctx) -> bool:
         '''Joins the voice channel you are currently in.'''
 
         try:  # ! user not in vc
@@ -499,7 +437,7 @@ class Music(commands.Cog):
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
 
-        url = self.url_get(query)
+        vid = YoutubeVideo.from_query(query=query)
 
         #! Queueing starts here
         voice = get(self.client.voice_clients, guild=ctx.guild)
@@ -521,9 +459,6 @@ class Music(commands.Cog):
 
         q_num = len(self.queues)+1
 
-        title = str(self.get_title(url))
-        thumbnail = str(self.get_thumbnail(url))
-
         embed = discord.Embed(title="Song Added to Queue",  # TODO make a function
                               url=url, color=discord.Colour.blurple())
         embed.set_author(name="Me!Me!Me!",
@@ -531,30 +466,29 @@ class Music(commands.Cog):
         embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
                          icon_url=ctx.message.author.avatar_url)
         embed.add_field(name=f"**#{q_num}**",
-                        value=title)
-        embed.set_image(url=thumbnail)
+                        value=vid.title)
+        embed.set_image(url=vid.thumbnail)
         embed.set_thumbnail(url=self.music_logo)
         await ctx.send(embed=embed)
 
         if len(self.queues) == 1:
-            
+
             l = int(self.queues[0][1].split("\\")[-1].split(".")[0][4:])
 
             path = self.download_music(url, f"song{l+1}", "./Queue", "webm")
-            self.log("Next Song Downloaded")        
+            self.log("Next Song Downloaded")
 
             self.queues += [[url, path, title, thumbnail]]
             self.log("Song added to queue")
-        
 
         elif len(self.queues) == 0:
-            
+
             path = self.download_music(url, f"song1", "./Queue", "webm")
             self.log("Downloaded")
 
             self.queues += [[url, path, title, thumbnail]]
             self.log("Song added to queue")
-                        
+
             thrd = Thread(target=self.player, args=(voice,))
             thrd.start()
 
@@ -563,15 +497,12 @@ class Music(commands.Cog):
             self.queues += [[url, f"song{l+1}", title, thumbnail]]
             self.log("Song added to queue")
 
-    #? SEARCH
+    # ? SEARCH
     @commands.command()
-    
     async def search(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
-        
-        
 
-        result = await self.searching(ctx,query)
+        result = await self.searching(ctx, query)
         if result:
             if not (await ctx.invoke(self.client.get_command("join"))):
                 return
@@ -582,11 +513,10 @@ class Music(commands.Cog):
 
 
 
-
-
-
-
-#*-------------------------------------------------------QUEUE------------------------------------------------------------------------------------------------------------------------
+# *-------------------------------------------------------QUEUE------------------------------------------------------------------------------------------------------------------------
+   
+   
+   
     # ? QUEUE
 
     @commands.group(aliases=['q'])
@@ -673,22 +603,12 @@ class Music(commands.Cog):
 
 
 
+# *----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
-#*----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-       # ? LOOP
+    # ? LOOP
 
     @commands.command(aliases=['lp'])
     @vc_check()
@@ -726,8 +646,8 @@ class Music(commands.Cog):
         await asyncio.sleep(0.1)
         self.loop_song = temp
 
-   
    # ? PAUSE
+
     @commands.command(aliases=['p'])
     @vc_check()
     async def pause(self, ctx):
@@ -819,7 +739,7 @@ class Music(commands.Cog):
     @vc_check()
     async def volume(self, ctx, volume: int):
         '''Changes the volume of the player. Volume should be between 0 and 100.'''
-        
+
         voice = get(self.client.voice_clients, guild=ctx.guild)
         if volume < 0 or volume > 100:
             await ctx.send("Volume needs to be between 0 and 100. Darling.")
@@ -833,176 +753,182 @@ class Music(commands.Cog):
             await ctx.send(">>> Enter the amount of mesages to be cleared if you dont want spanky / or do (depending on who you are)")
         elif isinstance(error, commands.UserInputError):
             await ctx.send(">>> We are numericons' people not Texticons, you traitor.")
-   
-   
-   
-   
-   
-   
-   
-   #* ----------------------------------------------------------PLAYLIST------------------------------------------------------------------------------------------------------------------------
-   
-    #? PLAYLIST
+
+
+
+
+   # * ----------------------------------------------------------PLAYLIST------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+    # ? PLAYLIST
+
     @commands.group(aliases=["pl"])
-    async def playlist(self,ctx):
-        '''Shows your Playlist. Subcommands can alter your playlist'''    
+    async def playlist(self, ctx):
+        '''Shows your Playlist. Subcommands can alter your playlist'''
         if ctx.invoked_subcommand is None:
-            
+
             playlist_db = gen.db_receive("playlist")
             try:
                 playlist = playlist_db[str(ctx.author.id)]
-            except:  
+            except:
                 playlist_db[str(ctx.author.id)] = []
-                playlist = [] 
+                playlist = []
             embed = discord.Embed(title=f"{ctx.author.name}'s Playlist",
-                                color=discord.Colour.dark_purple())
+                                  color=discord.Colour.dark_purple())
             embed.set_author(name="Me!Me!Me!",
-                            icon_url=self.client.user.avatar_url)
+                             icon_url=self.client.user.avatar_url)
             embed.set_thumbnail(url=self.music_logo)
             no = 1
             for song in playlist:
                 embed.add_field(name=f"**{no}**", value=f"**{song[1]}**")
-                no+=1
+                no += 1
             await ctx.send(embed=embed)
-            gen.db_update("playlist",playlist_db)
-    
-    #? PLAYLIST ADD
+            gen.db_update("playlist", playlist_db)
+
+    # ? PLAYLIST ADD
     @playlist.command()
-    async def add(self,ctx,*,query):
+    async def add(self, ctx, *, query):
         '''Adds a song to your Playlist.'''
-        
-        url = await self.searching(ctx,query)
+
+        url = await self.searching(ctx, query)
+        vid = YoutubeVideo(url=url)
 
         if url:
 
             playlist_db = gen.db_receive("playlist")
             try:
                 playlist_db[str(ctx.author.id)]
-            except:  
+            except:
                 playlist_db[str(ctx.author.id)] = []
-            playlist_db[str(ctx.author.id)] += [[url, self.get_title(url),self.get_thumbnail(url)]]
-            await ctx.send(f"**{self.get_title(url)}** added to your Playlist")
+
+            playlist_db[str(ctx.author.id)] += [[url,
+                                                 vid.title, vid.thumbnail]]
+
+            await ctx.send(f"**{vid.title}** added to your Playlist")
+
             self.log(f"altered {ctx.author.name}'s playlist")
-            gen.db_update("playlist",playlist_db)
-    
-    #? PLAYLIST REARRANGE
-    @playlist.command(aliases = ["re","change","replace","switch"])
-    async def rearrange(self,ctx,P1:int,P2:int):
+            gen.db_update("playlist", playlist_db)
+
+    # ? PLAYLIST REARRANGE
+    @playlist.command(aliases=["re", "change", "replace", "switch"])
+    async def rearrange(self, ctx, P1: int, P2: int):
         playlist_db = gen.db_receive("playlist")
-        
+
         try:
             playlist_db[str(ctx.author.id)]
-        except:  
+        except:
             playlist_db[str(ctx.author.id)] = []
             await ctx.send("Your playlist has been created.")
             return
-                         
+
         else:
-            if len(playlist_db[str(ctx.author.id)])<2:
+            if len(playlist_db[str(ctx.author.id)]) < 2:
                 await ctx.send("Your playlist too smol for rearrangement.")
                 return
-            
-            if P1<1 or P1>len(playlist_db[str(ctx.author.id)]) or P2<1 or P2>len(playlist_db[str(ctx.author.id)]):
+
+            if P1 < 1 or P1 > len(playlist_db[str(ctx.author.id)]) or P2 < 1 or P2 > len(playlist_db[str(ctx.author.id)]):
                 return
-            
-            playlist_db[str(ctx.author.id)][P1-1],playlist_db[str(ctx.author.id)][P2-1]=playlist_db[str(ctx.author.id)][P2-1],playlist_db[str(ctx.author.id)][P1-1]
+
+            playlist_db[str(ctx.author.id)][P1-1], playlist_db[str(ctx.author.id)][P2 -
+                                                                                   1] = playlist_db[str(ctx.author.id)][P2-1], playlist_db[str(ctx.author.id)][P1-1]
             await ctx.send(f"Number {P1} and {P2} have been rearranged.")
             self.log(f"altered {ctx.author.name}'s playlist")
 
-        gen.db_update("playlist",playlist_db)
+        gen.db_update("playlist", playlist_db)
 
-    #? PLAYLIST REMOVE
-    @playlist.command(aliases = ["rem"])
-    async def remove(self,ctx,R:int):
+    # ? PLAYLIST REMOVE
+    @playlist.command(aliases=["rem"])
+    async def remove(self, ctx, R: int):
         playlist_db = gen.db_receive("playlist")
-        
+
         try:
             playlist_db[str(ctx.author.id)]
-        except:  
+        except:
             playlist_db[str(ctx.author.id)] = []
             await ctx.send("Your playlist has been created.")
             return
-                         
+
         else:
-            if len(playlist_db[str(ctx.author.id)])<1:
+            if len(playlist_db[str(ctx.author.id)]) < 1:
                 await ctx.send("Your playlist too smol for alteration.")
                 return
-            
-            if R<1 or R>len(playlist_db[str(ctx.author.id)]):
+
+            if R < 1 or R > len(playlist_db[str(ctx.author.id)]):
                 return
-            
+
             playlist_db[str(ctx.author.id)].pop(R-1)
             await ctx.send(f"Number {R} has been removed.")
             self.log(f"altered {ctx.author.name}'s playlist")
 
-        gen.db_update("playlist",playlist_db)
+        gen.db_update("playlist", playlist_db)
 
-    #? PLAYLIST PLAY
-    @playlist.command(aliases = ["pp"])
-    async def pplay(self,ctx):
+    # ? PLAYLIST PLAY
+    @playlist.command(aliases=["pp"])
+    async def pplay(self, ctx):
         playlist_db = gen.db_receive("playlist")
-        
+
         try:
             playlist_db[str(ctx.author.id)]
-        except:  
+        except:
             playlist_db[str(ctx.author.id)] = []
             await ctx.send("Your playlist has been created.")
             return
-                         
+
         else:
-            if len(playlist_db[str(ctx.author.id)])<1:
+            if len(playlist_db[str(ctx.author.id)]) < 1:
                 await ctx.send("Your playlist doesn't have any songs to play")
                 return
-            
+
             else:
                 if not (await ctx.invoke(self.client.get_command("join"))):
                     return
 
                 voice = get(self.client.voice_clients, guild=ctx.guild)
-                playlist =  playlist_db[str(ctx.author.id)]
-                
-                if len(self.queues)==0:
-                    l=0
-                else:
-                    l = int(self.queues[0][1].split("\\")[-1].split(".")[0][4:])
+                playlist = playlist_db[str(ctx.author.id)]
 
-                for index,song in enumerate(playlist):
-                    
-                    self.queues+=[[song[0],f"song{l+1+index}",song[1],song[2]]]
+                if len(self.queues) == 0:
+                    l = 0
+                else:
+                    l = int(self.queues[0][1].split(
+                        "\\")[-1].split(".")[0][4:])
+
+                for index, song in enumerate(playlist):
+
+                    self.queues += [[song[0],
+                                     f"song{l+1+index}", song[1], song[2]]]
                 if l == 0:
-                    self.queues[0][1] = self.download_music(self.queues[0][0],"song1","./Queue","webm")
+                    self.queues[0][1] = self.download_music(
+                        self.queues[0][0], "song1", "./Queue", "webm")
                     self.log("Downloaded First song.")
                     try:
-                        self.queues[1][1] = self.download_music(self.queues[1][0],"song2","./Queue","webm")
+                        self.queues[1][1] = self.download_music(
+                            self.queues[1][0], "song2", "./Queue", "webm")
                         self.log("Downloaded next song.")
                     except:
-                        
+
                         pass
-                    
+
                     thrd = Thread(target=self.player, args=(voice,))
                     thrd.start()
                 if self.queues[1][1] == "song2":
-                    self.queues[1][1] = self.download_music(self.queues[1][0],"song2","./Queue","webm")
+                    self.queues[1][1] = self.download_music(
+                        self.queues[1][0], "song2", "./Queue", "webm")
                     self.log("Downloaded next song.")
-                
+
                 await ctx.send("Your Playlist has been added to the Queue.")
-               
-                    
-                
-                    
-
-            
 
 
-
-#*------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# *------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
 
 
+# *------------------------------------DOWNLOAD----------------------------------------------------------------------------------------------------------------------------------------------------
 
-#*------------------------------------DOWNLOAD----------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 
     # ? DOWNLOAD
@@ -1012,15 +938,16 @@ class Music(commands.Cog):
         '''Downloads a song for you, so your pirated ass doesn't have to look for it online.'''
 
         url = self.url_get(query)
+        vid = YoutubeVideo.from_query(query=query)
         embed = discord.Embed(title="Now downloading",
-                              color=discord.Colour.dark_purple(), url=url)
+                              color=discord.Colour.dark_purple(), vid.url)
         embed.set_author(name="Me!Me!Me!",
                          icon_url=self.client.user.avatar_url)
         embed.set_thumbnail(url=self.music_logo)
         embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
                          icon_url=ctx.message.author.avatar_url)
-        embed.set_image(url=self.get_thumbnail(url))
-        embed.add_field(name="**  **", value=f"**{self.get_title(url)}**")
+        embed.set_image(url=vid.thumbnail)
+        embed.add_field(name="**  **", value=f"**{vid.title}**")
 
         await ctx.send(embed=embed)
 
@@ -1034,12 +961,16 @@ class Music(commands.Cog):
         path = self.download_music(url, f"dnld{i}", "./Download", "webm")
         self.log("Downloaded")
 
-        mp3 = discord.File(path, filename=self.get_title(url)+".mp3")
+        mp3 = discord.File(path, filename=vid.title+".mp3")
 
         await ctx.channel.send(file=mp3)
         os.remove(path)
 
-#*---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+# *---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 
 
 def setup(client):
