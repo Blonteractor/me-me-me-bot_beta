@@ -7,3 +7,5 @@ Database/gothy
 nhenpy/cache.nhentai.net/*
 cache.nhentai.net/*
 .mypy_cache/*
+environment/.mypy_cache/*
+scripts/bot/cache.nhentai.net/*
