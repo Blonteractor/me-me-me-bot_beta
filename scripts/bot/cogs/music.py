@@ -4,7 +4,6 @@ from discord import FFmpegPCMAudio
 from discord.ext import commands, tasks
 
 from typing import List,Any
-from threading import Thread
 import shutil
 from lxml import etree
 import lxml
@@ -17,7 +16,8 @@ from youtube_dl import YoutubeDL
 import youtube_dl
 import time as t
 from os import system
-
+import time
+import lyricsgenius
 
 import imp,os
 imp.load_source("general", os.path.join(
@@ -44,16 +44,24 @@ def vc_check():
             return False
     return commands.check(predicate)
 
-
-
+genius = lyricsgenius.Genius("pGaaH8g-CxAeF1qaQ2DeVmLnmp84mIciWU8sbGoVKQO_MTlHQW4ZoxYeP8db1kDO")
+genius.verbose = False
 class Music(commands.Cog):
     ''':musical_note: The title says it all, commands related to music and stuff.'''
     queue:List[Any] = []                                      # queue of the format [items,"playlist name",playlist items,"/playlist name",items]
+    full_queue:List[Any] = []
+    queue_ct:List[Any] = []    
+    full_queue_ct:List[Any]=[]
+
     loop_song = False                                         # variable used for looping song
     skip_song = False                                         # variable used for skipping song
     time_for_disconnect = 300                                 # time for auto disconnect
+    
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"        # url of the image of thumbnail (vTube)
+    juke_box_url = "https://media.discordapp.net/attachments/623969275459141652/680480864316030996/juke_box.jpg"
 
+    
+    time = 0
     QPATH = os.path.join(
     os.path.dirname(__file__),'../../../Queue')
     QPATH = os.path.abspath(QPATH) 
@@ -70,6 +78,7 @@ class Music(commands.Cog):
         self.client = client
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
+        self.juke_box.start()
 
     def log(self, msg):                     # funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -125,6 +134,10 @@ class Music(commands.Cog):
                 await awoo_channel.send(f"Everyone left `{voice.channel.name}`, player paused.")
                 self.auto_resume.start()
 
+    @tasks.loop(seconds=1)
+    async def clock(self):
+        self.time += 1
+
     @tasks.loop(seconds=2)
     # disconnect if player is idle for the disconnecting time provided
     async def auto_disconnector(self):
@@ -138,7 +151,7 @@ class Music(commands.Cog):
                 break
         else:
             await self.auto_disconnect()
-            self.auto_resume.stop()
+            self.auto_resume.cancel()
 
     @tasks.loop(seconds=1)
     async def auto_resume(self):  # resumes the song if the user re-joins the vc
@@ -150,7 +163,7 @@ class Music(commands.Cog):
             self.log("Music AUTO resumed")
             voice.resume()
             await awoo_channel.send(f"Looks like someone joined `{voice.channel.name}`, player resumed.")
-            self.auto_resume.stop()
+            self.auto_resume.cancel()
 
     async def auto_disconnect(self):  # actual disconnecting code
 
@@ -163,37 +176,237 @@ class Music(commands.Cog):
         await awoo_channel.send(f"Nothing much to do in the vc so left `{voice.channel.name}`")
         self.log(f"Auto disconnected from {voice.channel.name}")
         self.queue.clear()
+    
+    @tasks.loop(seconds=1)
+    async def juke_box(self):
+        
+        for guild in self.client.guilds:
+            channel = discord.utils.get(guild.text_channels,name = "juke-box") 
+          
+            if not channel:
+                channel = await guild.create_text_channel("juke-box")
+                file = os.path.join(os.path.dirname(__file__),'../../../assets/icons/we_tube_logo.png')
+                file = os.path.abspath(file)
+                file = discord.File(file)
+             
+                await channel.send(file = file)
+
+                reactions = {"⏯️": "play/pause", "⏹️": "stop","⏮️": "previous", "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
+
+        
+                embed = discord.Embed(title="Not Playing Anything right now.",
+                                        color=discord.Colour.from_rgb(0,255,255))
+
+                embed.set_image(url = self.juke_box_url)
+                embed_msg = await channel.send(embed=embed)
+                embed_msg: discord.Message
+
+                self.juke_box_embed = embed
+                self.juke_box_embed_msg = embed_msg
+
+                def check(reaction: discord.Reaction, user):
+                    return reaction.message.id == embed_msg.id
+
+                async def reactions_add(message, reactions):
+                    for reaction in reactions:
+                        await message.add_reaction(reaction)
+
+                self.client.loop.create_task(
+                    reactions_add(embed_msg, reactions.keys()))
+                
+
+                loading_bar = await channel.send(f"0:00/0:00 - {':black_large_square:'*10}")
+                loading_bar: discord.Message
+
+                self.juke_box_loading = loading_bar
+
+                queue_msg = await channel.send("__QUEUE LIST__")
+                queue_msg: discord.Message
+
+                self.juke_box_queue = queue_msg
+
+                self.juke_box_channel = channel
+
+                self.juke_box.cancel()
+
+            else:
+                await channel.delete()
+
+    
+    
+    @commands.Cog.listener()
+    async def on_message(self,message):
+        try:
+            self.juke_box_channel
+        except:
+            pass
+        else:
+            if message.channel == self.juke_box_channel:
+                if message.author != self.client.user:
+                    
+                        await message.delete()
+                else:
+                    if message.id != self.juke_box_loading.id and message.id != self.juke_box_queue.id:
+                        await message.delete()
+
+    @commands.Cog.listener()
+    async def on_reaction_add(self,reaction,user):
+        
+        try:
+            self.juke_box_channel
+        except:
+            pass
+        else:
+            if user != self.client.user and reaction.message.id == self.juke_box_embed_msg.id:
+                reactions = {"⏯️": "play/pause", "⏹️": "stop","⏮️": "previous", "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
+                voice = get(self.client.voice_clients, guild=reaction.message.guild)
+                if voice:
+                    if str(reaction.emoji) in  reactions:
+                        ctx = await self.client.get_context(reaction.message)
+                        if reactions[str(reaction.emoji)] == "play/pause":
+                            if voice.is_playing():
+                                await ctx.invoke(self.client.get_command("pause"))
+                            elif voice.is_paused():
+                                await ctx.invoke(self.client.get_command("resume"))
+
+                        elif reactions[str(reaction.emoji)] == "stop":
+                            await ctx.invoke(self.client.get_command("stop"))
+                        
+                        elif reactions[str(reaction.emoji)] == "forward":
+                            await ctx.invoke(self.client.get_command("skip"))
+                        
+                        elif reactions[str(reaction.emoji)] == "loop":
+                            await ctx.invoke(self.client.get_command("loop"))
+
+
+                await reaction.remove(user)
+                        
+    
+    async def jbe_update(self,vid):
+        embed = discord.Embed(title=vid.title,
+                                        color=discord.Colour.from_rgb(0,255,255))
+
+        embed.set_image(url = vid.thumbnail)
+        await self.juke_box_embed_msg.edit(embed = embed)
+    
+    async def jbq_update(self,vid):
+        string = "__QUEUE__\n"
+        for index in range(len(self.queue_ct)):
+            i = self.queue_ct[index]
+           
+            string += f"{index+1}. {i.title} ({i.duration}) \n"
+
+        await self.juke_box_queue.edit(content = string)
+    
+    @tasks.loop(seconds=1)
+    async def jbl_update(self):
+        
+        queue = [x for x in self.queue if type(x)!= str]
+        if queue == []:
+            jbl_update.cancel()
+        vid = queue[0]
+        
+        def two_dig(number):
+            if number<10:
+                return f"0{number}"
+            else:
+                return str(number)
+
+        if vid.duration.count(":") == 1:
+            ntime = f"{self.time//60}:{two_dig(self.time%60)}"
+        else:
+            ntime = f"{self.time//3600}:{two_dig(self.time%3600//60)}:{two_dig(self.time//60)}"
+        
+        amt =int(self.time/vid.seconds*10)
+
+        await self.juke_box_loading.edit(content = f"{ntime}/{vid.duration}-{':black_square_button:'*amt +':black_large_square:'*(10-amt) }")
+        
 
     # * MAIN
 
     # ? PLAYER
-    def player(self, voice):  # checks queue and plays the song accordingly
+    async def player(self, ctx, voice):  # checks queue and plays the song accordingly
         def check_queue():
+
             if (not self.loop_song) or (self.skip_song):
-                self.queue.remove(queue[0])
-            self.player(voice)
+                try:
+                    queue = [x for x in self.queue if not type(x)== str]
+                    self.queue.remove(queue[0])
+                    try:
+                        self.queue_ct.remove(queue[0])
+                    except:
+                        pass
+                    
+                    def clear_pl():
+                        for i in range(len(self.queue)):
+                            print(2)
+                            if i != len(self.queue)-1:
+                                if isInstance(self.queue[i],str) and self.queue[i]==self.queue[i+1] :
+                                    if "----" in self.queue[i]:
+                                        temp = self.queue[i]
+                                        self.queue.remove(temp)
+                                        self.queue.remove(temp)
+                                                
+                                    else:
+                                        print(1)
+                                        temp = self.queue[i]
+                                        self.queue.remove(temp)
+                                        self.queue.remove(temp)
+                                        temp = temp[2:][:-2]
+                                        for j in range(len(self.queue_ct)):
+                                            if j.title == temp:
+                                                self.queue_ct.pop(j)
+
+                                        clear_pl()
+
+                    clear_pl()
+                except:
+                    pass
+            fut = asyncio.run_coroutine_threadsafe(self.player(ctx,voice), ctx.bot.loop)
+            try:
+                fut.result()
+            except:
+                # an error happened sending the message
+                pass
     
         flag = True
         while flag:
             queue = [x for x in self.queue if not type(x)== str]    
             if queue != []:
                 try:
-                    self.download_music(
-                        queue[0].url,self.QPATH)
-
-                    for i in os.listdir(self.QPATH):
-                        if i.split(".")[0]==queue[0].id:
-                            ext = i.split(".")[1]
-
+                    if not os.path.exists(self.QPATH):
+                        await self.download_music(
+                            queue[0].url,self.QPATH)  
+                        ext = os.listdir(self.QPATH)[0].split(".")[1]
+                    else:
+                        for i in os.listdir(self.QPATH):
+                            if i.split(".")[0]==queue[0].id:
+                                ext = i.split(".")[1]
+                        else:
+                            await self.download_music(
+                                queue[0].url,self.QPATH)  
+                            for i in os.listdir(self.QPATH):
+                                if i.split(".")[0]==queue[0].id:
+                                    ext = i.split(".")[1]
+                        
+                    await ctx.send(f"{queue[0].title} playing now.") 
                     self.log("Downloaded song.")
                     voice.play(discord.FFmpegPCMAudio(f"{self.QPATH}\\{queue[0].id}.{ext}"),
                             after=lambda e: check_queue())
+                    self.time = 0
+                    if (self.clock.current_loop == 0):
+                        self.clock.start()
+                    await self.jbe_update(queue[0])
+                    
+                    if (self.jbl_update.current_loop == 0):
+                        self.jbl_update.start()
+                    
                     self.log(f"{queue[0].title} is playing.")
                     voice.source = discord.PCMVolumeTransformer(voice.source)
                 except Exception as e:
                     self.log(e)
                     self.log(f"{queue[0].title} cannot be played.")
-                    #? await ctx.send(f"{self.queue[0].title} cannot be played.") 
+                    await ctx.send(f"{queue[0].title} cannot be played.") 
 
                     self.queue.remove(queue[0])
                     queue.pop(0)    
@@ -202,14 +415,19 @@ class Music(commands.Cog):
                     flag = False
                 
             else:
-                #? await ctx.send(">>> All songs played. No more songs to play.") 
+                await ctx.send(">>> All songs played. No more songs to play.") 
                 self.log("Ending the queue")
+                self.clock.cancel()
+                self.jbl_update.cancel()
+                await self.juke_box_embed_msg.edit(embed= self.juke_box_embed)
+                await self.juke_box_queue.edit(content= "__QUEUE__")
+                await self.juke_box_loading.edit(content = f"00:00/00:00 - {':black_large_square:'*10}")
                 break
 
     
 
     # ? DOWNLOADER
-    def download_music(self, url, path) -> str:
+    async def download_music(self, url, path) -> str:
 
         queue_path = os.path.abspath(f"{path}/%(id)s.%(ext)s")
         ydl_opts = {
@@ -222,8 +440,10 @@ class Music(commands.Cog):
             with youtube_dl.YoutubeDL(ydl_opts) as ydl:
                 self.log("Downloading stuff now")
                 ydl.download([url])
+                await asyncio.sleep(5)
         except Exception as e:
             self.log(e)
+        
 
 
     # ? SEARCHING
@@ -319,7 +539,7 @@ class Music(commands.Cog):
             await ctx.send(f"I am already connected to a voice channel and someone is listening to the songs. Join `{voice.channel.name}``")
             return False
 
-     # ? PLAY
+    # ? PLAY
     @commands.command()
     async def play(self, ctx, *, query):
         '''Plays the audio of the video in the provided VTUBE url.'''
@@ -332,6 +552,7 @@ class Music(commands.Cog):
                 split_list = re.split("/|=|&",query)
                 if "watch?v" in split_list:
                     vid = YoutubeVideo(split_list[split_list.index("watch?v")+1])
+                    
                 elif "playlist?list" in split_list:
                     vid = YoutubePlaylist(split_list[split_list.index("playlist?list")+1])
                 else:
@@ -358,6 +579,7 @@ class Music(commands.Cog):
             else:
                 self.queue_delete()
 
+        
         q_num = len(old_queue)+1
 
         embed = discord.Embed(title="Song Added to Queue",  # TODO make a function
@@ -371,19 +593,37 @@ class Music(commands.Cog):
         embed.set_image(url=vid.thumbnail)
         embed.set_thumbnail(url=self.music_logo)
         await ctx.send(embed=embed)
-
+        
+        self.queue_ct += [vid]
+        self.full_queue_ct += [vid]
+        
         if isinstance(vid,YoutubeVideo):
+            old_queue = [x for x in self.queue if type(x)!= str]
             self.queue += [vid]
-        else:
-            self.queue += [f"--{vid.title}--"]
-            self.queue += vid.entries
-            self.queue += [f"--{vid.title}--"]
-        if len(old_queue) == 0:
+            self.full_queue += [vid]
             
-            thrd = Thread(target= self.player, args=(voice,))
-            thrd.start()
+            await self.jbq_update(vid)
+            if len(old_queue) == 0:
+                await self.player(ctx,voice)   
+            else:
+                
+                self.log("Song added to queue") 
         else:
-            self.log("Song added to queue")
+            self.queue += [f"--{vid.title}--"]
+            self.full_queue += [f"--{vid.title}--"]
+            for i in range(len(vid.entries)):
+                old_queue = [x for x in self.queue if type(x)!= str]
+                _vid = YoutubeVideo(vid.entries[i][0],vid.entries[i][1])
+                self.queue += [_vid]
+                self.full_queue += [_vid]
+                if len(old_queue) == 0:
+                    await self.player(ctx,voice)
+                else:
+                    self.log("Song added to queue") 
+            
+            self.queue += [f"--{vid.title}--"]
+            self.full_queue += [f"--{vid.title}--"]
+            
 
     # ? SEARCH
     @commands.command()
@@ -395,7 +635,7 @@ class Music(commands.Cog):
             if not (await ctx.invoke(self.client.get_command("join"))):
                 return
             play_command = self.client.get_command("play")
-            await ctx.invoke(play_command, query=result.id)
+            await ctx.invoke(play_command, query=f"https://www.youtube.com/watch?v={result.id}")
     
     # ? SEARCH_PLAYLIST
     @commands.command()
@@ -407,10 +647,90 @@ class Music(commands.Cog):
             if not (await ctx.invoke(self.client.get_command("join"))):
                 return
             play_command = self.client.get_command("play")
-            await ctx.invoke(play_command, query=result.id)
+            await ctx.invoke(play_command, query=f"https://www.youtube.com/playlist?list={result.id}")
 
 
+    # ? NOW PLAYING
+    @commands.command(aliases = ["np"])
+    async def now_playing(self,ctx): 
+        queue = [x for x in self.queue if type(x)!= str]
+        vid = queue[0]
+        
+        embed = discord.Embed(title="NOW PLAYING",  # TODO make a function
+                              url=vid.url, color=discord.Colour.blurple())
+        embed.set_author(name="Me!Me!Me!",
+                         icon_url=self.client.user.avatar_url)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                         icon_url=ctx.message.author.avatar_url)
+        
+        embed.set_thumbnail(url=vid.thumbnail)
+        def two_dig(number):
+            if number<10:
+                return f"0{number}"
+            else:
+                return str(number)
 
+        if vid.duration.count(":") == 1:
+            ntime = f"{self.time//60}:{two_dig(self.time%60)}"
+        else:
+            ntime = f"{self.time//3600}:{two_dig(self.time%3600//60)}:{two_dig(self.time//60)}"
+        embed.add_field(name = f"{vid.title}",value= "**  **",inline = False)
+        amt =int(self.time/vid.seconds*10)
+        embed.add_field(name = f"{ntime}/{vid.duration} {':black_square_button:'*amt +':black_large_square:'*(10-amt) }",value= "**  **",inline = False)
+
+        
+        await ctx.send(embed=embed)
+
+    # ? LYRICS
+    @commands.command(aliases = ["l"])
+    async def lyrics(self,ctx): 
+        queue = [x for x in self.queue if type(x)!= str]
+        vid = queue[0]
+        
+        song = genius.search_song(vid.title)
+        lyrics = song.lyrics
+        l_list = lyrics.split("\n")
+        ly_list = []
+        l = ""
+        for i in l_list:
+            if len(l+i)>2048:
+                ly_list+=[l]
+                l=""
+            l+=i
+            l+="\n"
+        else:
+            ly_list+=[l]
+        for i in ly_list:
+
+            embed = discord.Embed(title=f"LYRICS - {song.title}",  # TODO make a function
+                                url=song.url, 
+                                description = i,
+                                color=discord.Colour.blurple())
+            embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+            embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                            icon_url=ctx.message.author.avatar_url)
+            
+            await ctx.send(embed=embed)
+
+    # ? SONG_INFO
+    @commands.command(aliases = ["sinfo"])
+    async def song_info(self,ctx,query):
+        result = await self.searching(ctx, query)
+        embed = discord.Embed(title=f"{result.title} ({result.duration}) - {result.uploader}", 
+                            url=result.url, 
+                            description = result.description,
+                            color=discord.Colour.blurple())
+        embed.set_author(name="Me!Me!Me!",
+                        icon_url=self.client.user.avatar_url)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                        icon_url=ctx.message.author.avatar_url)
+        embed.set_thumbnail(url = result.thumbnail)
+
+        embed.add_field(name = "Date of Upload", value = result.date)
+        embed.add_field(name = "Views", value = result.views)
+        embed.add_field(name = "Likes/Dislikes", value = f"{result.likes}/{result.dislikes}")
+        await ctx.send(embed=embed)
 
 
 # *-------------------------------------------------------QUEUE------------------------------------------------------------------------------------------------------------------------
@@ -517,8 +837,72 @@ class Music(commands.Cog):
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
         await ctx.invoke(self.client.get_command("next"))
+    
+    # ? QUEUE CONTRACTED  
+    @Queue.command(aliases = ['ct'])
+    async def contracted(self,ctx):
+        desc =""
+        
+        for index in range(len(self.queue_ct)):
+            i = self.queue_ct[index]
+           
+            desc += f"{index+1}. {i.title} ({i.duration}) \n"
 
+        embed = discord.Embed(title="QUEUE",
+        description = desc,
+        color=discord.Colour.dark_purple())
+        embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+        embed.set_thumbnail(url=self.music_logo)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                            icon_url=ctx.message.author.avatar_url)
+    
+        await ctx.send(embed=embed)
 
+    # ? QUEUE FULL
+    @Queue.group()
+    async def full(self,ctx):
+        if ctx.invoked_subcommand is None:
+            i=0
+            j=1
+            desc = ""
+            while i<len(self.full_queue):
+                if isinstance(self.full_queue[i],YoutubeVideo):
+                    desc += f"{j}. {self.full_queue[i].title} ({self.full_queue[i].duration}) \n"
+                    i+=1
+                    j+=1
+                else:
+                    desc += f"***{self.full_queue[i]}*** \n"
+                    i+=1
+            
+            embed = discord.Embed(title="QUEUE",
+            description = desc,
+            color=discord.Colour.dark_purple())
+            embed.set_author(name="Me!Me!Me!",
+                             icon_url=self.client.user.avatar_url)
+            embed.set_thumbnail(url=self.music_logo)
+            embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                             icon_url=ctx.message.author.avatar_url)
+        
+            await ctx.send(embed=embed)
+
+    # ? FULL CONTRACTED  
+    @full.command(aliases = ['fct'])
+    async def full_contracted(self,ctx):
+        desc =""
+        for index,i in enumerate(self.queue_ct):
+            desc += f"{index+1}. {i.title} ({i.duration}) \n"
+        
+        embed = discord.Embed(title="QUEUE",
+        description = desc,
+        color=discord.Colour.dark_purple())
+        embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+        embed.set_thumbnail(url=self.music_logo)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                            icon_url=ctx.message.author.avatar_url)
+    
+        await ctx.send(embed=embed)
 
 
 
@@ -577,10 +961,13 @@ class Music(commands.Cog):
         if voice and voice.is_playing():
             self.log("Player paused")
             voice.pause()
+            self.clock.cancel()
+            self.jbl_update.cancel()
             await ctx.send(">>> Music Paused")
         else:
             self.log("Pause failed")
             await ctx.send(">>> Ya know to pause stuff, stuff also needs to be playing first.")
+
 
     # ? RESUME
     @commands.command(aliases=['r', 'res'])
@@ -593,23 +980,53 @@ class Music(commands.Cog):
         if voice and voice.is_paused():
             self.log("Music resumed")
             voice.resume()
+            self.clock.start()
+            self.jbl_update.start()
             await ctx.send(">>> Resumed Music")
         else:
             self.log("Resume failed")
             await ctx.send(">>> Ya know to resume stuff, stuff also needs to be paused first.")
 
     # ? STOP
-    @commands.command(aliases=['st', 'yamero'])
+    @commands.command(aliases=['st', 'yamete'])
     @vc_check()
     async def stop(self, ctx):
         '''Stops the current music AND clears the current queue.'''
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
         self.queue.clear()
+        self.queue_ct.clear()
 
         if voice and voice.is_playing:
             self.log("Player stopped")
             voice.stop()
+            self.clock.cancel()
+            self.jbl_update.cancel()
+            self.time = 0
+            await ctx.send(">>> Music stopped")
+
+        else:
+            self.log("Stop failed")
+            await ctx.send(">>> Ya know to stop stuff, stuff also needs to be playing first.")
+
+    # ? HARD_STOP
+    @commands.command(aliases=['hs','hards','hstop','hardstop', 'yamero'])
+    @vc_check()
+    async def hard_stop(self, ctx):
+        '''Stops the current music AND clears the current queue.'''
+
+        voice = get(self.client.voice_clients, guild=ctx.guild)
+        self.queue.clear()
+        self.full_queue.clear()
+        self.queue_ct.clear()
+        self.full_queue_ct.clear()
+
+        if voice and voice.is_playing:
+            self.log("Player stopped")
+            voice.stop()
+            self.clock.cancel()
+            self.jbl_update.cancel()
+            self.time = 0
             await ctx.send(">>> Music stopped")
 
         else:
@@ -619,7 +1036,6 @@ class Music(commands.Cog):
             self.queue_delete()
         except:
             pass
-
     # ? SKIP
 
     @commands.command(aliases=['n', 'sk', 'skip'])
@@ -648,9 +1064,14 @@ class Music(commands.Cog):
 
         if voice and voice.is_connected():
             await voice.disconnect()
+            self.clock.cancel()
+            self.jbl_update.cancel()
+            self.time = 0
             await ctx.send(f">>> Left ```{voice.channel.name}```")
             self.queue.clear()
-
+            self.full_queue.clear()
+            self.queue_ct.clear()
+            self.full_queue_ct.clear()
         else:
             await ctx.send(">>> I cannot leave a voice channel I have not joined, thought wouldn't need to explain basic shit like this.")
 
@@ -674,12 +1095,121 @@ class Music(commands.Cog):
     @volume.error
     async def volume_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(">>> Enter the amount of mesages to be cleared if you dont want spanky / or do (depending on who you are)")
+            await ctx.send(">>> Enter the volume.")
         elif isinstance(error, commands.UserInputError):
             await ctx.send(">>> We are numericons' people not Texticons, you traitor.")
 
 
+    async def duration_check(self,ctx,time):
+        queue = [x for x in self.queue if type(x)!= str]
+        try:
+            if ":" in time:
+                tl = list(map(int,time.split(":")))
+                if tl[-1]>59 or tl[-2]>59 or tl[-1]<0 or tl[-2]<0:
+                    await ctx.send("Seek in the format HH:MM:SS or S or something i don't know but this is incorrect.")
+                    return False
+                elif time.count(":")>2:
+                    await ctx.send("Seek in the format HH:MM:SS or S or something i don't know but this is incorrect.")
+                    return False
+                
+                elif time.count(":") == 2:
+                    sec = queue[0].seconds
+                    if tl[0]*60*60 + tl[1]*60 + tl[2] > sec:
+                        await ctx.send("Entered a wrong time I guess.")
+                        return False
+                elif time.count(":") == 1:
+                    sec = queue[0].seconds
+                    if tl[0]*60 + tl[1] > sec:
+                        await ctx.send("Entered a wrong time I guess.")
+                        return False
+                
+            else:
+                if int(time) > queue[0].seconds:
+                    await ctx.send("Entered a wrong time I guess.")
+                    return False
+        except Exception as e:
+            print(e)
+            await ctx.send("Seek in the format HH:MM:SS or S or something i don't know but this is incorrect.")
+            return False
+        else:
+            return True
 
+    async def int_time(self,ctx,time):
+        if not await self.duration_check(ctx,time):
+            return None
+        if ":" in time:
+            time = list(map(int, time.split(":")))     
+            ts = 0
+            if len(time) == 3:
+                ts += time[-3]*60*60
+            ts += time[-2]*60
+            ts += time[-1]
+            time = ts
+        else:
+            time = int(time)
+
+        return time
+    #?SEEK
+    @commands.command()
+    @vc_check()
+    async def seek(self,ctx,time):
+        queue = [x for x in self.queue if type(x)!= str]
+
+        for i in os.listdir(self.QPATH):
+                        if i.split(".")[0]==queue[0].id:
+                            ext = i.split(".")[1]
+        voice = get(self.client.voice_clients, guild=ctx.guild)
+        
+        time = await self.int_time(ctx,time)
+        
+        if time:
+            voice.source = discord.FFmpegPCMAudio(f"{self.QPATH}\\{queue[0].id}.{ext}",before_options = f"-ss {time}")
+            self.time = time
+        else:
+            return
+    #?FORWARD
+    @commands.command(aliases = ["fwd"])
+    @vc_check()
+    async def forward(self,ctx,time):
+        
+        queue = [x for x in self.queue if type(x)!= str]
+
+        for i in os.listdir(self.QPATH):
+                        if i.split(".")[0]==queue[0].id:
+                            ext = i.split(".")[1]
+        voice = get(self.client.voice_clients, guild=ctx.guild)
+        time = await self.int_time(ctx,time)
+        
+        if time:
+            if time <= queue[0].seconds - self.time :
+                voice.source = discord.FFmpegPCMAudio(f"{self.QPATH}\\{queue[0].id}.{ext}",before_options = f"-ss {time + self.time}")
+                self.time += time
+            else:
+                await ctx.send("The seek is greater than the song limit.")
+        else:
+            return
+
+    #?REWIND
+    @commands.command(aliases = ["rew"])
+    @vc_check()
+    async def rewind(self,ctx,time):
+        
+        queue = [x for x in self.queue if type(x)!= str]
+
+        for i in os.listdir(self.QPATH):
+                        if i.split(".")[0]==queue[0].id:
+                            ext = i.split(".")[1]
+        voice = get(self.client.voice_clients, guild=ctx.guild)
+        time = await self.int_time(ctx,time)
+        
+        if time:
+            if time <= self.time :
+                voice.source = discord.FFmpegPCMAudio(f"{self.QPATH}\\{queue[0].id}.{ext}",before_options = f"-ss {self.time - time}")
+                self.time -= time
+            else:
+                await ctx.send("The seek is greater than the song limit.")
+        else:
+            return
 
    # * ----------------------------------------------------------PLAYLIST------------------------------------------------------------------------------------------------------------------------
 
@@ -701,12 +1231,11 @@ class Music(commands.Cog):
                 playlist = []
         
             for i in range(len(playlist)):
-                try:
-                    YoutubeVideo(playlist[i]).title
-                except:
-                    playlist[i] = YoutubePlaylist(playlist[i])
-                else:
+                if len(playlist[i])==11:
                     playlist[i] = YoutubeVideo(playlist[i])
+                else:
+                    playlist[i] = YoutubePlaylist(playlist[i])
+                
             embed = discord.Embed(title=playlist_db[str(ctx.author.id)][0],
                                   color=discord.Colour.dark_purple())
             embed.set_author(name="Me!Me!Me!",
@@ -792,8 +1321,8 @@ class Music(commands.Cog):
         gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST REMOVE
-    @playlist.command(aliases=["rem"])
-    async def remove(self, ctx, R: int):
+    @commands.command(aliases=["prem"])
+    async def premove(self, ctx, R: int):
         '''Removes a song/playlist from your playlist.'''
         playlist_db = gen.db_receive("playlist")
 
@@ -832,6 +1361,7 @@ class Music(commands.Cog):
             playlist_db[str(ctx.author.id)][0] = name
 
             gen.db_update("playlist",playlist_db)
+
     # ? PLAYLIST PLAY
     @playlist.command(aliases=["pp"])
     async def pplay(self, ctx):
@@ -857,28 +1387,47 @@ class Music(commands.Cog):
                 voice = get(self.client.voice_clients, guild=ctx.guild)
                 playlist = playlist_db[str(ctx.author.id)]
                 for i in range(len(playlist[1])):
-                    try:
-                        YoutubeVideo(playlist[1][i]).title
-                    except:
-                        playlist[1][i] = YoutubePlaylist(playlist[1][i])
-                    else:
+                    if len(playlist[1][i]) == 11:
                         playlist[1][i] = YoutubeVideo(playlist[1][i])
-                        
-                old_queue = [x for x in self.queue if type(x) != str]
-                
-                self.queue += [f"----{playlist[0]}----"]
-
-                for i in playlist[1]:
-                    if isinstance(i,YoutubeVideo):
-                        self.queue += [i]
+                    
                     else:
-                        self.queue += [f"--{i.title}--"] + i.entries + [f"--{i.title}--"]
+                        playlist[1][i] = YoutubePlaylist(playlist[1][i])
+                        
+                
+               
+                self.queue += [f"----{playlist[0]}----"]
+                self.full_queue += [f"----{playlist[0]}----"]
+                for i in playlist[1]:
+                    self.full_queue_ct += [i]
+                    self.queue_ct += [i]
+                    if isinstance(i,YoutubeVideo):
+                        old_queue = [x for x in self.queue if type(x) != str]
+                        self.queue += [i]
+                        self.full_queue += [i]
+                        
+                        if len(old_queue) == 0:
+                            await self.player(ctx,voice)
+                        else:
+                            self.log("Song added to queue")  
+                    else:
+                        
+                        self.queue += [f"--{i.title}--"]
+                        self.full_queue += [f"--{i.title}--"]
+                        for j in range(len(i.entries)):
+                            old_queue = [x for x in self.queue if type(x) != str]
+                            _vid = YoutubeVideo(i.entries[j][0],i.entries[j][1])
+                            self.queue += [_vid]
+                            self.full_queue += [_vid]
+                            if len(old_queue) == 0:
+                                await self.player(ctx,voice)
+                            else:
+                                self.log("Song added to queue")    
+                        self.queue += [f"--{i.title}--"]
+                        self.full_queue += [f"--{i.title}--"]
                 
                 self.queue += [f"----{playlist[0]}----"]
 
-                if len(old_queue) == 0:
-                    thrd = Thread(target=self.player, args=(voice,))
-                    thrd.start()
+                self.full_queue += [f"----{playlist[0]}----"]
            
                 await ctx.send("Your Playlist has been added to the Queue.")
 
@@ -917,7 +1466,7 @@ class Music(commands.Cog):
         files = os.listdir(self.DPATH)
 
         
-        self.download_music(vid.id, self.DPATH)
+        await self.download_music(vid.id, self.DPATH)
         self.log("Downloaded")
 
         for i in files:

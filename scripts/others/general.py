@@ -11,22 +11,24 @@ server_id = 617021917622173747
 awoo_id = 640862189288423425
 gen_id = 617021918071226369
 
+
 DBPATH = os.path.join(
     os.path.dirname(__file__),'../../Database')
 DBPATH = os.path.abspath(DBPATH)
-
+ 
 roles = ['Prostitute', 'Rookie', 'Adventurer', 'Player', 'Hero']
 
 status = ["Saksham's Son", 'Is Mayank', 'Who Is Gay']
 
 subreddits = ["memes", "dankmemes", "cursedcomments", "animemes"]
 
-cog_colours = {"exp":"cyan", "music":"green"}
+cog_colours = {"levels":"cyan", "music":"green"}
 
 epic = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
 
 admin_role_id = 632906375839744001
+
 MEE6_disc = 4876
 
 

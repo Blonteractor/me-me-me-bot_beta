@@ -22,6 +22,10 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
+imp.load_source("Youtube", os.path.join(
+    os.path.dirname(__file__), "../others/Youtube.py"))
+
+import Youtube
 
 
 # * CLIENT SETUP
@@ -68,22 +72,16 @@ def cog_load_startup():
 
 # * BACKING UP AND COMMIT STUFF
 @client.command(aliases=["commit", "baccup"])
+#@commands.has_role(gen.admin_role_id)
 async def backup(ctx, *, msg=""):
-
-    found = False
-    for role in ctx.author.roles:
-        if role.id == gen.admin_role_id:
-            found = True
-    if found:
-        done = gen.commit("| Manual |" + msg)
-        if not msg == "" and done:
-            await ctx.send(f">>> Everything backed up with message - ```{msg}```")
-        elif msg == "":
-            await ctx.send(">>> Everything backed up with no message because your lazy ass could'nt be bothered to type")
-        else:
-            await ctx.send(">>> Couldn't Backup Since Commit upto the mark.")
+    done = gen.commit(f"| Manual - {msg} |")
+    if not msg == "" and done:
+        await ctx.send(f">>> Everything backed up with message - ```{msg}```")
+    elif msg == "":
+        await ctx.send(">>> Everything backed up with no message because your lazy ass could'nt be bothered to type")
     else:
-        await ctx.send("Shut Up")
+        await ctx.send(">>> Couldn't Backup Since Commit upto the mark.")
+
 
 @client.command()
 #@commands.has_role(gen.admin_role_id)
@@ -91,6 +89,7 @@ async def re_init(ctx):
     
     os.startfile(__file__)
     await ctx.send("DONE")
+    Youtube.driver.quit()
     sys.exit()
 
 @client.command(aliases=["Debug","Development"])
@@ -106,6 +105,7 @@ async def develop(ctx , on_off, cog=""):
                 var["cogs"][cog] = 1
             else:
                 await ctx.send("The cog doesn't even exist BIG BREN.")
+                return
         else:
             for cog, debug in var["cogs"].items():
                 var["cogs"][cog] = 1
@@ -120,6 +120,7 @@ async def develop(ctx , on_off, cog=""):
                 var["cogs"][cog] = 0
             else:
                 await ctx.send("The cog doesn't even exist BIG BREN.")
+                return
         else:
             var["DEV"] = 0
             for cog, debug in var["cogs"].items():
@@ -166,9 +167,11 @@ async def on_ready():
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send(">>> That isn't even a command, you have again proven to be a ME!stake.")
-        await asyncio.sleep(1)
-        await ctx.channel.purge(limit=1)
+        message = await ctx.send(">>> That isn't even a command, you have again proven to be a ME!stake.")
+        try:
+            await message.delete()
+        except:
+            pass
     if not isinstance(error,commands.MissingRequiredArgument):
         gen.error_message(error)
 
