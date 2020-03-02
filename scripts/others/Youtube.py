@@ -17,6 +17,7 @@ chrome_options.add_argument("log-level=3")
 
 driver = webdriver.Chrome(options = chrome_options) 
 driver.get("http://www.youtube.com")
+
 class YoutubeVideo:
     def __init__(self, id: str ,duration:str = None):
         self.id = id
@@ -55,7 +56,6 @@ class YoutubeVideo:
 
         
         return yl
-
 
     def __len__(self) -> int:
         return self.seconds
@@ -317,9 +317,6 @@ class YoutubePlaylist:
     @property
     def entries(self):
         return self._info["entries"]
-
-
-
 
     @property
     def uploader(self) -> str:

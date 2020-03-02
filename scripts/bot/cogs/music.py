@@ -389,6 +389,7 @@ class Music(commands.Cog):
                     if not os.path.exists(self.QPATH):
                         await self.download_music(
                             queue[0].url,self.QPATH)  
+                        
                         ext = os.listdir(self.QPATH)[0].split(".")[1]
                     else:
                         for i in os.listdir(self.QPATH):
@@ -397,12 +398,14 @@ class Music(commands.Cog):
                         else:
                             await self.download_music(
                                 queue[0].url,self.QPATH)  
+                            
                             for i in os.listdir(self.QPATH):
                                 if i.split(".")[0]==queue[0].id:
                                     ext = i.split(".")[1]
                         
                     await ctx.send(f"{queue[0].title} playing now.") 
                     self.log("Downloaded song.")
+                    
                     voice.play(discord.FFmpegPCMAudio(f"{self.QPATH}\\{queue[0].id}.{ext}"),
                             after=lambda e: check_queue())
                     self.time = 0
@@ -410,10 +413,13 @@ class Music(commands.Cog):
                         self.clock.start()
                     await self.jbe_update(queue[0])
                     await self.jbq_update(queue[0])
+                    
                     if (self.jbl_update.current_loop == 0):
                         self.jbl_update.start()
+                        
                     self.log(f"{queue[0].title} is playing.")
                     voice.source = discord.PCMVolumeTransformer(voice.source)
+                    
                 except Exception as e:
                     self.log(e)
                     self.log(f"{queue[0].title} cannot be played.")
@@ -589,7 +595,10 @@ class Music(commands.Cog):
             else:
                 self.queue_delete()
 
-        q_num = len(old_queue)+1
+        q_num = len(old_queue) + 1
+        
+        message = await ctx.send("Downloading song.... <a:loading:683921845430648833>")
+        message: discord.Message
 
         embed = discord.Embed(title="Song Added to Queue",  # TODO make a function
                               url=vid.url, color=discord.Colour.blurple())
@@ -601,7 +610,6 @@ class Music(commands.Cog):
                         value=vid.title)
         embed.set_image(url=vid.thumbnail)
         embed.set_thumbnail(url=self.music_logo)
-        await ctx.send(embed=embed)
 
         self.queue_ct += [vid]
         self.full_queue_ct += [vid]
@@ -615,25 +623,30 @@ class Music(commands.Cog):
             if len(old_queue) == 0:
                 await self.player(ctx, voice)
             else:
-
                 self.log("Song added to queue")
         else:
             self.queue += [f"--{vid.title}--"]
             self.full_queue += [f"--{vid.title}--"]
+            
             for i in range(len(vid.entries)):
                 old_queue = [x for x in self.queue if type(x) != str]
                 _vid = YoutubeVideo(vid.entries[i][0], vid.entries[i][1])
+                
                 self.queue += [_vid]
                 self.full_queue += [_vid]
+                
                 if len(old_queue) == 0:
                     await self.player(ctx, voice)
                 else:
                     self.log("Song added to queue")
-
+                    
+            
             self.queue += [f"--{vid.title}--"]
             self.full_queue += [f"--{vid.title}--"]
             
-    @commands.command(name="playlist")
+        await message.edit("", embed=embed)
+            
+    @commands.command(name="playplaylist")
     async def play_playlist(self, ctx, *, query):
         vid = YoutubeVideo.from_query(query=query)[0]     
         play_command = self.client.get_command("play")
@@ -700,11 +713,17 @@ class Music(commands.Cog):
 
     # ? LYRICS
     @commands.command(name="lyrics", aliases=["l"])
-    async def lyrics(self, ctx):
+    async def lyrics(self, ctx: commands.Context):
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+                
         queue = [x for x in self.queue if type(x) != str]
+        print(queue)
         vid = queue[0]
-
+        print(vid)
         song = genius.search_song(vid.title)
+        print(song)
         lyrics = song.lyrics
         l_list = lyrics.split("\n")
         ly_list = []
@@ -717,18 +736,66 @@ class Music(commands.Cog):
             l += "\n"
         else:
             ly_list += [l]
-        for i in ly_list:
-
-            embed = discord.Embed(title=f"LYRICS - {song.title}",  # TODO make a function
+            
+        reactions = {"back": "⬅", "delete": "❌", "forward": "➡"}
+            
+        embed = discord.Embed(title=f"LYRICS - {song.title}",  # TODO make a function
                                   url=song.url,
-                                  description=i,
+                                  description=ly_list[0],
                                   color=discord.Colour.blurple())
-            embed.set_author(name="Me!Me!Me!",
-                             icon_url=self.client.user.avatar_url)
-            embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
-                             icon_url=ctx.message.author.avatar_url)
+        embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                            icon_url=ctx.message.author.avatar_url)
+        
+        embed_msg = await ctx.send(embed=embed)
+        embed_msg: discord.Message
+            
+        pages = len(ly_list)
+        wait_time = 120
+        page = 1
+        
+        self.client.loop.create_task(reactions_add(embed_msg, reactions.values()))
+        
+        def check(reaction: discord.Reaction, user):
+            return user == ctx.author and reaction.message.id == embed_msg.id
+        
+        def update_page(page):
+            embed.description = ly_list[page-1]
+            return embed
+        
+        while True:
 
-            await ctx.send(embed=embed)
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+            except TimeoutError:
+                await embed_msg.clear_reactions()
+
+                return
+
+            else:
+                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
+
+                if str(reaction.emoji) in reactions.values():
+                    if str(reaction.emoji) == reactions["forward"]:
+                        page += 1
+                        if page > pages:
+                            page = pages
+                            
+                        embed = update_page(page)
+                        await embed_msg.edit(embed=embed)
+                        
+                    if str(reaction.emoji) == reactions["back"]:
+                        page -= 1
+                        if page > 1:
+                            page = 1
+                            
+                        embed = update_page(page)
+                        await embed_msg.edit(embed=embed)
+                        
+                    if str(reaction.emoji) == reaction["delete"]:
+                        embed_msg.delete(delay=2)
+                        
 
     # ? SONG_INFO
     @commands.command(name="song", aliases=["sinfo"])
