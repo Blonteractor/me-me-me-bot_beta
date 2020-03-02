@@ -27,7 +27,7 @@ imp.load_source("general", os.path.join(
 imp.load_source("Youtube", os.path.join(
     os.path.dirname(__file__), "../../others/Youtube.py"))
 import general as gen
-from Youtube import YoutubePlaylist, YoutubeVideo
+from Youtube import YoutubePlaylist, YoutubeVideo, driver
 
 
 def vc_check():
@@ -88,6 +88,9 @@ class Music(commands.Cog):
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
         self.juke_box.start()
+        
+    def cog_unload(self):
+        driver.quit()
 
     def log(self, msg):                     # funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -338,31 +341,32 @@ class Music(commands.Cog):
 
             if (not self.loop_song) or (self.skip_song):
                 try:
-                    queue = [x for x in self.queue if not type(x) == str]
+                    queue = [x for x in self.queue if not type(x)== str]
                     self.queue.remove(queue[0])
                     try:
                         self.queue_ct.remove(queue[0])
                     except:
                         pass
-
+                    
                     def clear_pl():
                         for i in range(len(self.queue)):
                             print(2)
                             if i != len(self.queue)-1:
-                                if isInstance(self.queue[i], str) and self.queue[i] == self.queue[i+1]:
+                                
+                                if isinstance(self.queue[i],str) and self.queue[i]==self.queue[i+1] :
                                     if "----" in self.queue[i]:
                                         temp = self.queue[i]
                                         self.queue.remove(temp)
                                         self.queue.remove(temp)
-
+                                        clear_pl()      
                                     else:
-                                        print(1)
                                         temp = self.queue[i]
                                         self.queue.remove(temp)
                                         self.queue.remove(temp)
                                         temp = temp[2:][:-2]
                                         for j in range(len(self.queue_ct)):
-                                            if j.title == temp:
+                                            
+                                            if self.queue_ct[j].title == temp:
                                                 self.queue_ct.pop(j)
 
                                         clear_pl()
@@ -370,67 +374,69 @@ class Music(commands.Cog):
                     clear_pl()
                 except:
                     pass
-            fut = asyncio.run_coroutine_threadsafe(
-                self.player(ctx, voice), ctx.bot.loop)
+            fut = asyncio.run_coroutine_threadsafe(self.player(ctx,voice), ctx.bot.loop)
             try:
                 fut.result()
             except:
                 # an error happened sending the message
                 pass
-
+    
         flag = True
         while flag:
-            queue = [x for x in self.queue if not type(x) == str]
+            queue = [x for x in self.queue if not type(x)== str]    
             if queue != []:
                 try:
                     if not os.path.exists(self.QPATH):
                         await self.download_music(
-                            queue[0].url, self.QPATH)
+                            queue[0].url,self.QPATH)  
                         ext = os.listdir(self.QPATH)[0].split(".")[1]
                     else:
                         for i in os.listdir(self.QPATH):
-                            if i.split(".")[0] == queue[0].id:
+                            if i.split(".")[0]==queue[0].id:
                                 ext = i.split(".")[1]
                         else:
                             await self.download_music(
-                                queue[0].url, self.QPATH)
+                                queue[0].url,self.QPATH)  
                             for i in os.listdir(self.QPATH):
-                                if i.split(".")[0] == queue[0].id:
+                                if i.split(".")[0]==queue[0].id:
                                     ext = i.split(".")[1]
-
-                    await ctx.send(f"{queue[0].title} playing now.")
+                        
+                    await ctx.send(f"{queue[0].title} playing now.") 
                     self.log("Downloaded song.")
                     voice.play(discord.FFmpegPCMAudio(f"{self.QPATH}\\{queue[0].id}.{ext}"),
-                               after=lambda e: check_queue())
+                            after=lambda e: check_queue())
                     self.time = 0
                     if (self.clock.current_loop == 0):
                         self.clock.start()
                     await self.jbe_update(queue[0])
-
+                    await self.jbq_update(queue[0])
                     if (self.jbl_update.current_loop == 0):
                         self.jbl_update.start()
-
                     self.log(f"{queue[0].title} is playing.")
                     voice.source = discord.PCMVolumeTransformer(voice.source)
                 except Exception as e:
                     self.log(e)
                     self.log(f"{queue[0].title} cannot be played.")
-                    await ctx.send(f"{queue[0].title} cannot be played.")
+                    await ctx.send(f"{queue[0].title} cannot be played.") 
 
                     self.queue.remove(queue[0])
-                    queue.pop(0)
+                    try:
+                        self.queue_ct.remove(queue[0])
+                    except:
+                        pass
+                    queue.pop(0)    
                 else:
-
+                    
                     flag = False
-
+                
             else:
-                await ctx.send(">>> All songs played. No more songs to play.")
+                await ctx.send(">>> All songs played. No more songs to play.") 
                 self.log("Ending the queue")
                 self.clock.cancel()
                 self.jbl_update.cancel()
-                await self.juke_box_embed_msg.edit(embed=self.juke_box_embed)
-                await self.juke_box_queue.edit(content="__QUEUE__")
-                await self.juke_box_loading.edit(content=f"00:00/00:00 - {':black_large_square:'*10}")
+                await self.juke_box_embed_msg.edit(embed= self.juke_box_embed)
+                await self.juke_box_queue.edit(content= "__QUEUE__")
+                await self.juke_box_loading.edit(content = f"00:00/00:00 - {':black_large_square:'*10}")
                 break
 
     # ? DOWNLOADER
@@ -626,6 +632,13 @@ class Music(commands.Cog):
 
             self.queue += [f"--{vid.title}--"]
             self.full_queue += [f"--{vid.title}--"]
+            
+    @commands.command(name="playlist")
+    async def play_playlist(self, ctx, *, query):
+        vid = YoutubeVideo.from_query(query=query)[0]     
+        play_command = self.client.get_command("play")
+        
+        await ctx.invoke(play_command, query=f"https://www.youtube.com/playlist?list={vid.id}")
 
     # ? SEARCH
 
@@ -1393,6 +1406,7 @@ class Music(commands.Cog):
         except:
             playlist_db[str(ctx.author.id)] = [
                 f"{ctx.author.name}'s Playlist", []]
+            
             await ctx.send("Your playlist has been created.")
             return
 
@@ -1407,6 +1421,7 @@ class Music(commands.Cog):
 
                 voice = get(self.client.voice_clients, guild=ctx.guild)
                 playlist = playlist_db[str(ctx.author.id)]
+                
                 for i in range(len(playlist[1])):
                     if len(playlist[1][i]) == 11:
                         playlist[1][i] = YoutubeVideo(playlist[1][i])
@@ -1416,9 +1431,11 @@ class Music(commands.Cog):
 
                 self.queue += [f"----{playlist[0]}----"]
                 self.full_queue += [f"----{playlist[0]}----"]
+                
                 for i in playlist[1]:
                     self.full_queue_ct += [i]
                     self.queue_ct += [i]
+                    
                     if isinstance(i, YoutubeVideo):
                         old_queue = [x for x in self.queue if type(x) != str]
                         self.queue += [i]
@@ -1428,21 +1445,23 @@ class Music(commands.Cog):
                             await self.player(ctx, voice)
                         else:
                             self.log("Song added to queue")
+                            
                     else:
-
                         self.queue += [f"--{i.title}--"]
                         self.full_queue += [f"--{i.title}--"]
+                        
                         for j in range(len(i.entries)):
-                            old_queue = [
-                                x for x in self.queue if type(x) != str]
-                            _vid = YoutubeVideo(
-                                i.entries[j][0], i.entries[j][1])
+                            old_queue = [x for x in self.queue if type(x) != str]
+                            _vid = YoutubeVideo(i.entries[j][0], i.entries[j][1])
+                            
                             self.queue += [_vid]
                             self.full_queue += [_vid]
+                            
                             if len(old_queue) == 0:
                                 await self.player(ctx, voice)
                             else:
                                 self.log("Song added to queue")
+                                
                         self.queue += [f"--{i.title}--"]
                         self.full_queue += [f"--{i.title}--"]
 

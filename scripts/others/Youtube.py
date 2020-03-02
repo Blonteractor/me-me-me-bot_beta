@@ -25,6 +25,7 @@ class YoutubeVideo:
             self.get_duration()
         else:
             self._info["duration"] = duration
+            
     @classmethod
     def from_query(cls, query: str , amount:int = 1):
 
@@ -113,8 +114,10 @@ class YoutubeVideo:
         info["thumbnail"] = f"https://i.ytimg.com/vi/{info['id']}/0.jpg"
         info["uploader"] = wait.until(EC.presence_of_element_located(
                                 (By.CSS_SELECTOR,"div#upload-info ytd-channel-name yt-formatted-string"))).text
-        info["description"] = wait.until(EC.presence_of_element_located(
-                                (By.CSS_SELECTOR,"div#description yt-formatted-string"))).text + "..."
+        wait.until(EC.presence_of_element_located(
+                                (By.CSS_SELECTOR,"paper-button#more"))).click()
+        info["description"] =wait.until(EC.presence_of_element_located(
+                                (By.CSS_SELECTOR,"div#description"))).text
 
         
 
