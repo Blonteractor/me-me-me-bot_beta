@@ -63,6 +63,9 @@ class Music(commands.Cog):
     skip_song = False
     # time for auto disconnect
     time_for_disconnect = 300
+    
+    # str of loading emoji
+    loading_emoji = "<a:loading:683921845430648833>"
 
     # url of the image of thumbnail (vTube)
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
@@ -122,6 +125,9 @@ class Music(commands.Cog):
 
         if Queue_infile:
             shutil.rmtree(self.QPATH)
+            
+    def to_pages():
+        pass
 
     # * ERROR HANDLER
     @commands.Cog.listener()
@@ -197,53 +203,55 @@ class Music(commands.Cog):
             channel = discord.utils.get(guild.text_channels, name="juke-box")
 
             if not channel:
-                channel = await guild.create_text_channel("juke-box")
-                file = os.path.join(os.path.dirname(
-                    __file__), '../../../assets/icons/we_tube_logo.png')
-                file = os.path.abspath(file)
-                file = discord.File(file)
-
-                await channel.send(file=file)
-
-                reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
-                             "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
-
-                embed = discord.Embed(title="Not Playing Anything right now.",
-                                      color=discord.Colour.from_rgb(0, 255, 255))
-
-                embed.set_image(url=self.juke_box_url)
-                embed_msg = await channel.send(embed=embed)
-                embed_msg: discord.Message
-
-                self.juke_box_embed = embed
-                self.juke_box_embed_msg = embed_msg
-
-                def check(reaction: discord.Reaction, user):
-                    return reaction.message.id == embed_msg.id
-
-                async def reactions_add(message, reactions):
-                    for reaction in reactions:
-                        await message.add_reaction(reaction)
-
-                self.client.loop.create_task(
-                    reactions_add(embed_msg, reactions.keys()))
-
-                loading_bar = await channel.send(f"0:00/0:00 - {':black_large_square:'*10}")
-                loading_bar: discord.Message
-
-                self.juke_box_loading = loading_bar
-
-                queue_msg = await channel.send("__QUEUE LIST__")
-                queue_msg: discord.Message
-
-                self.juke_box_queue = queue_msg
-
-                self.juke_box_channel = channel
-
-                self.juke_box.cancel()
+                channel = await guild.create_text_channel("juke-box")  
 
             else:
-                await channel.delete()
+                async for msg in self.client.logs_from(channel):
+                    await client.delete_message(msg)
+                
+            file = os.path.join(os.path.dirname(
+                __file__), '../../../assets/icons/we_tube_logo.png')
+            file = os.path.abspath(file)
+            file = discord.File(file)
+
+            await channel.send(file=file)
+
+            reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
+                            "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
+
+            embed = discord.Embed(title="Not Playing Anything right now.",
+                                    color=discord.Colour.from_rgb(0, 255, 255))
+
+            embed.set_image(url=self.juke_box_url)
+            embed_msg = await channel.send(embed=embed)
+            embed_msg: discord.Message
+
+            self.juke_box_embed = embed
+            self.juke_box_embed_msg = embed_msg
+
+            def check(reaction: discord.Reaction, user):
+                return reaction.message.id == embed_msg.id
+
+            async def reactions_add(message, reactions):
+                for reaction in reactions:
+                    await message.add_reaction(reaction)
+
+            self.client.loop.create_task(
+                reactions_add(embed_msg, reactions.keys()))
+
+            loading_bar = await channel.send(f"0:00/0:00 - {':black_large_square:'*10}")
+            loading_bar: discord.Message
+
+            self.juke_box_loading = loading_bar
+
+            queue_msg = await channel.send("__QUEUE LIST__")
+            queue_msg: discord.Message
+
+            self.juke_box_queue = queue_msg
+
+            self.juke_box_channel = channel
+
+            self.juke_box.cancel()
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -470,10 +478,15 @@ class Music(commands.Cog):
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
+                
+        embed_msg: discord.Message = await ctx.send(content=f"Searching for `{query}` on YouTube....{self.loading_emoji}")
+        
         if isVideo:
             results = YoutubeVideo.from_query(query, 5)
         else:
             results = YoutubePlaylist.from_query(query, 5)
+            
+        print("ok")
         wait_time = 60
 
         reactions = {"1️⃣": 1, "2️⃣": 2, "3️⃣": 3, "4️⃣": 4, "5️⃣": 5}
@@ -491,8 +504,7 @@ class Music(commands.Cog):
             embed.add_field(name=f"*{index + 1}.*",
                             value=f"**{result.title}**", inline=False)
 
-        embed_msg = await ctx.send(embed=embed)
-        embed_msg: discord.Message
+        await embed_msg.edit(content="", embed=embed)
 
         def check(reaction: discord.Reaction, user):
             return user == ctx.author and reaction.message.id == embed_msg.id
@@ -581,6 +593,8 @@ class Music(commands.Cog):
                 return
         else:
             vid = YoutubeVideo.from_query(query=query)[0]
+            
+        vid: YoutubeVideo
 
         #! Queueing starts here
         voice = get(self.client.voice_clients, guild=ctx.guild)
@@ -597,7 +611,7 @@ class Music(commands.Cog):
 
         q_num = len(old_queue) + 1
         
-        message = await ctx.send("Downloading song.... <a:loading:683921845430648833>")
+        message = await ctx.send(f"Downloading song `{vid.title}`.... {self.loading_emoji}")
         message: discord.Message
 
         embed = discord.Embed(title="Song Added to Queue",  # TODO make a function
@@ -644,7 +658,7 @@ class Music(commands.Cog):
             self.queue += [f"--{vid.title}--"]
             self.full_queue += [f"--{vid.title}--"]
             
-        await message.edit("", embed=embed)
+        await message.edit(content="", embed=embed)
             
     @commands.command(name="playplaylist")
     async def play_playlist(self, ctx, *, query):
@@ -658,7 +672,7 @@ class Music(commands.Cog):
     @commands.command(name="search")
     async def search(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
-
+        
         result = await self.searching(ctx, query)
         if result:
             if not (await ctx.invoke(self.client.get_command("join"))):
@@ -721,9 +735,10 @@ class Music(commands.Cog):
         queue = [x for x in self.queue if type(x) != str]
         print(queue)
         vid = queue[0]
-        print(vid)
+        print(vid.title)
         song = genius.search_song(vid.title)
         print(song)
+        
         lyrics = song.lyrics
         l_list = lyrics.split("\n")
         ly_list = []
@@ -1022,19 +1037,24 @@ class Music(commands.Cog):
             else:
                 self.loop_song = True
                 await ctx.send(">>> **Looping current song now**")
+                
     # ? RESTART
 
     @commands.command(name="restart")
     @vc_check()
     async def restart(self, ctx):
         '''Restarts the current song.'''
-
-        temp = self.loop_song
-        self.loop_song = True
         voice = get(self.client.voice_clients, guild=ctx.guild)
-        voice.stop()
-        await asyncio.sleep(0.1)
-        self.loop_song = temp
+        if voice and voice.is_playing():
+            temp = self.loop_song
+            self.loop_song = True
+            
+            voice.stop()
+            await asyncio.sleep(0.1)
+            self.loop_song = temp
+        else:
+            self.log("Restart failed")
+            await ctx.send(">>> Ya know to restart stuff, stuff also needs to be playing first.")
 
    # ? PAUSE
 
@@ -1236,6 +1256,28 @@ class Music(commands.Cog):
             time = int(time)
 
         return time
+    
+     # ? BACK
+    @commands.command()
+    @vc_check()
+    async def back(self,ctx):
+        '''Plays previous song.'''
+        voice = get(self.client.voice_clients, guild=ctx.guild)
+
+        if voice:
+            fq = [x for x in self.full_queue if not isinstance(x,str)]
+            q = [x for x in self.queue if not isinstance(x,str)]
+            self.queue +=  [fq[-(len(q)+1)]]
+            if not voice.is_playing():
+                
+                if len(self.queue) == 1:    
+                    await self.player(ctx,voice)
+                elif voice.is_paused():
+                    voice.resume()
+                    await ctx.invoke(self.client.get_command("restart"))
+                    
+            else:
+                await ctx.invoke(self.client.get_command("restart"))
     
     # ?SEEK
     @commands.command()
