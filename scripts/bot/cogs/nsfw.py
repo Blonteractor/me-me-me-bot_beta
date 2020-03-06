@@ -18,9 +18,6 @@ imp.load_source("nhenpy", os.path.join(
 
 import nhenpy
 
-
-
-
 #* DECORATOR FOR CHECKING IF COMMAND IS BEING RUN IN A NSFW CHANNEL
 def nsfw_command():
     async def predicate(ctx):
@@ -66,6 +63,48 @@ class nsfw(commands.Cog):
             return embed
 
         return update_page
+    
+    async def doujin_react(self, doujin, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):  
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+                
+        def default_check(reaction: discord.Reaction, user):
+            return user == ctx.author and reaction.message.id == embed_msg.id
+                
+        if check is None:
+            check = default_check 
+            
+        doujin_id = str(doujin).split("]")[0][2:]   
+                
+        reactions = {"read": "📖","delete": "❌", "save": "💾"}
+        
+        self.client.loop.create_task(reactions_add(reactions=reactions.values(), message=embed_msg))
+        
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+            except TimeoutError:
+                await embed_msg.clear_reactions()
+                
+                return
+
+            else:
+                response = str(reaction.emoji)
+                
+                await embed_msg.remove_reaction(response, ctx.author)
+
+                if response in reactions.values():
+                    if response == reactions["read"]:
+                        await ctx.invoke(self.client.get_command("watch"), doujin_id=doujin_id)
+
+                    elif response == reactions["save"]:
+                        print("Save was pressed")
+                        
+                    elif response == reactions["delete"]:
+                        await embed_msg.delete(delay=3)
+                        
+                        return
 
     def doujin_embed(self, doujin, author, doujin_id=0): #! creaters an embed of a doujin
         url = f"https://nhentai.net/g/{doujin_id}/"
@@ -215,6 +254,7 @@ class nsfw(commands.Cog):
 
         reactions = {"long_back": "⏪", "back": "⬅", "forward": "➡",
                      "long_forward": "⏩", "info": "ℹ", "delete": "❌"}
+        
         page = page_number
         wait_time = 180
 
@@ -237,8 +277,7 @@ class nsfw(commands.Cog):
         def check(reaction: discord.Reaction, user):
             return user == ctx.author and reaction.message.id == embed_msg.id
 
-        self.client.loop.create_task(
-            reactions_add(embed_msg, reactions.values()))
+        self.client.loop.create_task(reactions_add(embed_msg, reactions.values()))
 
         while True:
 
@@ -305,7 +344,7 @@ class nsfw(commands.Cog):
 
     @commands.group(aliases=["doujin", "doujinshi"])
     @nsfw_command()
-    async def nhentai(self, ctx, doujin_id: str): #! veiw information about the doujin, nama, artist, etc. 
+    async def nhentai(self, ctx, doujin_id: str,*, query): #! veiw information about the doujin, nama, artist, etc. 
         '''View the doujin, tags, artist and stuff.'''
 
         if doujin_id.isnumeric():
@@ -315,10 +354,20 @@ class nsfw(commands.Cog):
             if not await self.doujin_found(doujin, ctx.message.channel):
                 return
 
-            await ctx.send(embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+            embed_msg = await ctx.send(embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+            await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
 
         elif doujin_id.lower() == "random":
             await ctx.invoke(self.client.get_command("random"))
+            
+        elif doujin_id.lower() == "parody":
+            await ctx.invoke(self.client.get_command("parody"), query=query)
+            
+        elif doujin_id.lower() == "artist":
+            await ctx.invoke(self.client.get_command("artist"), query=query)
+            
+        elif doujin_id.lower() == "character":
+            await ctx.invoke(self.client.get_command("character"), query=query)
 
         else:
             await ctx.send(">>> Enter the `ID` of the doujin you wanna look up.")
@@ -327,14 +376,75 @@ class nsfw(commands.Cog):
     @nsfw_command()
     async def random(self, ctx): #! gives info about a random doujin, selected from specific tags
         '''Gives you a random doujin to enjoy yourself to'''
+
+        self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
+        embed_msg = await ctx.send(f"Searching for doujins on nhentai.......{self.loading_emoji}")
+
         search_tag = str(choice(self.tags))
-        search = self.nh.search(f"tag:{search_tag}", 1)
+        search = self.nh.search(f"tag:{search_tag}", randint(1, 5))
 
         doujin = choice(search)
         doujin_id = str(doujin).split("]")[0][2:]
 
-        await ctx.send(embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+        await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+        await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
+        
+    @commands.command()
+    @nsfw_command()
+    async def parody(self, ctx,*, query): #! gives info about a random doujin, selected from specific tags
+        '''Gives you a doujin on the parody you specified'''
 
+        self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
+        embed_msg = await ctx.send(f"Searching for doujins on nhentai, parody of `{query}`.......{self.loading_emoji}")
+
+        search = self.nh.search(f"parody:{query}", randint(1, 3))
+
+        if len(search) > 0:
+            doujin = choice(search)
+            doujin_id = str(doujin).split("]")[0][2:]
+
+            await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+            await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
+        else:
+            await ctx.send(">>> No doujin found")
+            
+    @commands.command()
+    @nsfw_command()
+    async def artist(self, ctx,*, query): #! gives info about a random doujin, selected from specific tags
+        '''Gives you a doujin of the artist you specified'''
+
+        self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
+        embed_msg = await ctx.send(f"Searching for doujins on nhentai by `{query}`.......{self.loading_emoji}")
+
+        search = self.nh.search(f"artist:{query}", randint(1, 3))
+
+        if len(search) > 0:
+            doujin = choice(search)
+            doujin_id = str(doujin).split("]")[0][2:]
+
+            await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+            await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
+        else:
+            await ctx.send(">>> No doujin found")
+            
+    @commands.command()
+    @nsfw_command()
+    async def character(self, ctx,*, query): #! gives info about a random doujin, selected from specific tags
+        '''Gives you a doujin featuring the character you specified'''
+        
+        self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
+        embed_msg = await ctx.send(f"Searching for doujins on nhentai with character `{query}`` .......{self.loading_emoji}")
+
+        search = self.nh.search(f"character:{query}", randint(1, 3))
+
+        if len(search) > 0:
+            doujin = choice(search)
+            doujin_id = str(doujin).split("]")[0][2:]
+
+            await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
+            await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
+        else:
+            await ctx.send(">>> No doujin found")
 
 def setup(client):
     client.add_cog(nsfw(client))
