@@ -65,7 +65,7 @@ class Music(commands.Cog):
     time_for_disconnect = 300
     
     # str of loading emoji
-    loading_emoji = "<a:loading:683921845430648833>"
+    loading_emoji = ""
 
     # url of the image of thumbnail (vTube)
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
@@ -92,6 +92,8 @@ class Music(commands.Cog):
         self.auto_disconnector.start()
         self.juke_box.start()
         
+        self.client: discord.Client
+        
     def cog_unload(self):
         driver.quit()
 
@@ -104,7 +106,11 @@ class Music(commands.Cog):
             debug_info[cog_name] = 0
         if debug_info[cog_name] == 1:
             return gen.error_message(msg, gen.cog_colours[cog_name])
-
+        
+    def chunks(self, lst, n):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
+        
     # check if there is no one listening to the bot
     def disconnect_check(self, voice) -> bool:
         flag = False
@@ -125,9 +131,6 @@ class Music(commands.Cog):
 
         if Queue_infile:
             shutil.rmtree(self.QPATH)
-            
-    def to_pages():
-        pass
 
     # * ERROR HANDLER
     @commands.Cog.listener()
@@ -471,13 +474,92 @@ class Music(commands.Cog):
                 await asyncio.sleep(5)
         except Exception as e:
             self.log(e)
-
-    # ? SEARCHING
-
-    async def searching(self, ctx, query, isVideo: bool = True):
+            
+    async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
+        
+        if type(_content) == str:
+            if len(_content) < 2048:
+                return
+        
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
+                
+        def default_check(reaction: discord.Reaction, user):
+            return user == ctx.author and reaction.message.id == embed_msg.id
+                
+        if check is None:
+            check = default_check    
+            
+            
+        if type(_content) == str:
+            content_list = _content.split("\n")
+            content = []
+            l = ""
+            for i in content_list:
+                if len(l+i) > 2048:
+                    content += [l]
+                    l = ""
+                l += i
+                l += "\n"
+            else:
+                content += [l]
+                
+        elif type(_content) == list:
+            content = _content
+            
+        pages = len(content)
+        page = 1
+        
+        embed: discord.Embed = embed_msg.embeds[0] 
+        
+        def embed_update(page):
+            embed.description = content[page - 1]
+            return embed
+        
+        await embed_msg.edit(embed=embed_update(page=page))
+                
+        reactions = {"back": "⬅","delete": "❌", "forward": "➡"}
+        
+        self.client.loop.create_task(reactions_add(reactions=reactions.values(), message=embed_msg))
+        
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+            except TimeoutError:
+                await embed_msg.clear_reactions()
+                
+                return
+
+            else:
+                response = str(reaction.emoji)
+                
+                await embed_msg.remove_reaction(response, ctx.author)
+
+                if response in reactions.keys():
+                    if response == reactions["forward"]:
+                        page += 1
+                        if page > pages:
+                            page = pages
+                    elif response == reactions["back"]:
+                        page -= 1
+                        if page < 1:
+                            page = 1
+                    elif response == reactions["delete"]:
+                        embed_msg.delete(delay=3)
+                        
+                        return
+                        
+                    await embed_msg.edit(embed=embed_update(page=page))
+
+    # ? SEARCHING
+
+    async def searching(self, ctx: commands.Context, query, isVideo: bool = True):
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+
+        self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
                 
         embed_msg: discord.Message = await ctx.send(content=f"Searching for `{query}` on YouTube....{self.loading_emoji}")
         
@@ -611,6 +693,8 @@ class Music(commands.Cog):
 
         q_num = len(old_queue) + 1
         
+        self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
+        
         message = await ctx.send(f"Downloading song `{vid.title}`.... {self.loading_emoji}")
         message: discord.Message
 
@@ -733,30 +817,14 @@ class Music(commands.Cog):
                 await message.add_reaction(reaction)
                 
         queue = [x for x in self.queue if type(x) != str]
-        print(queue)
         vid = queue[0]
-        print(vid.title)
         song = genius.search_song(vid.title)
-        print(song)
         
         lyrics = song.lyrics
-        l_list = lyrics.split("\n")
-        ly_list = []
-        l = ""
-        for i in l_list:
-            if len(l+i) > 2048:
-                ly_list += [l]
-                l = ""
-            l += i
-            l += "\n"
-        else:
-            ly_list += [l]
-            
-        reactions = {"back": "⬅", "delete": "❌", "forward": "➡"}
-            
+        
         embed = discord.Embed(title=f"LYRICS - {song.title}",  # TODO make a function
                                   url=song.url,
-                                  description=ly_list[0],
+                                  description="",
                                   color=discord.Colour.blurple())
         embed.set_author(name="Me!Me!Me!",
                             icon_url=self.client.user.avatar_url)
@@ -764,52 +832,8 @@ class Music(commands.Cog):
                             icon_url=ctx.message.author.avatar_url)
         
         embed_msg = await ctx.send(embed=embed)
-        embed_msg: discord.Message
-            
-        pages = len(ly_list)
-        wait_time = 120
-        page = 1
         
-        self.client.loop.create_task(reactions_add(embed_msg, reactions.values()))
-        
-        def check(reaction: discord.Reaction, user):
-            return user == ctx.author and reaction.message.id == embed_msg.id
-        
-        def update_page(page):
-            embed.description = ly_list[page-1]
-            return embed
-        
-        while True:
-
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
-            except TimeoutError:
-                await embed_msg.clear_reactions()
-
-                return
-
-            else:
-                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
-
-                if str(reaction.emoji) in reactions.values():
-                    if str(reaction.emoji) == reactions["forward"]:
-                        page += 1
-                        if page > pages:
-                            page = pages
-                            
-                        embed = update_page(page)
-                        await embed_msg.edit(embed=embed)
-                        
-                    if str(reaction.emoji) == reactions["back"]:
-                        page -= 1
-                        if page > 1:
-                            page = 1
-                            
-                        embed = update_page(page)
-                        await embed_msg.edit(embed=embed)
-                        
-                    if str(reaction.emoji) == reaction["delete"]:
-                        embed_msg.delete(delay=2)
+        await self.embed_pages(ctx=ctx, content_str=lyrics, embed_msg=embed_msg, wait_time=120)
                         
 
     # ? SONG_INFO
@@ -857,6 +881,10 @@ class Music(commands.Cog):
                 else:
                     desc += f"***{self.queue[i]}*** \n"
                     i += 1
+                    
+            desc_l = []
+            for chunk in list(self.chunks(desc.split("\n"), n=5)):
+                desc_l.append("\n".join(chunk))
 
             embed = discord.Embed(title="QUEUE",
                                   description=desc,
@@ -867,7 +895,9 @@ class Music(commands.Cog):
             embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
                              icon_url=ctx.message.author.avatar_url)
 
-            await ctx.send(embed=embed)
+            embed_msg = await ctx.send(embed=embed)
+            
+            await self.embed_pages(_content=desc_l, ctx=ctx, embed_msg=embed_msg, wait_time=120)
 
     # ? QUEUE REPLACE
     @Queue.command(name="replace", aliases=['move'])
