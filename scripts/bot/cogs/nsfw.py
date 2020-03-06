@@ -96,7 +96,7 @@ class nsfw(commands.Cog):
 
                 if response in reactions.values():
                     if response == reactions["read"]:
-                        await ctx.invoke(self.client.get_command("watch"), doujin_id=doujin_id)
+                        await self.watch(ctx, doujin_id=doujin_id)
 
                     elif response == reactions["save"]:
                         print("Save was pressed")
@@ -197,6 +197,7 @@ class nsfw(commands.Cog):
             return
 
     @commands.command()
+    @nsfw_command()
     async def read(self, ctx, doujin_id): #! makes a different channel in the doujins categoryand posts all doujin images there
         '''Read the doujin, will create a seperate channel and post all images there. Recomend muting the doujin category.'''
 
@@ -297,8 +298,7 @@ class nsfw(commands.Cog):
                     if str(reaction.emoji) == reactions["forward"]:
                         page += 1
 
-                        if page >= len(doujin_pages):
-                            # ? equal pe equal kyu bhai
+                        if page > len(doujin_pages):
                             page = len(doujin_pages)
 
                         embed = update_page(page)
@@ -307,8 +307,8 @@ class nsfw(commands.Cog):
                     elif str(reaction.emoji) == reactions["back"]:
                         page -= 1
 
-                        if page <= 0:
-                            page = 1  # ? equal pe equal kyu bhai
+                        if page < 0:
+                            page = 1  
 
                         embed = update_page(page)
                         await embed_msg.edit(embed=embed)
@@ -358,23 +358,23 @@ class nsfw(commands.Cog):
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
 
         elif doujin_id.lower() == "random":
-            await ctx.invoke(self.client.get_command("random"))
+            await self.random(ctx)
             
         elif doujin_id.lower() == "parody":
-            await ctx.invoke(self.client.get_command("parody"), query=query)
+            await self.parody(ctx, query=query)
             
         elif doujin_id.lower() == "artist":
-            await ctx.invoke(self.client.get_command("artist"), query=query)
+            await self.artist(ctx, query=query)
             
         elif doujin_id.lower() == "character":
-            await ctx.invoke(self.client.get_command("character"), query=query)
+            await self.character(ctx, query=query)
 
         else:
             await ctx.send(">>> Enter the `ID` of the doujin you wanna look up.")
 
-    @commands.command()
+    @nhentai.command()
     @nsfw_command()
-    async def random(self, ctx): #! gives info about a random doujin, selected from specific tags
+    async def random(self, ctx): 
         '''Gives you a random doujin to enjoy yourself to'''
 
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
@@ -389,9 +389,9 @@ class nsfw(commands.Cog):
         await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
         await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         
-    @commands.command()
+    @nhentai.command()
     @nsfw_command()
-    async def parody(self, ctx,*, query): #! gives info about a random doujin, selected from specific tags
+    async def parody(self, ctx,*, query): 
         '''Gives you a doujin on the parody you specified'''
 
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
@@ -408,9 +408,9 @@ class nsfw(commands.Cog):
         else:
             await ctx.send(">>> No doujin found")
             
-    @commands.command()
+    @nhentai.command()
     @nsfw_command()
-    async def artist(self, ctx,*, query): #! gives info about a random doujin, selected from specific tags
+    async def artist(self, ctx,*, query): 
         '''Gives you a doujin of the artist you specified'''
 
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
@@ -427,9 +427,9 @@ class nsfw(commands.Cog):
         else:
             await ctx.send(">>> No doujin found")
             
-    @commands.command()
+    @nhentai.command()
     @nsfw_command()
-    async def character(self, ctx,*, query): #! gives info about a random doujin, selected from specific tags
+    async def character(self, ctx,*, query): 
         '''Gives you a doujin featuring the character you specified'''
         
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
