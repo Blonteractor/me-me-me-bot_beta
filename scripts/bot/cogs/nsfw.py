@@ -99,7 +99,7 @@ class nsfw(commands.Cog):
                         await self.watch(ctx, doujin_id=doujin_id)
 
                     elif response == reactions["save"]:
-                        print("Save was pressed")
+                        pass
                         
                     elif response == reactions["delete"]:
                         await embed_msg.delete(delay=3)
@@ -184,17 +184,18 @@ class nsfw(commands.Cog):
             response = requests.get(hacc)
             image_found = response.ok
 
-            embed = discord.Embed(
-                title="Here, satisfied yet?", color=discord.Colour.dark_magenta())
-            embed.set_author(name="Me!Me!Me!",
-                             icon_url=self.client.user.avatar_url)
-            embed.set_footer(
-                text=f"Requested By: {ctx.message.author.display_name}", icon_url=ctx.message.author.avatar_url)
-            embed.set_image(url=hacc)
-
-            await ctx.send(embed=embed)
         else:
+            embed = discord.Embed(title="Here, satisfied yet?",
+                                  color=discord.Colour.dark_magenta())
+            embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+            embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                            icon_url=ctx.message.author.avatar_url)
+            embed.set_image(url=hacc)
+            
+            await ctx.send(embed=embed)
             return
+        
 
     @commands.command()
     @nsfw_command()
@@ -345,7 +346,7 @@ class nsfw(commands.Cog):
     @commands.group(aliases=["doujin", "doujinshi"])
     @nsfw_command()
     async def nhentai(self, ctx, doujin_id: str,*, query): #! veiw information about the doujin, nama, artist, etc. 
-        '''View the doujin, tags, artist and stuff.'''
+        '''View the doujin, tags, artist and stuff, powered by nhentai.net'''
 
         if doujin_id.isnumeric():
             doujin = nhenpy.NHentaiDoujin(f"/g/{doujin_id}")
@@ -406,7 +407,7 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
-            await ctx.send(">>> No doujin found")
+            await ctx.send(f">>> No doujin found parodying `{query}`", delete_after=5)
             
     @nhentai.command()
     @nsfw_command()
@@ -425,7 +426,7 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
-            await ctx.send(">>> No doujin found")
+            await ctx.send(f">>> No doujin found of {query}", delete_after=5)
             
     @nhentai.command()
     @nsfw_command()
@@ -444,7 +445,7 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
-            await ctx.send(">>> No doujin found")
+            await ctx.send(f">>> No doujin found featuring {query}", delete_after=5)
 
 def setup(client):
     client.add_cog(nsfw(client))
