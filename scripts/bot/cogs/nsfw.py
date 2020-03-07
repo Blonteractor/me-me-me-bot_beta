@@ -50,7 +50,30 @@ class nsfw(commands.Cog):
             debug_info[cog_name] = 0
         if debug_info[cog_name] == 1:
             return gen.error_message(msg, gen.cog_colours[cog_name])
-
+        
+    def vault_add(self, user: discord.User, item):
+        vault = gen.db_receive("vault")
+        user_id = str(user.id)
+        
+        if user_id not in vault.keys():
+            vault[user_id] = {}
+            
+        vault[user_id][len(vault[user_id]) + 1] = item
+        
+        gen.db_update("vault", vault)
+    
+    def vault_remove(self, user, index):
+        vault = gen.db_receive("vault")
+        user_id = str(user.id)
+        
+        if len(vault[user.id].keys()) < index:
+            return None
+        
+        removed = vault[user.id].pop(int(index))
+        
+        gen.db_update("vault", vault)
+        
+        return removed
 
     def update_doujin_page_creater(self, embed: discord.Embed, doujin): #! function which creates a function to update page of embed
         def update_page(page):
@@ -99,7 +122,7 @@ class nsfw(commands.Cog):
                         await self.watch(ctx, doujin_id=doujin_id)
 
                     elif response == reactions["save"]:
-                        pass
+                        self.vault_add(user=ctx.author, item=doujin_id)
                         
                     elif response == reactions["delete"]:
                         await embed_msg.delete(delay=3)
@@ -350,7 +373,6 @@ class nsfw(commands.Cog):
 
         if doujin_id.isnumeric():
             doujin = nhenpy.NHentaiDoujin(f"/g/{doujin_id}")
-            doujin_info = doujin.labels
 
             if not await self.doujin_found(doujin, ctx.message.channel):
                 return
@@ -446,6 +468,55 @@ class nsfw(commands.Cog):
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
             await ctx.send(f">>> No doujin found featuring {query}", delete_after=5)
+            
+    @commands.group()
+    @nsfw_command()
+    async def vault(self, ctx: commands.Context):
+        if ctx.invoked_subcommand is None:
+            user_vault = list(gen.db_receive("vault")[ctx.author.id].values())
+            content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
+            
+        embed: discord.Embed = discord.Embed(title=f"{ctx.author.name}'s vault'")
+        embed.set_thumbnail(url=self.nhentai_logo) 
+        embed.set_author(name="Me!Me!Me!",
+                         icon_url=self.client.user.avatar_url)
+        
+        for index, item in enumerate(content):
+            item_id = str(item).split("]")[0][2:]
+            embed.add_field(name=f"{index + 1}.", valur=f"{item.title} --> ***{item_id}***")
+            
+        await ctx.send(embed=embed)
+        
+    @vault.command()
+    async def release(self, ctx: commands.Context):
+        user_vault = list(gen.db_receive("vault")[ctx.author.id].values())      
+        content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
+        
+        await ctx.send(">>> Your whole vault is being sent to your DM.")
+        await ctx.author.send(">>> Here's your vault, enjoy!")
+        
+        for item in content:
+            await ctx.author.send(embed=self.doujin_embed(doujin=item, author=ctx.author, doujin_id=str(item).split("]")[0][2:]))
+            
+        await ctx.author.send("That's all folks.")
+    
+    @vault.command()
+    @nsfw_command()
+    async def pop(self, ctx: commands.Context, index):
+        try:
+            i = int(index)
+        except:
+            await ctx.send(">>> Indexes are supposed to be numbers.")
+            return
+        
+        removed = self.vault_remove(ctx.author, index=index)
+        
+        if removed is None:
+            await ctx.send(">>> The index you entered is bigger than the size of your vault.")
+            return
+        
+        await ctx.send(f">>> Removed {removed} from your vault")
+    
 
 def setup(client):
     client.add_cog(nsfw(client))
