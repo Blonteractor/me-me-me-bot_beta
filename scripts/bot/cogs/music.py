@@ -43,6 +43,54 @@ def vc_check():
             return False
     return commands.check(predicate)
 
+def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_duration=20):
+    async def predicate(ctx: commands.Context):   
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+ 
+        members = ctx.guild.voice_client.channel.members
+        
+        already_voted: List[int] = []
+        reactions = {"yes": "✔", "no": "❌"}
+        
+        def check(reaction: discord.Reaction, user):
+            return user in members and reaction.message.id == msg.id and str(reaction) in reactions.values()
+        
+        msg = await ctx.send(content=f">>> {vote_msg}")
+        msg: discord.Message
+        
+        ctx.bot.loop.create_task(reactions_add(msg, reactions.values()))
+        
+        while True:
+            try:
+                reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration, check=check)
+                response = str(reaction)
+            except TimeoutError:
+                for reaction in msg.reactions:
+                    if response == reactions["yes"]:
+                        yes = reaction.count
+                    elif response == reactions["no"]:
+                        no = reaction.count
+                
+                total = yes + no
+                result = (yes / total) >= votes_required
+                
+                if result:
+                    await msg.edit(content=yes_msg)
+                if not result:
+                    await msg.edit(content=no_msg)
+                    
+                return result
+
+            else:
+                if user.id not in already_voted:
+                    already_voted.append(user.id)
+                else:
+                    await msg.remove_reaction(response, user)
+        
+    return commands.check(predicate=predicate)
+
 
 genius = lyricsgenius.Genius(
     "pGaaH8g-CxAeF1qaQ2DeVmLnmp84mIciWU8sbGoVKQO_MTlHQW4ZoxYeP8db1kDO")
@@ -91,6 +139,7 @@ class Music(commands.Cog):
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
         self.juke_box.start()
+        self.dj_role = "DJ"
         
         self.client: discord.Client
         
@@ -536,7 +585,7 @@ class Music(commands.Cog):
                 
                 await embed_msg.remove_reaction(response, ctx.author)
 
-                if response in reactions.keys():
+                if response in reactions.values():
                     if response == reactions["forward"]:
                         page += 1
                         if page > pages:
@@ -1177,6 +1226,11 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['n', 'sk', 'skip'])
     @vc_check()
+    @vote(votes_required=0.5,
+           vote_duration=20,
+           vote_msg="Looks like somone wants to skip the current song",
+            no_msg="Vote failed! Not skipping the current song.",
+            yes_msg="Vote passed! Skipping the current song now...")
     async def next(self, ctx):
         '''Skips the current song and plays the next song in the queue.'''
 
