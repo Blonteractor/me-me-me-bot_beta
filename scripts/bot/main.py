@@ -22,6 +22,8 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
+COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
+
 
 # * CLIENT SETUP
 prefix = gen.permu("me! ") + gen.permu("epic ")
@@ -52,7 +54,7 @@ async def unload(ctx, extension):
 #@commands.has_role(gen.admin_role_id)
 async def unload_all(ctx):
     
-    for filename in os.listdir("./cogs"):
+    for filename in os.listdir(COGS_PATH):
         if filename.endswith(".py"):        
             client.unload_extension(f"cogs.{filename[:-3]}")
 
@@ -69,7 +71,7 @@ async def reload(ctx, extension):
 #@commands.has_role(gen.admin_role_id)
 async def reload_all(ctx):
     
-    for filename in os.listdir("./cogs"):
+    for filename in os.listdir(COGS_PATH):
         if filename.endswith(".py"):        
             client.unload_extension(f"cogs.{filename[:-3]}")
             client.load_extension(f"cogs.{filename[:-3]}")
@@ -77,7 +79,7 @@ async def reload_all(ctx):
 
 def cog_load_startup():
     
-    for filename in os.listdir("./cogs"):
+    for filename in os.listdir(COGS_PATH):
         if filename.endswith(".py"):
             client.load_extension(f"cogs.{filename[:-3]}")
 
@@ -182,7 +184,7 @@ async def on_command_error(ctx, error):
         except:
             pass
     if not isinstance(error,commands.MissingRequiredArgument):
-        gen.error_message(error)
+        gen.error_message(error)    
 
 
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")
