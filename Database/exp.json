@@ -5,11 +5,17 @@
         "discrim": "5566",
         "role": "Player",
         "level": 37,
+<<<<<<< HEAD
         "xp": 122391,
         "messages": 9352,
         "rel_xp": 4361,
+=======
+        "xp": 126659,
+        "messages": 9869,
+        "rel_xp": 8629,
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
         "rel_bar": 8795,
-        "active": false,
+        "active": true,
         "rank": 1
     },
     "580282285002194966": {
@@ -17,12 +23,21 @@
         "id": "580282285002194966",
         "discrim": "8590",
         "role": "Player",
+<<<<<<< HEAD
         "level": 26,
         "xp": 46601,
         "messages": 3051,
         "rel_xp": 126,
         "rel_bar": 4780,
         "active": true,
+=======
+        "level": 25,
+        "xp": 45368,
+        "messages": 2916,
+        "rel_xp": 3368,
+        "rel_bar": 4475,
+        "active": false,
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
         "rank": 5
     },
     "497450643007602688": {
@@ -70,9 +85,9 @@
         "discrim": "8393",
         "role": "Player",
         "level": 31,
-        "xp": 76950,
-        "messages": 5942,
-        "rel_xp": 3325,
+        "xp": 77060,
+        "messages": 5947,
+        "rel_xp": 3435,
         "rel_bar": 6455,
         "active": false,
         "rank": 3

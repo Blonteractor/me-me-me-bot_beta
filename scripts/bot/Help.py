@@ -15,12 +15,17 @@ class MyHelpCommand(commands.HelpCommand):
     def get_command_signature(self, command):
         """Method to return a commands name and signature"""
 
-        if not command.signature and isinstance(command,commands.Group):
+        if not command.signature and isinstance(command,commands.Group) and not command.parent:
             return f'`ME!` `{command.name}` `[subcommands]`'
 
-        elif command.signature and isinstance(command,commands.Group):
+        elif command.signature and isinstance(command,commands.Group) and not command.parent:
             return f'`ME!` `{command.name}` `{command.signature}` `[subcommands]`'
 
+        elif not command.signature and command.parent and isinstance(command,commands.Group):
+            return f' {self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}` `[subcommands]`'
+
+        elif command.signature and command.parent and isinstance(command,commands.Group):
+            return f' {self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}` `{command.signature}` `[subcommands]`'
 
         elif not command.signature and not command.parent:  # checking if it has no args and isn't a subcommand
             return f'`ME!` `{command.name}`'
@@ -29,11 +34,11 @@ class MyHelpCommand(commands.HelpCommand):
             return f'`ME!` `{command.name}` `{command.signature}`'
 
         elif not command.signature and command.parent:  # checking if it has no args and is a subcommand
-            return f'`ME!` `{command.parent.name}` `{command.name}`'
+            return f' {self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}`'
         
         
         else:  # else assume it has args a signature and is a subcommand
-            return f'`ME!` `{command.parent.name}` `{command.name}` `{command.signature}`'
+            return f'{self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}` `{command.signature}`'
 
     def get_command_aliases(self, command):  # this is a custom written method along with all the others below this
         """Method to return a commands aliases"""

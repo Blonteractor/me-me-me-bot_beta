@@ -13,6 +13,7 @@ from discord.ext import commands, tasks
 #? ALL OTHERS
 from itertools import cycle
 import asyncio
+from selenium.webdriver import Chrome as webdriver
 
 #? FILES
 import Help
@@ -22,7 +23,10 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
+<<<<<<< HEAD
 COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
+=======
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 
 
 # * CLIENT SETUP
@@ -54,7 +58,11 @@ async def unload(ctx, extension):
 #@commands.has_role(gen.admin_role_id)
 async def unload_all(ctx):
     
+<<<<<<< HEAD
     for filename in os.listdir(COGS_PATH):
+=======
+    for filename in os.listdir("./cogs"):
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
         if filename.endswith(".py"):        
             client.unload_extension(f"cogs.{filename[:-3]}")
 
@@ -71,7 +79,11 @@ async def reload(ctx, extension):
 #@commands.has_role(gen.admin_role_id)
 async def reload_all(ctx):
     
+<<<<<<< HEAD
     for filename in os.listdir(COGS_PATH):
+=======
+    for filename in os.listdir("./cogs"):
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
         if filename.endswith(".py"):        
             client.unload_extension(f"cogs.{filename[:-3]}")
             client.load_extension(f"cogs.{filename[:-3]}")
@@ -95,13 +107,24 @@ async def backup(ctx, *, msg=""):
     else:
         await ctx.send(">>> Couldn't Backup Since Commit upto the mark.")
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 @client.command(aliases = ["reboot"])
 #@commands.has_role(gen.admin_role_id)
 async def re_init(ctx):
     
     await ctx.invoke(client.get_command("unload_all"))
+<<<<<<< HEAD
     os.execv(sys.executable, ['python'] + sys.argv)
     await ctx.send("DONE")
+=======
+    await ctx.send("DONE")
+    os.execv(sys.executable, ['python'] + sys.argv)
+    
+  
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 
 @client.command(aliases=["Debug","Development"])
 #@commands.has_role(gen.admin_role_id)
@@ -165,10 +188,17 @@ async def on_ready():
     
     client.help_command = Help.MyHelpCommand()
     change_status.start()
+<<<<<<< HEAD
     # auto_backup.start() 
     cog_load_startup()
     
     # gen.reset()
+=======
+    #auto_backup.start() 
+    cog_load_startup()
+    
+    #gen.reset()
+>>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 
     print('Bot is ready as sef!')
 
