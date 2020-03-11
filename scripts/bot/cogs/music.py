@@ -523,45 +523,82 @@ class Music(commands.Cog):
                 await self.juke_box_loading.edit(content = f"00:00/00:00 - {':black_large_square:'*10}")
                 break
 
+        async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
         
-        def embed_update(page):
-            embed.description = content[page - 1]
-            return embed
-        
-        await embed_msg.edit(embed=embed_update(page=page))
+            if type(_content) == str:
+                if len(_content) < 2048:
+                    return
+            
+            async def reactions_add(message, reactions):
+                for reaction in reactions:
+                    await message.add_reaction(reaction)
+                    
+            def default_check(reaction: discord.Reaction, user):
+                return user == ctx.author and reaction.message.id == embed_msg.id
+                    
+            if check is None:
+                check = default_check    
                 
-        reactions = {"back": "⬅","delete": "❌", "forward": "➡"}
-        
-        self.client.loop.create_task(reactions_add(reactions=reactions.values(), message=embed_msg))
-        
-        while True:
-            try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
-            except TimeoutError:
-                await embed_msg.clear_reactions()
                 
-                return
+            if type(_content) == str:
+                content_list = _content.split("\n")
+                content = []
+                l = ""
+                for i in content_list:
+                    if len(l+i) > 2048:
+                        content += [l]
+                        l = ""
+                    l += i
+                    l += "\n"
+                else:
+                    content += [l]
+                    
+            elif type(_content) == list:
+                content = _content
+                
+            pages = len(content)
+            page = 1
+            
+            embed: discord.Embed = embed_msg.embeds[0] 
+            
+            def embed_update(page):
+                embed.description = content[page - 1]
+                return embed
+            
+            await embed_msg.edit(embed=embed_update(page=page))
+                    
+            reactions = {"back": "⬅","delete": "❌", "forward": "➡"}
+            
+            self.client.loop.create_task(reactions_add(reactions=reactions.values(), message=embed_msg))
+            
+            while True:
+                try:
+                    reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+                except TimeoutError:
+                    await embed_msg.clear_reactions()
+                    
+                    return
 
-            else:
-                response = str(reaction.emoji)
-                
-                await embed_msg.remove_reaction(response, ctx.author)
+                else:
+                    response = str(reaction.emoji)
+                    
+                    await embed_msg.remove_reaction(response, ctx.author)
 
-                if response in reactions.values():
-                    if response == reactions["forward"]:
-                        page += 1
-                        if page > pages:
-                            page = pages
-                    elif response == reactions["back"]:
-                        page -= 1
-                        if page < 1:
-                            page = 1
-                    elif response == reactions["delete"]:
-                        embed_msg.delete(delay=3)
-                        
-                        return
-                        
-                    await embed_msg.edit(embed=embed_update(page=page))
+                    if response in reactions.values():
+                        if response == reactions["forward"]:
+                            page += 1
+                            if page > pages:
+                                page = pages
+                        elif response == reactions["back"]:
+                            page -= 1
+                            if page < 1:
+                                page = 1
+                        elif response == reactions["delete"]:
+                            embed_msg.delete(delay=3)
+                            
+                            return
+                            
+                        await embed_msg.edit(embed=embed_update(page=page))
 
     # ? SEARCHING
     async def searching(self, ctx, query , isVideo:bool = True, VideoClass:bool = True):
@@ -1946,6 +1983,8 @@ class Music(commands.Cog):
                
                 self.queue += [f"----{pname}----"]
                 self.full_queue += [f"----{pname}----"]
+                
+                temp = []
                 for i in playlist:
                     self.full_queue_ct += [i]
                     self.queue_ct += [i]
@@ -1963,9 +2002,9 @@ class Music(commands.Cog):
                     else:
                         self.queue += [f"--{i.title}--"]
                         self.full_queue += [f"--{i.title}--"]
-                        for j in range(len(vid.entries)):
+                        for j in range(len(i.entries)):
                             
-                            _vid = YoutubeVideo(vid.entries[j][0])
+                            _vid = YoutubeVideo(i.entries[j][0])
                             
                             temp += [_vid]
 
@@ -1990,11 +2029,13 @@ class Music(commands.Cog):
     # ? PLAYLIST EXPAND
     @playlist.command()
     async def expandd(self,ctx,name):
+        playlist_db = gen.db_receive("playlist")
+        
         try:
             if name in playlist_db[str(ctx.author.id)]:
                 pname = name
             elif name.isnumeric():
-                if int(name)>0 and int(name)<= len(playlist_db[str(ctx.author.id)]):
+                if int(name)>0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
                     pname = list(playlist_db[str(ctx.author.id)].keys())[int(name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2057,7 +2098,7 @@ class Music(commands.Cog):
     # ? EXPORT
 
     @commands.command(aliases = ["ex"])
-    async def export(self,ctx,isFull = "queue"):
+    async def export(self,ctx, isFull = "queue"):
         if isFull.lower() != "full" or isFull.lower() != "queue" or isFull.lower() != "q" :  
             await ctx.send("only full or q or queue")
             return
@@ -2087,8 +2128,8 @@ class Music(commands.Cog):
         await ctx.send(f"here is your page Mister , {the_page}") 
 
     #? IMPORT
-    @commands.command(aliases = ["ex"])
-    async def export(self,ctx,url):
+    @commands.command(name="import", aliases = ["ex"])
+    async def _import(self,ctx,url):
         if not (await ctx.invoke(self.client.get_command("join"))):
                     return
 
@@ -2142,16 +2183,16 @@ class Music(commands.Cog):
                             self.queue.append(vid)
 
     @commands.command()
-    async def generic_play(self,ctx):
+    async def generic_play(self, ctx, url):
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
         ydl_opts = {
-            "quiet" = True
+            "quiet": True
             } 
         try:
-            info = youtube_dl.YoutubeDL(ydl_opts).extract_info(url,download = False)
+            info = youtube_dl.YoutubeDL(ydl_opts).extract_info(url, download = False)
         except:
             await ctx.send("cant play that")
             return
@@ -2179,7 +2220,8 @@ class Music(commands.Cog):
             else:
                 info2[i] = "** **"
 
-        vid = YoutubeVideo(info2["id"],info2,ctx.author)
+        result = YoutubeVideo(info2["id"], info2, ctx.author)
+        
         embed = discord.Embed(title=f"{result.title} ({result.duration}) - {result.uploader}", 
                                     url=result.url, 
                                     description = result.description,
@@ -2196,10 +2238,10 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
         if self.queue == []:
-            self.queue.append(vid)
-            await self.player(ctx,voice)
+            self.queue.append(result)
+            await self.player(ctx, voice)
         else:
-            self.queue.append(vid)
+            self.queue.append(result)
 
 # *---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
