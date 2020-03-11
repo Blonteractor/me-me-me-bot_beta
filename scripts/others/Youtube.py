@@ -9,6 +9,9 @@ import urllib.parse
 from typing import List,Any
 from selenium.webdriver.chrome.options import Options
 
+import tracemalloc
+tracemalloc.start()
+
 chrome_options = Options()
 chrome_options.add_argument("disable-extensions")
 chrome_options.add_argument("disable-gpu")
@@ -22,6 +25,7 @@ class YoutubeVideo:
     def __init__(self, id: str ,duration:str = None):
         self.id = id
         self._info = self.info
+        
         if not duration:
             self.get_duration()
         else:
@@ -39,6 +43,7 @@ class YoutubeVideo:
                                         (By.CSS_SELECTOR,"ytd-thumbnail-overlay-time-status-renderer span")))[:amount]
 
         entries_list : List[Any]=[]
+        
         for element in search_results:
             duration = element.text
             driver.execute_script("arguments[0].scrollIntoView();", element)
@@ -52,8 +57,7 @@ class YoutubeVideo:
         yl : List[Any]=[]
         
         for i in entries_list:
-            yl += [cls(i[0],i[1])]
-
+            yl += [cls(i[0], i[1])]
         
         return yl
 
