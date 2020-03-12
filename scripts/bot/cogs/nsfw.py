@@ -40,6 +40,10 @@ class nsfw(commands.Cog):
         self.tags:  List[str] = gen.db_receive("nos")["tags"] #! the tags by which doujins are searched
         self.nh = nhenpy.NHentai()                            #! nhentai client
         self.client = client 
+        if self.qualified_name in gen.cog_cooldown:
+            self.cooldown = gen.cog_cooldown[self.qualified_name]
+        else:
+            self.cooldown = gen.cog_cooldown["default"]
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -62,14 +66,14 @@ class nsfw(commands.Cog):
         
         gen.db_update("vault", vault)
     
-    def vault_remove(self, user, index):
+    def vault_remove(self, user: discord.User, index):
         vault = gen.db_receive("vault")
         user_id = str(user.id)
         
-        if len(vault[user.id].keys()) < index:
+        if len(vault[user_id].keys()) < int(index):
             return None
-        
-        removed = vault[user.id].pop(int(index))
+
+        removed = vault[user_id].pop(index)
         
         gen.db_update("vault", vault)
         
@@ -368,7 +372,7 @@ class nsfw(commands.Cog):
 
     @commands.group(aliases=["doujin", "doujinshi"])
     @nsfw_command()
-    async def nhentai(self, ctx, doujin_id: str,*, query): #! veiw information about the doujin, nama, artist, etc. 
+    async def nhentai(self, ctx, doujin_id: str,*, query=""): #! veiw information about the doujin, nama, artist, etc. 
         '''View the doujin, tags, artist and stuff, powered by nhentai.net'''
 
         if doujin_id.isnumeric():
@@ -399,7 +403,6 @@ class nsfw(commands.Cog):
     @nsfw_command()
     async def random(self, ctx): 
         '''Gives you a random doujin to enjoy yourself to'''
-
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai.......{self.loading_emoji}")
 
@@ -419,7 +422,6 @@ class nsfw(commands.Cog):
 
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai, parody of `{query}`.......{self.loading_emoji}")
-
         search = self.nh.search(f"parody:{query}", randint(1, 3))
 
         if len(search) > 0:
@@ -429,7 +431,7 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
-            await ctx.send(f">>> No doujin found parodying `{query}`", delete_after=5)
+            await embed_msg.edit(content=f">>> No doujin found parodying `{query}`", embed=None)
             
     @nhentai.command()
     @nsfw_command()
@@ -448,7 +450,7 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
-            await ctx.send(f">>> No doujin found of {query}", delete_after=5)
+            await embed_msg.edit(content=f">>> No doujin found of {query}", embed=None)
             
     @nhentai.command()
     @nsfw_command()
@@ -467,29 +469,30 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content="", embed=self.doujin_embed(doujin, ctx.message.author, doujin_id))
             await self.doujin_react(doujin=doujin, ctx=ctx, embed_msg=embed_msg, wait_time=120)
         else:
-            await ctx.send(f">>> No doujin found featuring {query}", delete_after=5)
+            await embed_msg.edit(content=f">>> No doujin found featuring {query}", embed=None)
             
     @commands.group()
     @nsfw_command()
     async def vault(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            user_vault = list(gen.db_receive("vault")[ctx.author.id].values())
+            user_vault = list(gen.db_receive("vault")[str(ctx.author.id)].values())
             content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
             
-        embed: discord.Embed = discord.Embed(title=f"{ctx.author.name}'s vault'")
-        embed.set_thumbnail(url=self.nhentai_logo) 
-        embed.set_author(name="Me!Me!Me!",
-                         icon_url=self.client.user.avatar_url)
-        
-        for index, item in enumerate(content):
-            item_id = str(item).split("]")[0][2:]
-            embed.add_field(name=f"{index + 1}.", valur=f"{item.title} --> ***{item_id}***")
+            embed: discord.Embed = discord.Embed(title=f"{ctx.author.name}'s vault",
+                                                color=discord.Color.from_rgb(255, 9, 119))
+            embed.set_thumbnail(url=self.nhentai_logo) 
+            embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
             
-        await ctx.send(embed=embed)
+            for index, item in enumerate(content):
+                item_id = str(item).split("]")[0][2:]
+                embed.add_field(name=f"{index + 1}.", value=f"{item.title} --> ***{item_id}***", inline=False)
+                
+            await ctx.send(embed=embed)
         
     @vault.command()
     async def release(self, ctx: commands.Context):
-        user_vault = list(gen.db_receive("vault")[ctx.author.id].values())      
+        user_vault = list(gen.db_receive("vault")[str(ctx.author.id)].values())      
         content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
         
         await ctx.send(">>> Your whole vault is being sent to your DM.")
@@ -509,13 +512,14 @@ class nsfw(commands.Cog):
             await ctx.send(">>> Indexes are supposed to be numbers.")
             return
         
-        removed = self.vault_remove(ctx.author, index=index)
+        removed_id = self.vault_remove(ctx.author, index=index)
+        removed_name = nhenpy.NHentaiDoujin(f"/g/{removed_id}").name
         
-        if removed is None:
+        if removed_id is None:
             await ctx.send(">>> The index you entered is bigger than the size of your vault.")
             return
         
-        await ctx.send(f">>> Removed {removed} from your vault")
+        await ctx.send(f">>> Removed `{removed_name}` from your vault")
     
 
 def setup(client):
