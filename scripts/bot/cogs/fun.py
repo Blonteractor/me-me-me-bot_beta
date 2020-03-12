@@ -5,17 +5,24 @@ import pytesseract
 import requests
 from PIL import Image
 import imp,os
+
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
-
 import general as gen
 
 
 class Fun(commands.Cog):
     ''':grin: These commands will make your day great.'''
+    
+    cooldown = 0
 
     def __init__(self, client):
         self.client = client 
+        
+        if self.qualified_name in gen.cog_cooldown:
+            self.cooldown = gen.cog_cooldown[self.quailifed_name]
+        else:
+            self.cooldown = gen.cog_cooldown["default"]
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -30,6 +37,7 @@ class Fun(commands.Cog):
 
     #! QUES
     @commands.command(aliases=['8ball', '_8ball', 'question'])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def ques(self, ctx, *, question):
         '''I have answers to all your questions in this GOD DAMN WORLD.'''
 
@@ -58,7 +66,9 @@ class Fun(commands.Cog):
             await ctx.send(">>> Enter the question boss.")
 
     #! DIX
+    # @commands.command(aliases=['penis', 'dicc', 'peepee', 'dick'])
     @commands.command(aliases=['penis', 'dicc', 'peepee', 'dick'])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def dix(self, ctx):
         '''Well, I calculate your peepee with my special MEASURING STICK that goes in ME! ass.'''
 
@@ -79,7 +89,8 @@ class Fun(commands.Cog):
   
     #! EMOJI
     @commands.command(aliases = ['emo'])
-    async def emoji(self,ctx,emoji_name,amount = 3):
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    async def emoji(self, ctx, emoji_name, amount = 3):
       '''Returns the emoji or maybe not.'''
 
       strs = f":{emoji_name}: "*amount
@@ -91,6 +102,7 @@ class Fun(commands.Cog):
 
     #! OCR
     @commands.command()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def ocr(self,ctx,im = ""):
         '''Read the text in an image.
             Why is it in FUN you may ask, well see for yourself.

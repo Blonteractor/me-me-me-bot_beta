@@ -12,9 +12,17 @@ import general as gen
 
 class Currency(commands.Cog):
     ''':moneybag: Virtual money dudes'''
+    
+    cooldown = 0
 
     def __init__(self, client):
         self.client = client      
+        
+        if self.qualified_name in gen.cog_cooldown:
+            self.cooldown = gen.cog_cooldown[self.quailifed_name]
+        else:
+            self.cooldown = gen.cog_cooldown["default"]
+            
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
         debug_info = gen.db_receive("var")["cogs"]
@@ -28,9 +36,10 @@ class Currency(commands.Cog):
     
     #! BET
     @commands.command()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def bet(self, ctx, amount : int):
         '''Well, this is the only fun part, BET, hail KAKEGURUI.'''
-
+        
         name = ctx.author.name
         disc = ctx.author.discriminator
         #! GET COINS
@@ -99,6 +108,7 @@ class Currency(commands.Cog):
             await ctx.send(">>> U need to have actual souls, go hunt POET.")
     #BANK
     @commands.command()
+    @commands.cooldown(rate=3, per=30, type=commands.BucketType.user)
     async def bank(self, ctx):
         '''When you are broke, cry in front of the GOVT. and get some loan to use in a game which will have no impact on your true irl broke ass.'''
 
@@ -124,6 +134,7 @@ class Currency(commands.Cog):
 
     #SOULS
     @commands.command(aliases=['bal','coins'])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def souls(self, ctx):
         '''Just the balance of your souls. THATS IT.'''
 

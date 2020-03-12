@@ -54,6 +54,11 @@ class Utility(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        
+        if self.qualified_name in gen.cog_cooldown:
+            self.cooldown = gen.cog_cooldown[self.quailifed_name]
+        else:
+            self.cooldown = gen.cog_cooldown["default"]
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]

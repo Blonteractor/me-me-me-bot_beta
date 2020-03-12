@@ -16,11 +16,17 @@ import general as gen
 class levels(commands.Cog):
     ''':up: Level up by sending messages, earn new ranks and powers by doing so.'''
     
+    cooldown = 0
     roles = {"Prostitute":[0,[230, 126, 34]],"Rookie":[5,[153, 45, 34]],"Adventurer":[10,[173, 20, 87]],"Player":[25,[241, 196, 15]],"Hero":[50,[46, 204, 113]],"Council of Numericons":[85,[0, 255, 240]]}
     
     def __init__(self, client):
         self.client = client
         self.exp_info = gen.db_receive('exp')
+        
+        if self.qualified_name in gen.cog_cooldown:
+            self.cooldown = gen.cog_cooldown[self.quailifed_name]
+        else:
+            self.cooldown = gen.cog_cooldown["default"]
         
         self.give_exp.start()
 
@@ -291,6 +297,7 @@ class levels(commands.Cog):
 
 
     @commands.command()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def rank(self, ctx,member = ''):
         '''Shows your level and rank, all epic style.'''
 

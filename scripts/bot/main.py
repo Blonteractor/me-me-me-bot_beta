@@ -81,7 +81,7 @@ async def reload_all(ctx):
 def cog_load_startup():
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):
+        if filename.endswith(".py") and not filename == "music.py":
             client.load_extension(f"cogs.{filename[:-3]}")
 
 # * BACKING UP AND COMMIT STUFF
@@ -186,8 +186,14 @@ async def on_command_error(ctx, error):
             await message.delete()
         except:
             pass
-    if not isinstance(error,commands.MissingRequiredArgument):
-        gen.error_message(error)    
+    elif isinstance(error, commands.CommandOnCooldown):
+            embed = discord.Embed(title="Woah woah, gonnae wait??",
+                                  color = discord.Color.red(),
+                                   description=f"We have cooldowns here, try again after `{round(error.retry_after, 1)}s` ")
+            await ctx.send(embed=embed)
+    else:
+        if not isinstance(error,commands.MissingRequiredArgument):
+            gen.error_message(error)    
 
 
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")

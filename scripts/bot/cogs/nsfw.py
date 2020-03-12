@@ -32,6 +32,8 @@ def nsfw_command():
 
 class nsfw(commands.Cog):
     ''':high_heel: Commands for big boiz.'''
+    
+    cooldown = 0
 
     #* INIT AND PREQUISITES
     def __init__(self, client):
@@ -44,6 +46,8 @@ class nsfw(commands.Cog):
             self.cooldown = gen.cog_cooldown[self.qualified_name]
         else:
             self.cooldown = gen.cog_cooldown["default"]
+            
+        self.cooldown = 20
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -198,6 +202,7 @@ class nsfw(commands.Cog):
     #* MAIN
 
     @commands.command(aliases=["4k"])
+    @commands.cooldown(rate=1, per=30, type=commands.BucketType.user)
     @nsfw_command()
     async def porn(self, ctx):   #! sends 4k porn pics
         '''4K, hacc certified pics'''
@@ -225,6 +230,7 @@ class nsfw(commands.Cog):
         
 
     @commands.command()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def read(self, ctx, doujin_id): #! makes a different channel in the doujins categoryand posts all doujin images there
         '''Read the doujin, will create a seperate channel and post all images there. Recomend muting the doujin category.'''
@@ -273,6 +279,7 @@ class nsfw(commands.Cog):
             await ctx.send(f">>> Go to {channel.mention} and enjoy your doujin!")
 
     @commands.command(aliases=["show"])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def watch(self, ctx, doujin_id, page_number=1): #! reaction navigation approach to read command
         '''Watch the doujin, like a slideshow. Navigate using reactions. The doujin will self delete after being left idle for 3 minutes.'''
@@ -371,6 +378,7 @@ class nsfw(commands.Cog):
                     pass
 
     @commands.group(aliases=["doujin", "doujinshi"])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def nhentai(self, ctx, doujin_id: str,*, query=""): #! veiw information about the doujin, nama, artist, etc. 
         '''View the doujin, tags, artist and stuff, powered by nhentai.net'''
@@ -472,6 +480,7 @@ class nsfw(commands.Cog):
             await embed_msg.edit(content=f">>> No doujin found featuring {query}", embed=None)
             
     @commands.group()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def vault(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:

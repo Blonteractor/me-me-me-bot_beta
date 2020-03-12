@@ -23,22 +23,9 @@ chrome_options.add_argument("log-level=3")
 driver = webdriver.Chrome(options = chrome_options) 
 driver.get("http://www.youtube.com")
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 class YoutubeVideo:
     def __init__(self, id: str,info:dict = None,requested_by:str = None):
         self.id = id
-<<<<<<< HEAD
-        self._info = self.info
-        
-        if not duration:
-            self.get_duration()
-        else:
-            self._info["duration"] = duration
-            
-=======
         self._requester = requested_by
         
 
@@ -47,7 +34,6 @@ class YoutubeVideo:
         else:
             self._info = info
 
->>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
     @classmethod
     def from_query(cls, query: str , amount:int = 1):
 
@@ -75,14 +61,7 @@ class YoutubeVideo:
             split_list = re.split("/|=|&",link.get_attribute("href"))
             entries_list += [[(split_list[split_list.index("watch?v")+1]),name,channel_name,duration]]   
         
-<<<<<<< HEAD
-        for i in entries_list:
-            yl += [cls(i[0], i[1])]
-        
-        return yl
-=======
         return entries_list
->>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 
     def __len__(self) -> int:
         return self.seconds
@@ -121,23 +100,6 @@ class YoutubeVideo:
             'quiet': True,
         } 
         
-<<<<<<< HEAD
-        buttons = driver.find_elements_by_css_selector("div#top-level-buttons yt-formatted-string")
-        info["likes"] = buttons[0].text
-        info["dislikes"] = buttons[1].text
-        info["thumbnail"] = f"https://i.ytimg.com/vi/{info['id']}/0.jpg"
-        info["uploader"] = wait.until(EC.presence_of_element_located(
-                                (By.CSS_SELECTOR,"div#upload-info ytd-channel-name yt-formatted-string"))).text
-        wait.until(EC.presence_of_element_located(
-                                (By.CSS_SELECTOR,"paper-button#more"))).click()
-        info["description"] =wait.until(EC.presence_of_element_located(
-                                (By.CSS_SELECTOR,"div#description"))).text
-
-        
-
-        return info
-
-=======
         need = ["id",
                 "uploader",
                 "upload_date",
@@ -159,7 +121,6 @@ class YoutubeVideo:
         for i in need:
             info2[i] = info[i]
         return info2
->>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
 
     @property
     def uploader(self) -> str:
@@ -381,10 +342,6 @@ class YoutubePlaylist:
     def entries(self):
         return self._info["entries"]
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 4031def7ba545a05bfa4b55af653d4c78f65bdbd
     @property
     def uploader(self) -> str:
         return self._info["uploader"]
