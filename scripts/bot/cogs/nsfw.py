@@ -46,8 +46,8 @@ class nsfw(commands.Cog):
             self.cooldown = gen.cog_cooldown[self.qualified_name]
         else:
             self.cooldown = gen.cog_cooldown["default"]
-            
-        self.cooldown = 20
+
+        cooldown += gen.extra_cooldown
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]

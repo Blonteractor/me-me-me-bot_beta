@@ -10,7 +10,7 @@ imp.load_source("general", os.path.join(
 import general as gen
 
 #! RECALLING FUNCTIONS
-def check_command(ctx,member):
+def check_command(ctx, member):
     roles = [role for role in member.roles]
     role_names = []
     for role in roles:
@@ -59,6 +59,8 @@ class Utility(commands.Cog):
             self.cooldown = gen.cog_cooldown[self.quailifed_name]
         else:
             self.cooldown = gen.cog_cooldown["default"]
+            
+        cooldown += gen.extra_cooldown
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -159,7 +161,60 @@ class Utility(commands.Cog):
             member =  ctx.author
             await ctx.send(embed=avatar_command(ctx,member))
 
-
+    @commands.group()
+    async def setup(self, ctx):
+        embed = discord.Embed(title="Current setUp", color=discord.Color.from_rgb(150, 77, 232))
+        
+        embed.add_field(name="juke box", value=gen.juke_box_channel)
+        embed.add_field(name="auto meme", value=gen.auto_meme_channel)
+        embed.add_field(name="extra cooldown", value=gen.extra_cooldown)
+        
+        await ctx.send(embed=embed)
+    
+    @setup.command()     
+    async def juke(self, ctx, channel: discord.TextChannel):
+        rem = ["disable", "remove"]
+        if str(channel) in rem:
+            gen.juke_box_channel = None
+            await ctx.send(f">>> Juke box removed")
+            return    
+        gen.juke_box_channel = channel
+        
+        await ctx.send(f">>> Juke box channel set to `{channel.name}`")
+        
+    @setup.command(aliases=["ameme", "aoutom"])     
+    async def automeme(self, ctx, channel: discord.TextChannel):
+        rem = ["disable", "remove"]
+        if str(channel) in rem:
+            gen.auto_meme_channel = None
+            await ctx.send(f">>> Auto meme removed")
+            return    
+        gen.auto_meme_channel = channel
+        
+        await ctx.send(f">>> Auto meme channel set to `{channel.name}`")
+    
+    @setup.command(aliases=["cool"])     
+    async def cooldown(self, ctx, extra: int):
+        rem = ["disable", "remove", "0"]
+        if str(extra) in rem:
+            gen.extra_cooldown = 0
+            await ctx.send(f">>> Extra cooldown removed")
+            return    
+        gen.auto_meme_channel = extra
+        
+        await ctx.send(f">>> Cooldown of all commands increased by `{extra}`")
+        
+    @setup.command(aliases=["dj"])     
+    async def djrole(self, ctx, role: discord.Role):
+        rem = ["disable", "remove"]
+        if str(role) in rem:
+            gen.dj_role = None
+            await ctx.send(f">>> DJ role removed")
+            return    
+        gen.auto_meme_channel = role
+        
+        await ctx.send(f">>> DJ role changed to `{role.name}`")    
+    
    
         
 def setup(client):

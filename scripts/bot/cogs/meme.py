@@ -143,6 +143,9 @@ class Meme(commands.Cog):
         #! MAKE SUBMISSION EMBED
 
         meme_info = gen.db_receive("meme")
+        channel = self.auto_meme_channel
+        if channel is None:
+            return
 
         for sub_name in meme_info:
             sub_info = meme_info[sub_name]
@@ -159,8 +162,6 @@ class Meme(commands.Cog):
                 meh.add_field(name = 'Subreddit', value = f"r/{sub_name}" , inline = True)
                 
                 meh.set_thumbnail(url = subr.icon_img)
-
-                channel = self.client.get_channel(617426209181270016)
 
                 
                 await channel.send(embed = meh)

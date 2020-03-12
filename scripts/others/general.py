@@ -28,6 +28,10 @@ cog_cooldown = {"music": 3, "default": 2, "nsfw": 3}
 
 epic = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
+dj_role = None
+auto_meme_channel = None
+juke_box_channel = None
+extra_cooldown = 0
 
 admin_role_id = 632906375839744001
 

@@ -97,6 +97,19 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
 
     return commands.check(predicate=predicate)
 
+    def has_role(role_id):
+        def predicate(ctx):
+            if role_id is None:
+                return True
+
+            for role in ctx.author.roles:
+                if role.id == role_id:
+                    return True
+                
+            return False
+            
+        return commands.check(predicate=predicate)
+
 
 genius = lyricsgenius.Genius(
     "pGaaH8g-CxAeF1qaQ2DeVmLnmp84mIciWU8sbGoVKQO_MTlHQW4ZoxYeP8db1kDO")
@@ -137,6 +150,8 @@ class Music(commands.Cog):
     DPATH = os.path.join(
         os.path.dirname(__file__), '../../../Download')
     DPATH = os.path.abspath(DPATH)
+    
+    dj_role_id = 0
 
     shuffle_lim = None
     shuffle_var = 0
@@ -147,7 +162,10 @@ class Music(commands.Cog):
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
         self.juke_box.start()
-        self.dj_role = "DJ"
+        if gen.dj_role is not None:
+            self.dj_role_id = gen.dj_role.id
+        else:
+            self.dj_role_id = "@everyone"
 
         self.client: discord.Client
         
@@ -155,6 +173,8 @@ class Music(commands.Cog):
             self.cooldown = gen.cog_cooldown[self.qualified_name]
         else:
             self.cooldown = gen.cog_cooldown["default"]
+            
+        cooldown += gen.extra_cooldown
 
     def cog_unload(self):
         driver.quit()
@@ -267,10 +287,10 @@ class Music(commands.Cog):
     async def juke_box(self):
 
         for guild in self.client.guilds:
-            channel = discord.utils.get(guild.text_channels, name="juke-box")
+            channel = gen.juke_box_channel
 
-            if not channel:
-                channel = await guild.create_text_channel("juke-box")
+            if channel is None:
+                return
 
             else:
                 async for msg in self.client.logs_from(channel):
@@ -677,6 +697,7 @@ class Music(commands.Cog):
 
     @commands.command(name="join")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    @has_role(role_id=dj_role_id)
     async def join(self, ctx) -> bool:
         '''Joins the voice channel you are currently in.'''
 
