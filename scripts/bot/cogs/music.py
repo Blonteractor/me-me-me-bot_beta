@@ -97,18 +97,18 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
 
     return commands.check(predicate=predicate)
 
-    def has_role(role_id):
-        def predicate(ctx):
-            if role_id is None:
-                return True
+def has_role(role_id):
+    def predicate(ctx):
+        if role_id is None:
+            return True
 
-            for role in ctx.author.roles:
-                if role.id == role_id:
-                    return True
-                
-            return False
+        for role in ctx.author.roles:
+            if role.id == role_id:
+                return True
             
-        return commands.check(predicate=predicate)
+        return False
+        
+    return commands.check(predicate=predicate)
 
 
 genius = lyricsgenius.Genius(
@@ -695,7 +695,7 @@ class Music(commands.Cog):
 
     # ? JOIN
 
-    @commands.command(name="join")
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @has_role(role_id=dj_role_id)
     async def join(self, ctx) -> bool:
@@ -728,7 +728,7 @@ class Music(commands.Cog):
             return False
 
     # ? PLAY
-    @commands.command(name="play")
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def play(self, ctx, *, query):
         '''Plays the audio of the video in the provided VTUBE url.'''
@@ -834,7 +834,7 @@ class Music(commands.Cog):
 
     # ? SEARCH
 
-    @commands.command(name="search")
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def search(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
@@ -846,7 +846,7 @@ class Music(commands.Cog):
             await ctx.invoke(play_command, query=f"https://www.youtube.com/watch?v={result[0]}")
 
     # ? SEARCH_PLAYLIST
-    @commands.command(name="search_playlist")
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def search_playlist(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
@@ -859,7 +859,7 @@ class Music(commands.Cog):
 
     # ? NOW PLAYING
 
-    @commands.command(name="nplaying", aliases=["np", "playing"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def now_playing(self, ctx):
         queue = [x for x in self.queue if type(x) != str]
@@ -892,7 +892,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     # ? LYRICS
-    @commands.command(name="lyrics", aliases=["l"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def lyrics(self, ctx: commands.Context):
         async def reactions_add(message, reactions):
@@ -920,7 +920,7 @@ class Music(commands.Cog):
 
     # ? SONG_INFO
 
-    @commands.command(aliases=["sinfo"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def song_info(self, ctx, *, query):
         result = await self.searching(ctx, query)
@@ -941,7 +941,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     # ? PLAYLIST_INFO
-    @commands.command(aliases=["plinfo"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def playlist_info(self, ctx, *, query):
 
@@ -1007,7 +1007,7 @@ class Music(commands.Cog):
             await self.embed_pages(_content=desc_l, ctx=ctx, embed_msg=embed_msg, wait_time=120)
 
     # ? QUEUE REPLACE
-    @Queue.command(name="replace", aliases=['qmove'])
+    @Queue.command()
     @vc_check()
     async def replace(self, ctx, change1, change2):
         '''Replaces two queue members.'''
@@ -1027,7 +1027,7 @@ class Music(commands.Cog):
             return
 
     # ? QUEUE REMOVE
-    @Queue.command(name="remove")
+    @Queue.command()
     @vc_check()
     async def remove(self, ctx, remove):
         '''Removes the Queue member.'''
@@ -1046,7 +1046,7 @@ class Music(commands.Cog):
             return
 
     # ? QUEUE NOW
-    @Queue.command(name="now")
+    @Queue.command()
     @vc_check()
     async def now(self, ctx, change):
         '''Plays a queue member NOW.'''
@@ -1089,7 +1089,7 @@ class Music(commands.Cog):
             await ctx.send(embed=embed)
 
     # ? CONTRACTED REMOVE
-    @contracted.command(aliases=["rem"])
+    @contracted.command()
     async def remm(self, ctx, remove):
         '''Removes the Queue member.'''
         try:
@@ -1116,7 +1116,7 @@ class Music(commands.Cog):
             return
 
     # ? CONTRACTED REPLACE
-    @contracted.command(aliases=['pmove'])
+    @contracted.command()
     @vc_check()
     async def repla(self, ctx, change1, change2):
         '''Replaces two queue members.'''
@@ -1355,7 +1355,7 @@ class Music(commands.Cog):
 
     # ? LOOP
 
-    @commands.command(name="loop", aliases=['lp'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def loop(self, ctx, toggle=""):
@@ -1381,7 +1381,7 @@ class Music(commands.Cog):
 
     # ? LOOP_QUEUE
 
-    @commands.command(aliases=['lpq'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def loop_queue(self, ctx, toggle=""):
@@ -1407,7 +1407,7 @@ class Music(commands.Cog):
 
     # ? RESTART
 
-    @commands.command(name="restart")
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def restart(self, ctx):
@@ -1426,7 +1426,7 @@ class Music(commands.Cog):
 
    # ? PAUSE
 
-    @commands.command(aliases=['p'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def pause(self, ctx):
@@ -1446,7 +1446,7 @@ class Music(commands.Cog):
 
     # ? RESUME
 
-    @commands.command(aliases=['r', 'res'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def resume(self, ctx):
@@ -1465,7 +1465,7 @@ class Music(commands.Cog):
             await ctx.send(">>> Ya know to resume stuff, stuff also needs to be paused first.")
 
     # ? STOP
-    @commands.command(aliases=['st', 'yamete'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def stop(self, ctx):
@@ -1489,7 +1489,7 @@ class Music(commands.Cog):
             await ctx.send(">>> Ya know to stop stuff, stuff also needs to be playing first.")
 
     # ? HARD_STOP
-    @commands.command(name="hardstop", aliases=['hs', 'hards', 'hstop', 'yamero'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def hard_stop(self, ctx):
@@ -1519,7 +1519,7 @@ class Music(commands.Cog):
             pass
     # ? SKIP
 
-    @commands.command(aliases=['n', 'sk', 'skip'])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     @vote(votes_required=0.5,
@@ -1594,7 +1594,7 @@ class Music(commands.Cog):
             pass
     # ? VOLUME
 
-    @commands.command(aliases=["v"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def volume(self, ctx, volume: int):
@@ -1705,7 +1705,7 @@ class Music(commands.Cog):
             return
     # ?FORWARD
 
-    @commands.command(aliases=["fwd"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def forward(self, ctx, time):
@@ -1726,7 +1726,7 @@ class Music(commands.Cog):
             return
 
     # ?REWIND
-    @commands.command(aliases=["rew"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def rewind(self, ctx, time):
@@ -1747,7 +1747,7 @@ class Music(commands.Cog):
             return
 
     # ? SHUFFLE
-    @commands.command(aliases=["shuf"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def shuffle(self, ctx, amount: int = None):
@@ -1894,7 +1894,7 @@ class Music(commands.Cog):
             gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST REARRANGE
-    @playlist.command(aliases=["re", "change", "replace", "switch"])
+    @playlist.command()
     async def rearrange(self, ctx, name, P1: int, P2: int):
         '''Rearranges 2 songs/playlist places of your playlist.'''
         playlist_db = gen.db_receive("playlist")
@@ -1931,7 +1931,7 @@ class Music(commands.Cog):
         gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST REMOVE
-    @commands.command(aliases=["prem"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def premove(self, ctx, name, R: int):
         '''Removes a song/playlist from your playlist.'''
@@ -1973,7 +1973,7 @@ class Music(commands.Cog):
         gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST NAME
-    @playlist.command(aliases=[])
+    @playlist.command()
     async def name(self, ctx, name, new_name):
         playlist_db = gen.db_receive("playlist")
         try:
@@ -2003,7 +2003,7 @@ class Music(commands.Cog):
             gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST PLAY
-    @playlist.command(aliases=["pp"])
+    @playlist.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def pplay(self, ctx, name):
         '''Plays your playlist.'''
@@ -2139,7 +2139,7 @@ class Music(commands.Cog):
     # ? DOWNLOAD
 
 
-    @commands.command(aliases=["dnld"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def download(self, ctx, *, query):
         '''Downloads a song for you, so your pirated ass doesn't have to look for it online.'''
@@ -2162,7 +2162,7 @@ class Music(commands.Cog):
 
     # ? EXPORT
 
-    @commands.command(aliases=["ex"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def export(self, ctx, isFull="queue"):
         if isFull.lower() != "full" or isFull.lower() != "queue" or isFull.lower() != "q":
@@ -2194,7 +2194,7 @@ class Music(commands.Cog):
         await ctx.send(f"here is your page Mister , {the_page}")
 
     # ? IMPORT
-    @commands.command(name="import", aliases=["ex"])
+    @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def _import(self, ctx, url):
         if not (await ctx.invoke(self.client.get_command("join"))):

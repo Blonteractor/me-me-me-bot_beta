@@ -242,7 +242,7 @@ class nsfw(commands.Cog):
             return
         
 
-    @commands.command()
+    @commands.command(usage="<doujin id>")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def read(self, ctx, doujin_id): #! makes a different channel in the doujins categoryand posts all doujin images there
@@ -291,7 +291,7 @@ class nsfw(commands.Cog):
 
             await ctx.send(f">>> Go to {channel.mention} and enjoy your doujin!")
 
-    @commands.command(aliases=["show"])
+    @commands.command(aliases=["show"], usage="<doujin id> [page number -> 1]")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def watch(self, ctx, doujin_id, page_number=1): #! reaction navigation approach to read command
@@ -390,11 +390,11 @@ class nsfw(commands.Cog):
                 else:
                     pass
 
-    @commands.group(aliases=["doujin", "doujinshi"])
+    @commands.group(aliases=["doujin", "doujinshi"], usage="<doujin id>")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def nhentai(self, ctx, doujin_id: str,*, query=""): #! veiw information about the doujin, nama, artist, etc. 
-        '''View the doujin, tags, artist and stuff, powered by nhentai.net'''
+        '''View the doujin, tags, artist and stuff, powered by nhentai.net, subcommands for more specific searches available'''
 
         if doujin_id.isnumeric():
             doujin = nhenpy.NHentaiDoujin(f"/g/{doujin_id}")
