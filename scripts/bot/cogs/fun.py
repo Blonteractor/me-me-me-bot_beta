@@ -24,7 +24,7 @@ class Fun(commands.Cog):
         else:
             self.cooldown = gen.cog_cooldown["default"]
             
-        cooldown += gen.extra_cooldown
+        self.cooldown += gen.extra_cooldown
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]

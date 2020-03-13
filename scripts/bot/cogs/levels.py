@@ -28,7 +28,7 @@ class levels(commands.Cog):
         else:
             self.cooldown = gen.cog_cooldown["default"]
             
-        cooldown += gen.extra_cooldown
+        self.cooldown += gen.extra_cooldown
         
         self.give_exp.start()
 

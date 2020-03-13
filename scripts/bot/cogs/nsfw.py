@@ -47,7 +47,7 @@ class nsfw(commands.Cog):
         else:
             self.cooldown = gen.cog_cooldown["default"]
 
-        cooldown += gen.extra_cooldown
+        self.cooldown += gen.extra_cooldown
 
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -190,6 +190,19 @@ class nsfw(commands.Cog):
             return False
         else:
             return True
+        
+    async def find_doujins(self, search_by, search_tag, page_limit):
+        found = False
+        prev = 0
+        rand = randint(1, page_limit)
+        while not found:
+            prev = rand
+            search = self.nh.search(f"{search_by}:{search_tag}", rand)
+            found = await self.doujin_found(search)
+            if not found:
+                rand = randint(1, prev)
+        else:
+            return search
 
     #* ERROR HANDLER
     @commands.Cog.listener()
@@ -413,9 +426,8 @@ class nsfw(commands.Cog):
         '''Gives you a random doujin to enjoy yourself to'''
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai.......{self.loading_emoji}")
-
-        search_tag = str(choice(self.tags))
-        search = self.nh.search(f"tag:{search_tag}", randint(1, 5))
+        
+        search = await self.find_doujins(search_by="tag", search_tag=str(choice(self.tags)), page_limit=50)
 
         doujin = choice(search)
         doujin_id = str(doujin).split("]")[0][2:]
@@ -430,8 +442,9 @@ class nsfw(commands.Cog):
 
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai, parody of `{query}`.......{self.loading_emoji}")
-        search = self.nh.search(f"parody:{query}", randint(1, 3))
-
+            
+        search = await self.find_doujins(search_by="parody", search_tag=query, page_limit=20)
+        
         if len(search) > 0:
             doujin = choice(search)
             doujin_id = str(doujin).split("]")[0][2:]
@@ -449,7 +462,7 @@ class nsfw(commands.Cog):
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai by `{query}`.......{self.loading_emoji}")
 
-        search = self.nh.search(f"artist:{query}", randint(1, 3))
+        search = await self.find_doujins(search_by="artist", search_tag=query, page_limit=10)
 
         if len(search) > 0:
             doujin = choice(search)
@@ -466,9 +479,9 @@ class nsfw(commands.Cog):
         '''Gives you a doujin featuring the character you specified'''
         
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
-        embed_msg = await ctx.send(f"Searching for doujins on nhentai with character `{query}`` .......{self.loading_emoji}")
+        embed_msg = await ctx.send(f"Searching for doujins on nhentai with character `{query}` .......{self.loading_emoji}")
 
-        search = self.nh.search(f"character:{query}", randint(1, 3))
+        search = await self.find_doujins(search_by="character", search_tag=query, page_limit=15)
 
         if len(search) > 0:
             doujin = choice(search)

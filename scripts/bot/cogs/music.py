@@ -174,7 +174,7 @@ class Music(commands.Cog):
         else:
             self.cooldown = gen.cog_cooldown["default"]
             
-        cooldown += gen.extra_cooldown
+        self.cooldown += gen.extra_cooldown
 
     def cog_unload(self):
         driver.quit()
