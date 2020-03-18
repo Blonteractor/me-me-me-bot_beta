@@ -487,6 +487,14 @@ class Music(commands.Cog):
 
                     if self.loop_q:
                         self.queue += [temp]
+                        self.queue_ct += [temp]
+                        self.full_queue += [temp]
+                        self.full_queue_ct += [temp]
+                        self.full_queue.remove(temp)
+                        try:
+                            self.full_queue_ct.remove(temp)
+                        except:
+                            pass
 
                     try:
                         self.queue_ct.remove(temp)
