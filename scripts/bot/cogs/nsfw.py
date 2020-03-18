@@ -8,6 +8,7 @@ import requests
 
 
 import imp,os
+
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
 
@@ -17,6 +18,12 @@ imp.load_source("nhenpy", os.path.join(
     os.path.dirname(__file__), "../../others/nhenpy.py"))
 
 import nhenpy
+
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../../others/state.py"))
+
+from state import CustomContext as cc
+
 
 #* DECORATOR FOR CHECKING IF COMMAND IS BEING RUN IN A NSFW CHANNEL
 def nsfw_command():
@@ -35,13 +42,14 @@ class nsfw(commands.Cog):
     
     cooldown = 0
 
+    nhentai_logo = "https://i.imgur.com/uLAimaY.png" #! nhentai logo url
+    tags:  List[str] = gen.db_receive("nos")["tags"] #! the tags by which doujins are searched
+    
     #* INIT AND PREQUISITES
     def __init__(self, client):
-        self.nhentai_logo = "https://i.imgur.com/uLAimaY.png" #! nhentai logo url
-        self.doujins_category_name = "Doujins 📓"             #! name of category in which doujins are posted
-        self.tags:  List[str] = gen.db_receive("nos")["tags"] #! the tags by which doujins are searched
-        self.nh = nhenpy.NHentai()                            #! nhentai client
         self.client = client 
+        self.nh = nhenpy.NHentai()                            #! nhentai client
+        
         if self.qualified_name in gen.cog_cooldown:
             self.cooldown = gen.cog_cooldown[self.qualified_name]
         else:
@@ -255,15 +263,13 @@ class nsfw(commands.Cog):
         if not await self.doujin_found(doujin, ctx.message.channel):
             return
 
-        guild = ctx.message.guild
-        guild: discord.Guild
         category = discord.utils.get(
-            guild.categories, name=self.doujins_category_name)
+            ctx.guild.categories, name=ctx.guildState.doujin_category)
         category: discord.CategoryChannel
 
         channel_exists = False
         channel_exists = not discord.utils.get(
-            guild.text_channels, name=doujin_id) == None
+            ctx.guild.text_channels, name=doujin_id) == None
 
         if not channel_exists:
             channel = await ctx.guild.create_text_channel(str(doujin_id), nsfw=True, category=category)

@@ -6,8 +6,11 @@ from datetime import datetime
 import imp,os
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../../others/state.py"))
 
 import general as gen
+from state import CustomContext as cc
 
 #! RECALLING FUNCTIONS
 def check_command(ctx, member):
@@ -54,6 +57,7 @@ class Utility(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.client: commands.Bot
         
         if self.qualified_name in gen.cog_cooldown:
             self.cooldown = gen.cog_cooldown[self.quailifed_name]
@@ -163,57 +167,152 @@ class Utility(commands.Cog):
 
     @commands.group()
     async def setup(self, ctx):
-        embed = discord.Embed(title="Current setUp", color=discord.Color.from_rgb(150, 77, 232))
+        ctx = await self.client.get_context(ctx.message, cls=cc)
         
-        embed.add_field(name="juke box", value=gen.juke_box_channel)
-        embed.add_field(name="auto meme", value=gen.auto_meme_channel)
-        embed.add_field(name="extra cooldown", value=gen.extra_cooldown)
+        if ctx.invoked_subcommand is None:
+            embed = discord.Embed(title="Current setUp", color=discord.Color.from_rgb(150, 77, 232))
+            
+            embed.add_field(name="Juke box", value="#" + str(ctx.guildState.juke_box_channel), inline=False)
+            embed.add_field(name="Auto meme", value="#" + str(ctx.guildState.auto_meme_channel), inline=False)
+            embed.add_field(name="Level up", value="#" + str(ctx.guildState.level_up_channel), inline=False)
+            embed.add_field(name="VC text", value="#" + str(ctx.guildState.voice_text_channel), inline=False)
+            embed.add_field(name="Extra cooldown", value=str(ctx.guildState.extra_cooldown) + " seconds", inline=False)
+            embed.add_field(name="Auto-disconenct time", value=str(ctx.guildState.auto_disconnect_time) + " seconds", inline=False)
+            embed.add_field(name="Auto-pause time", value=str(ctx.guildState.auto_pause_time) + " seconds", inline=False)
+            embed.add_field(name="DJ role", value="@" + str(ctx.guildState.dj_role), inline=False)
+            
+            await ctx.send(embed=embed)
         
-        await ctx.send(embed=embed)
-    
     @setup.command()     
     async def juke(self, ctx, channel: discord.TextChannel):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(channel) in rem:
-            gen.juke_box_channel = None
+            ctx.guildState.juke_box_channel = None
             await ctx.send(f">>> Juke box removed")
             return    
-        gen.juke_box_channel = channel
-        
-        await ctx.send(f">>> Juke box channel set to `{channel.name}`")
+        ctx.guildState.juke_box_channel = channel
+       
+        await ctx.send(f">>> Juke box channel set to {channel.mention}")
         
     @setup.command(aliases=["ameme", "aoutom"])     
     async def automeme(self, ctx, channel: discord.TextChannel):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(channel) in rem:
-            gen.auto_meme_channel = None
+            ctx.guildState.auto_meme_channel = None
             await ctx.send(f">>> Auto meme removed")
             return    
-        gen.auto_meme_channel = channel
+        ctx.guildState.auto_meme_channel = channel
         
-        await ctx.send(f">>> Auto meme channel set to `{channel.name}`")
+        await ctx.send(f">>> Auto meme channel set to {channel.mention}")
     
     @setup.command(aliases=["cool"])     
     async def cooldown(self, ctx, extra: int):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove", "0"]
         if str(extra) in rem:
             gen.extra_cooldown = 0
             await ctx.send(f">>> Extra cooldown removed")
             return    
-        gen.auto_meme_channel = extra
+        ctx.guildState.extra_cooldown = extra
         
         await ctx.send(f">>> Cooldown of all commands increased by `{extra}`")
         
     @setup.command(aliases=["dj"])     
     async def djrole(self, ctx, role: discord.Role):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(role) in rem:
-            gen.dj_role = None
+            ctx.guildState.dj_role = None
             await ctx.send(f">>> DJ role removed")
             return    
-        gen.auto_meme_channel = role
+        ctx.guildState.dj_role = role
         
-        await ctx.send(f">>> DJ role changed to `{role.name}`")    
+        await ctx.send(f">>> DJ role changed to {role.mention}")  
+        
+    @setup.command(aliases=["lvl", "lvlup"])     
+    async def levelup(self, ctx, channel: discord.TextChannel):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
+        rem = ["disable", "remove"]
+        if str(channel) in rem:
+            ctx.guildState.level_up_channel = None
+            await ctx.send(f">>> The level up channel was removed")
+            return    
+        ctx.guildState.level_up_channel = channel
+        
+        await ctx.send(f">>> The level up channel chaged to to {channel.mention}")  
+        
+    @setup.command()     
+    async def vc(self, ctx, channel: discord.TextChannel):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
+        rem = ["disable", "remove"]
+        if str(channel) in rem:
+            ctx.guildState.voice_text_channel = None
+            await ctx.send(f">>> The primary voice text channel was removed")
+            return    
+        ctx.guildState.voice_text_channel = channel
+        
+        await ctx.send(f">>> The primary voice text channel chaged to to {channel.mention}") 
+        
+    @setup.command(name="doujin-category", aliases=["djcat"])
+    async def doujin_category(self, ctx, name):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
+        rem = ["disable", "remove"]
+        if name in rem:
+            ctx.guildState.doujin_category = None
+            await ctx.send(">> All doujin channels will not be created in any category.")
+            return
+        
+        ctx.guildState.doujin_category = name
+        
+        await ctx.send(f">>> All doujin channels will be created in `{name}` from now on.")
+        
+    @setup.command(aliases=["roles"])
+    async def ranks(self, ctx):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
+        rem = ["disable", "remove"]
+        res = {}
+        
+        await ctx.send(">>> Send the ranks you want to add like this `add @role level_required`, a total of 6 will be accepted")
+        
+        def check(m: discord.Message):
+            return m.author == ctx.author and m.content.startswith("add ")
+        
+        
+        while True:
+        
+            try:
+                message = await self.client.wait_for("message", check=check, timeout=60)
+                message: discord.Message
+            except asyncio.TimeoutError:
+                await ctx.send("Looks like no one is adding any more roles")
+                res = {}
+            else:
+                if len(res) == 6:
+                    await ctx.send("All 6 roles added")
+                    break
+                else:
+                    spl = message.content.split()
+                    role = discord.utils.get(ctx.guild.roles, id=int(spl[1][3:][:-1]))
+                    rank = int(spl[2])
+                    res[rank] = role
+                    
+        ctx.guildState.ranks = res
+        
+        print(ctx.guildState.ranks)
+        
+    @setup.command()
+    async def reset(self, ctx):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
+        ctx.guildState.reset()
+        
+        await ctx.send(">>> All the setUp has been reset")
     
    
         

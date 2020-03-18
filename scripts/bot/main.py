@@ -62,7 +62,6 @@ async def unload_all(ctx):
 @client.command(aliases=["refresh"])
 #@commands.has_role(gen.admin_role_id)
 async def reload(ctx, extension):
-
     client.unload_extension(f"cogs.{extension}")
     client.load_extension(f"cogs.{extension}")
     await ctx.send(f">>> {extension.capitalize()} commands drank some coke, they are now refreshed. ")

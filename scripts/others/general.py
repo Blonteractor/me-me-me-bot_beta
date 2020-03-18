@@ -6,6 +6,7 @@ import json
 import git
 from git import Repo
 from datetime import datetime
+import concurrent.futures
 
 server_id = 617021917622173747
 awoo_id = 640862189288423425
@@ -44,13 +45,16 @@ level_Player = 25
 level_Hero = 50
 level_CON = 85
 
-reddit = praw.Reddit(
-    client_id=os.environ.get("REDDIT_CLIENT_ID"),
-    client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
-    username=os.environ.get("REDDIT_USERNAME"),
-    password=os.environ.get("REDDIT_PASSWORD"),
-    user_agent="FuqU"
-)
+try:
+    reddit = praw.Reddit(
+        client_id=os.environ.get("REDDIT_CLIENT_ID"),
+        client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
+        username=os.environ.get("REDDIT_USERNAME"),
+        password=os.environ.get("REDDIT_PASSWORD"),
+        user_agent="FuqU"
+    )
+except praw.exceptions.ClientException:
+    pass
 
 
 # def commit(sp_msg: str()):
@@ -134,8 +138,7 @@ def error_message(error, color="white"):
     print(Fore.WHITE+Back.BLACK)
 
 
-def db_receive(name):
-    
+def db_receive(name) -> dict:
     with open(f'{DBPATH}\\{name}.json', 'r') as f:
         return json.load(f)
 

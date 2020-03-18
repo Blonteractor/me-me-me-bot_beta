@@ -23,10 +23,12 @@ from os import system
 import time
 import lyricsgenius
 import random
+import concurrent.futures
+import ast
+from lyricsgenius.song import Song
 
 import imp
 import os
-
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
 
@@ -34,6 +36,11 @@ imp.load_source("Youtube", os.path.join(
     os.path.dirname(__file__), "../../others/Youtube.py"))
 from Youtube import YoutubePlaylist, YoutubeVideo, driver
 import general as gen
+
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../../others/state.py"))
+
+from state import CustomContext, guildState
 
 def vc_check():
     async def predicate(ctx):           # Check if the user is in vc to run the command
@@ -61,7 +68,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
         reactions = {"yes": "✔", "no": "❌"}
 
         def check(reaction: discord.Reaction, user):
-            return user in members and reaction.message.id == msg.id and str(reaction) in reactions.values()
+            return user in members and reaction.message.id == msg.id and str(reaction) in reactions.values() and not user == ctx.bot.user
 
         msg = await ctx.send(content=f">>> {vote_msg}")
         msg: discord.Message
@@ -73,11 +80,12 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration, check=check)
                 response = str(reaction)
             except TimeoutError:
+                yes = no = 0
                 for reaction in msg.reactions:
                     if response == reactions["yes"]:
-                        yes = reaction.count
+                        yes = reaction.count - 1
                     elif response == reactions["no"]:
-                        no = reaction.count
+                        no = reaction.count - 1
 
                 total = yes + no
                 result = (yes / total) >= votes_required
@@ -110,9 +118,29 @@ def has_role(role_id):
         
     return commands.check(predicate=predicate)
 
+def multi(func):
+    def wrapper(*args, **kwargs):
+        if __name__ == "cogs.testing":
+            return func(*args, **kwargs)
+        else:
+            return "no"
+    return wrapper
 
-genius = lyricsgenius.Genius(
-    "pGaaH8g-CxAeF1qaQ2DeVmLnmp84mIciWU8sbGoVKQO_MTlHQW4ZoxYeP8db1kDO")
+@multi
+def process(func, wargs):
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        p = executor.submit(func, wargs)
+
+    return "".join(p.result())
+
+@multi
+def thread(func, wargs):
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        t = executor.submit(func, wargs)
+        
+    return "".join(t.result())
+
+genius = lyricsgenius.Genius(os.environ.get("LYRICS_GENIUS_KEY"))
 genius.verbose = False
 
 
@@ -158,14 +186,16 @@ class Music(commands.Cog):
    # * ------------------------------------------------------------------------------PREREQUISITES--------------------------------------------------------------------------------------------------------------
 
     def __init__(self, client):
+        print(__name__)
         self.client = client
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
         self.juke_box.start()
+        
         if gen.dj_role is not None:
             self.dj_role_id = gen.dj_role.id
         else:
-            self.dj_role_id = "@everyone"
+            self.dj_role_id = None
 
         self.client: discord.Client
         
@@ -185,11 +215,11 @@ class Music(commands.Cog):
     def log(self, msg):                     # funciton for logging if developer mode is on
         debug_info = gen.db_receive("var")["cogs"]
         try:
-            debug_info[self.quailifed_name]
+            debug_info[self.qualified_name]
         except:
-            debug_info[self.quailifed_name] = 0
-        if debug_info[self.quailifed_name] == 1:
-            return gen.error_message(msg, gen.cog_colours[self.quailifed_name])
+            debug_info[self.qualified_name] = 0
+        if debug_info[self.qualified_name] == 1:
+            return gen.error_message(msg, gen.cog_colours[self.qualified_name])
 
     def chunks(self, lst, n):
         for i in range(0, len(lst), n):
@@ -287,7 +317,8 @@ class Music(commands.Cog):
     async def juke_box(self):
 
         for guild in self.client.guilds:
-            channel = gen.juke_box_channel
+            state - guildState(guild)
+            channel = state.juke_box_channel
 
             if channel is None:
                 return
@@ -507,12 +538,15 @@ class Music(commands.Cog):
                     self.time = 0
                     if (self.clock.current_loop == 0):
                         self.clock.start()
+                        
                     await self.jbe_update(queue[0])
                     await self.jbq_update(queue[0])
+                    
                     if (self.jbl_update.current_loop == 0):
                         self.jbl_update.start()
 
                     if self.shuffle_lim:
+                        
                         self.shuffle_var += 1
                         if self.shuffle_var == self.shuffle_lim:
                             await ctx.invoke(self.client.get_command("shuffle"))
@@ -546,82 +580,82 @@ class Music(commands.Cog):
                 await self.juke_box_loading.edit(content=f"00:00/00:00 - {':black_large_square:'*10}")
                 break
 
-        async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
+    async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
 
-            if type(_content) == str:
-                if len(_content) < 2048:
-                    return
+        if type(_content) == str:
+            if len(_content) < 2048:
+                return
 
-            async def reactions_add(message, reactions):
-                for reaction in reactions:
-                    await message.add_reaction(reaction)
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
 
-            def default_check(reaction: discord.Reaction, user):
-                return user == ctx.author and reaction.message.id == embed_msg.id
+        def default_check(reaction: discord.Reaction, user):
+            return user == ctx.author and reaction.message.id == embed_msg.id
 
-            if check is None:
-                check = default_check
+        if check is None:
+            check = default_check
 
-            if type(_content) == str:
-                content_list = _content.split("\n")
-                content = []
-                l = ""
-                for i in content_list:
-                    if len(l+i) > 2048:
-                        content += [l]
-                        l = ""
-                    l += i
-                    l += "\n"
-                else:
+        if type(_content) == str:
+            content_list = _content.split("\n")
+            content = []
+            l = ""
+            for i in content_list:
+                if len(l+i) > 2048:
                     content += [l]
+                    l = ""
+                l += i
+                l += "\n"
+            else:
+                content += [l]
 
-            elif type(_content) == list:
-                content = _content
+        elif type(_content) == list:
+            content = _content
 
-            pages = len(content)
-            page = 1
+        pages = len(content)
+        page = 1
 
-            embed: discord.Embed = embed_msg.embeds[0]
+        embed: discord.Embed = embed_msg.embeds[0]
 
-            def embed_update(page):
-                embed.description = content[page - 1]
-                return embed
+        def embed_update(page):
+            embed.description = content[page - 1]
+            return embed
 
-            await embed_msg.edit(embed=embed_update(page=page))
+        await embed_msg.edit(embed=embed_update(page=page))
 
-            reactions = {"back": "⬅", "delete": "❌", "forward": "➡"}
+        reactions = {"back": "⬅", "delete": "❌", "forward": "➡"}
 
-            self.client.loop.create_task(reactions_add(
-                reactions=reactions.values(), message=embed_msg))
+        self.client.loop.create_task(reactions_add(
+            reactions=reactions.values(), message=embed_msg))
 
-            while True:
-                try:
-                    reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
-                except TimeoutError:
-                    await embed_msg.clear_reactions()
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+            except TimeoutError:
+                await embed_msg.clear_reactions()
 
-                    return
+                return
 
-                else:
-                    response = str(reaction.emoji)
+            else:
+                response = str(reaction.emoji)
 
-                    await embed_msg.remove_reaction(response, ctx.author)
+                await embed_msg.remove_reaction(response, ctx.author)
 
-                    if response in reactions.values():
-                        if response == reactions["forward"]:
-                            page += 1
-                            if page > pages:
-                                page = pages
-                        elif response == reactions["back"]:
-                            page -= 1
-                            if page < 1:
-                                page = 1
-                        elif response == reactions["delete"]:
-                            embed_msg.delete(delay=3)
+                if response in reactions.values():
+                    if response == reactions["forward"]:
+                        page += 1
+                        if page > pages:
+                            page = pages
+                    elif response == reactions["back"]:
+                        page -= 1
+                        if page < 1:
+                            page = 1
+                    elif response == reactions["delete"]:
+                        embed_msg.delete(delay=3)
 
-                            return
+                        return
 
-                        await embed_msg.edit(embed=embed_update(page=page))
+                    await embed_msg.edit(embed=embed_update(page=page))
 
     # ? SEARCHING
     async def searching(self, ctx, query, isVideo: bool = True, VideoClass: bool = True):
@@ -695,7 +729,7 @@ class Music(commands.Cog):
 
     # ? JOIN
 
-    @commands.command()
+    @commands.command(aliases=["j"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @has_role(role_id=dj_role_id)
     async def join(self, ctx) -> bool:
@@ -728,7 +762,7 @@ class Music(commands.Cog):
             return False
 
     # ? PLAY
-    @commands.command()
+    @commands.command(aliases=["plae"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def play(self, ctx, *, query):
         '''Plays the audio of the video in the provided VTUBE url.'''
@@ -747,7 +781,7 @@ class Music(commands.Cog):
                     vid = YoutubePlaylist(split_list[split_list.index(
                         "playlist?list")+1], requested_by=ctx.author.name)
                 else:
-                    await ctx.send("Couldnt find neither video or playlist.")
+                    await ctx.send("Couldn't find neither video or playlist.")
                     return
 
             else:
@@ -762,20 +796,12 @@ class Music(commands.Cog):
 
         old_queue = [x for x in self.queue if type(x) != str]
 
-        if voice and (not voice.is_playing()):
-            Queue_infile = os.path.isdir(self.QPATH)
-
-            if not Queue_infile:
-                os.mkdir(self.QPATH)
-            else:
-                self.queue_delete()
-
         q_num = len(old_queue) + 1
 
         self.loading_emoji = str(discord.utils.get(
             ctx.guild.emojis, name="loading"))
 
-        message = await ctx.send(f"Downloading song `{vid.title}`.... {self.loading_emoji}")
+        message = await ctx.send(f"Searching song `{vid.title}`.... {self.loading_emoji}")
         message: discord.Message
 
         embed = discord.Embed(title="Song Added to Queue",  # TODO make a function
@@ -806,35 +832,40 @@ class Music(commands.Cog):
             self.queue += [f"--{vid.title}--"]
             self.full_queue += [f"--{vid.title}--"]
             temp = []
-            for i in range(len(vid.entries)):
-
-                _vid = YoutubeVideo(vid.entries[i][0])
-
-                temp += [_vid]
-
             old_queue = [x for x in self.queue if type(x) != str]
+            for i in range(len(vid.entries)):
+                _vid = YoutubeVideo(vid.entries[i][0])
+                                    
+                if len(old_queue) == 0:
+                    self.queue.append(_vid)
+                    await self.player(ctx, voice)
+                else:
+                    self.log("Song added to queue")
+                    
+                temp.append(_vid)
+                
+            if len(old_queue) == 0:
+                self.queue = []    
+            
             self.queue += temp
             self.full_queue += temp
-            vid._entries = temp
-            if len(old_queue) == 0:
-                await self.player(ctx, voice)
-            else:
-                self.log("Song added to queue")
+            vid._info["entries"] = temp
+            
 
             self.queue += [f"--{vid.title}--"]
             self.full_queue += [f"--{vid.title}--"]
 
     # ? PLAY PLAYLIST
-    @commands.command()
+    @commands.command(name="play-playlist", aliases=["ppl"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def play_playlist(self, ctx, *, query):
-        vid = YoutubePlaylist.from_query(query=query)[0]
+        vid = thread(YoutubePlaylist.from_query, [query]).result()[0]
         play_command = self.client.get_command("play")
         await ctx.invoke(play_command, query=f"https://www.youtube.com/playlist?list={vid.id}")
 
     # ? SEARCH
 
-    @commands.command()
+    @commands.command(aliases=["s"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def search(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
@@ -846,7 +877,7 @@ class Music(commands.Cog):
             await ctx.invoke(play_command, query=f"https://www.youtube.com/watch?v={result[0]}")
 
     # ? SEARCH_PLAYLIST
-    @commands.command()
+    @commands.command(name="search-playlist", aliases=["spl"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def search_playlist(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
@@ -859,7 +890,7 @@ class Music(commands.Cog):
 
     # ? NOW PLAYING
 
-    @commands.command()
+    @commands.command(name="now-playing", aliases=["np"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def now_playing(self, ctx):
         queue = [x for x in self.queue if type(x) != str]
@@ -917,10 +948,95 @@ class Music(commands.Cog):
         embed_msg = await ctx.send(embed=embed)
 
         await self.embed_pages(ctx=ctx, content_str=lyrics, embed_msg=embed_msg, wait_time=120)
+        
+    @commands.command(name="choose-lyrics")
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    async def clyrics(self, ctx: commands.Context,query = None):
+        if not query and self.queue == []:
+            await ctx.send("no song sad lyf")
+        elif not query:
+            query = self.queue[0].title
+        
+        title = query
+        response = genius.search_genius_web(title)
+
+        hits = response['sections'][0]['hits']
+        sections = sorted(response['sections'],
+                                key=lambda sect: sect['type'] == "song",
+                                reverse=True)
+                
+                
+        hits =[hit for section in sections for hit in section['hits'] if hit['type'] == "song"][0:5]
+        
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+                
+        wait_time = 60
+
+        reactions = {"1️⃣": 1, "2️⃣": 2, "3️⃣": 3, "4️⃣": 4, "5️⃣": 5}
+
+        embed = discord.Embed(title="Search returned the following",
+                              color=discord.Colour.dark_green())
+
+        embed.set_author(name="Me!Me!Me!",
+                         icon_url=self.client.user.avatar_url)
+        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                         icon_url=ctx.message.author.avatar_url)
+        embed.set_thumbnail(url=self.music_logo)
+
+        embed_msg = await ctx.send(embed=embed)
+
+        
+        for index, result in enumerate(hits):
+            embed.add_field(name=f"*{index + 1}.*",
+                            value=f"**{result['title']} - {result['artist']}**", inline=False)
+
+        await embed_msg.edit(content="", embed=embed)
+
+        def check(reaction: discord.Reaction, user):
+            return user == ctx.author and reaction.message.id == embed_msg.id
+
+        self.client.loop.create_task(
+            reactions_add(embed_msg, reactions.keys()))
+        
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+            except TimeoutError:
+                await ctx.send(f">>> I guess no ones wants to see some sweet lyrics.")
+                await embed_msg.delete()
+
+                return None
+
+            else:
+                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
+
+                if str(reaction.emoji) in reactions.keys():
+                    await embed_msg.delete(delay=3)
+                    hit = hits[reactions[str(reaction.emoji)] - 1]  
+                                      
+                    song_info =hit["result"]
+                    lyrics = genius._scrape_song_lyrics_from_url(song_info['url'])
+                    
+                    song = Song(song_info,lyrics)
+                    embed = discord.Embed(title=f"LYRICS - {song.title} - {song.artist}",  # TODO make a function
+                              url=song.url,
+                              description="",
+                              color=discord.Colour.blurple())
+                    
+                    embed.set_author(name="Me!Me!Me!",
+                                        icon_url=self.client.user.avatar_url)
+                    embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                                        icon_url=ctx.message.author.avatar_url)
+
+                    embed_msg = await ctx.send(embed=embed)
+
+                    await self.embed_pages(ctx=ctx, content_str=lyrics, embed_msg=embed_msg, wait_time=120)
 
     # ? SONG_INFO
 
-    @commands.command()
+    @commands.command(name="song-info", aliases=["sinfo", "sf"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def song_info(self, ctx, *, query):
         result = await self.searching(ctx, query)
@@ -941,7 +1057,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     # ? PLAYLIST_INFO
-    @commands.command()
+    @commands.command(name="playlist-info", aliases=["plinfo", "pf"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def playlist_info(self, ctx, *, query):
 
@@ -1381,7 +1497,7 @@ class Music(commands.Cog):
 
     # ? LOOP_QUEUE
 
-    @commands.command()
+    @commands.command(name="loop-queue", aliases=["loopq", "lq"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def loop_queue(self, ctx, toggle=""):
@@ -1407,7 +1523,7 @@ class Music(commands.Cog):
 
     # ? RESTART
 
-    @commands.command()
+    @commands.command(aliases=["res"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def restart(self, ctx):
@@ -1426,7 +1542,7 @@ class Music(commands.Cog):
 
    # ? PAUSE
 
-    @commands.command()
+    @commands.command(aliases=["p"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def pause(self, ctx):
@@ -1446,7 +1562,7 @@ class Music(commands.Cog):
 
     # ? RESUME
 
-    @commands.command()
+    @commands.command(aliases=["r"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def resume(self, ctx):
@@ -1465,7 +1581,7 @@ class Music(commands.Cog):
             await ctx.send(">>> Ya know to resume stuff, stuff also needs to be paused first.")
 
     # ? STOP
-    @commands.command()
+    @commands.command(aliases=["st"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def stop(self, ctx):
@@ -1489,7 +1605,7 @@ class Music(commands.Cog):
             await ctx.send(">>> Ya know to stop stuff, stuff also needs to be playing first.")
 
     # ? HARD_STOP
-    @commands.command()
+    @commands.command(name="hardstop", aliases=["hst"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def hard_stop(self, ctx):
@@ -1519,7 +1635,7 @@ class Music(commands.Cog):
             pass
     # ? SKIP
 
-    @commands.command()
+    @commands.command(aliases=["skip", "sk", "nxt"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     @vote(votes_required=0.5,
@@ -1528,7 +1644,9 @@ class Music(commands.Cog):
           no_msg="Vote failed! Not skipping the current song.",
           yes_msg="Vote passed! Skipping the current song now...")
     async def next(self, ctx):
-        '''Skips the current song and plays the next song in the queue.'''
+        '''Skips the current song and plays the next song in the queue.
+        Requires atleast 50% of people to vote yes
+        '''
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
@@ -1594,7 +1712,7 @@ class Music(commands.Cog):
             pass
     # ? VOLUME
 
-    @commands.command()
+    @commands.command(aliases=["v", "vl"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def volume(self, ctx, volume: int):
@@ -1705,7 +1823,7 @@ class Music(commands.Cog):
             return
     # ?FORWARD
 
-    @commands.command()
+    @commands.command(aliases=["fwd"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def forward(self, ctx, time):
@@ -1855,7 +1973,7 @@ class Music(commands.Cog):
             gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST ADD_PLAYLIST
-    @playlist.command()
+    @playlist.command(name="add-playlist", aliases=["addpl"])
     async def add_playlist(self, ctx, name, *, query):
         '''Adds a playlist to your Playlist.'''
 
@@ -1894,7 +2012,7 @@ class Music(commands.Cog):
             gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST REARRANGE
-    @playlist.command()
+    @playlist.command(aliases=["rng"])
     async def rearrange(self, ctx, name, P1: int, P2: int):
         '''Rearranges 2 songs/playlist places of your playlist.'''
         playlist_db = gen.db_receive("playlist")
@@ -1931,9 +2049,9 @@ class Music(commands.Cog):
         gen.db_update("playlist", playlist_db)
 
     # ? PLAYLIST REMOVE
-    @commands.command()
+    @commands.command(name="plremove") #! experimentation
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    async def premove(self, ctx, name, R: int):
+    async def plremove(self, ctx, name, R: int):
         '''Removes a song/playlist from your playlist.'''
         playlist_db = gen.db_receive("playlist")
 
@@ -2005,7 +2123,7 @@ class Music(commands.Cog):
     # ? PLAYLIST PLAY
     @playlist.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    async def pplay(self, ctx, name):
+    async def plplay(self, ctx, name):
         '''Plays your playlist.'''
 
         playlist_db = gen.db_receive("playlist")
@@ -2078,7 +2196,7 @@ class Music(commands.Cog):
                         old_queue = [x for x in self.queue if type(x) != str]
                         self.queue += temp
                         self.full_queue += temp
-                        vid._entries = temp
+                        vid._info["entries"] = temp
                         if len(old_queue) == 0:
                             await self.player(ctx, voice)
                         else:
@@ -2092,7 +2210,7 @@ class Music(commands.Cog):
                 self.full_queue += [f"----{pname}----"]
 
                 await ctx.send("Your Playlist has been added to the Queue.")
-
+                
     # ? PLAYLIST EXPAND
     @playlist.command()
     async def expandd(self, ctx, name):
@@ -2165,9 +2283,9 @@ class Music(commands.Cog):
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def export(self, ctx, isFull="queue"):
-        if isFull.lower() != "full" or isFull.lower() != "queue" or isFull.lower() != "q":
+        if not(isFull.lower() == "full" or isFull.lower() == "queue" or isFull.lower() == "q"):
             await ctx.send("only full or q or queue")
-            return
+            return 
 
         if isFull.lower() == "full":
             queue = [x for x in self.full_queue if type(x) != str]
@@ -2194,24 +2312,28 @@ class Music(commands.Cog):
         await ctx.send(f"here is your page Mister , {the_page}")
 
     # ? IMPORT
-    @commands.command()
+    @commands.command(name="import")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def _import(self, ctx, url):
+        
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
-        if "https://www.pastebin.com/" not in url:
-            await ctx.send("Suck a dick or die or sucker punch")
+        if "https://pastebin.com/" not in url:
+            await ctx.send("pwease add a pastw biwn link uwu")
             return
+        
         part = url[-8:]
-        url = "https://www.pastebin.com/raw/" + part
+        url = "https://pastebin.com/raw/" + part
 
         response = requests.get(url)
         content = response.content.decode("utf-8")
+        content = ast.literal_eval(content)
+        
         if "<!DOCTYPE HTML>" in content:
-            await ctx.send("nigga shut up")
+            await ctx.send("niggwa pwease shut uwp uwu")
             return
         content = list(content)
         for i in range(len(content)):
@@ -2219,13 +2341,17 @@ class Music(commands.Cog):
                 content[i] = '"'
         content = "".join(content)
         try:
+            with open("yes.json", "w") as f:
+                f.write(content)
+            print(content)
             content = json.loads(content)
-        except:
-            await ctx.send("nigga shut up")
+        except Exception as w:
+            await ctx.send("niggwa will yo ass pwease shut uwp uwu")
+            print(w)
             return
 
         if type(content) != list:
-            await ctx.send("nigga shut up")
+            await ctx.send("nigga shut or gay")
             return
 
         for i in content:
@@ -2233,7 +2359,7 @@ class Music(commands.Cog):
                 await ctx.send("nigga shut up")
                 return
             if "title" not in i or "url" not in i:
-                await ctx.send("nigga shut up")
+                await ctx.send("nigga shut up1")
                 return
 
         for i in content:
@@ -2250,7 +2376,7 @@ class Music(commands.Cog):
                         else:
                             self.queue.append(vid)
 
-    @commands.command()
+    @commands.command(name="generic-play", aliases=["gp", "genplay"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def generic_play(self, ctx, url):
         if not (await ctx.invoke(self.client.get_command("join"))):
