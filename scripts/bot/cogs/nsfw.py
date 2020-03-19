@@ -264,7 +264,7 @@ class nsfw(commands.Cog):
             return
 
         category = discord.utils.get(
-            ctx.guild.categories, name=ctx.guildState.doujin_category)
+            ctx.guild.categories, name=ctx.GuildState.doujin_category)
         category: discord.CategoryChannel
 
         channel_exists = False

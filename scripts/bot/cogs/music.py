@@ -40,7 +40,7 @@ import general as gen
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
 
-from state import CustomContext, guildState
+from state import CustomContext, GuildState
 
 def vc_check():
     async def predicate(ctx):           # Check if the user is in vc to run the command
@@ -258,17 +258,19 @@ class Music(commands.Cog):
 
     @tasks.loop(seconds=2)
     async def auto_pause(self):  # auto pauses the player if it no one is in the vc
-        guild = self.client.get_guild(gen.server_id)
-        awoo_channel = self.client.get_channel(gen.awoo_id)
-        voice = get(self.client.voice_clients, guild=guild)
+        for guild in self.client.guilds:
+            awoo_channel = GuildState(guild).voice_text_channel
+            voice = get(self.client.voice_clients, guild=guild)
 
-        if self.disconnect_check(voice):
-
-            if voice.is_playing():
-                self.log("Player AUTO paused")
-                voice.pause()
-                await awoo_channel.send(f"Everyone left `{voice.channel.name}`, player paused.")
-                self.auto_resume.start()
+            if self.disconnect_check(voice):
+                if voice.is_playing():
+                    self.log("Player AUTO paused")
+                    voice.pause()
+                    self.auto_resume.start()
+                    
+                    if awoo_channel is None:
+                        continue
+                    await awoo_channel.send(f"Everyone left `{voice.channel.name}`, player paused.")
 
     @tasks.loop(seconds=1)
     async def clock(self):
@@ -291,34 +293,37 @@ class Music(commands.Cog):
 
     @tasks.loop(seconds=1)
     async def auto_resume(self):  # resumes the song if the user re-joins the vc
-        guild = self.client.get_guild(gen.server_id)
-        awoo_channel = self.client.get_channel(gen.awoo_id)
-        voice = get(self.client.voice_clients, guild=guild)
-
-        if voice and voice.is_paused() and not self.disconnect_check(voice):
-            self.log("Music AUTO resumed")
-            voice.resume()
-            await awoo_channel.send(f"Looks like someone joined `{voice.channel.name}`, player resumed.")
-            self.auto_resume.cancel()
+        for guild in self.client.guilds:
+            awoo_channel = GuildState(guild).voice_text_channel
+            voice = get(self.client.voice_clients, guild=guild)
+            
+            if voice and voice.is_paused() and not self.disconnect_check(voice):
+                self.log("Music AUTO resumed")
+                voice.resume()
+                self.auto_resume.cancel()
+                
+                if awoo_channel is None:
+                    continue
+                await awoo_channel.send(f"Looks like someone joined `{voice.channel.name}`, player resumed.")
 
     async def auto_disconnect(self):  # actual disconnecting code
-
-        guild = self.client.get_guild(gen.server_id)
-        voice = get(self.client.voice_clients, guild=guild)
-        awoo_channel = self.client.get_channel(gen.awoo_id)
-
-        await voice.disconnect()
-
-        await awoo_channel.send(f"Nothing much to do in the vc so left `{voice.channel.name}`")
-        self.log(f"Auto disconnected from {voice.channel.name}")
-        self.queue.clear()
+        for guild in self.client.guilds:
+            voice = get(self.client.voice_clients, guild=guild)
+            awoo_channel = GuildState(guild).voice_text_channel
+    
+            await voice.disconnect()
+            self.queue.clear()
+            self.log(f"Auto disconnected from {voice.channel.name}")
+            
+            if awoo_channel is None:
+                continue
+            await awoo_channel.send(f"Nothing much to do in the vc so left `{voice.channel.name}`")
 
     @tasks.loop(seconds=1)
     async def juke_box(self):
 
         for guild in self.client.guilds:
-            state - guildState(guild)
-            channel = state.juke_box_channel
+            channel = GuildState(guild).juke_box_channel
 
             if channel is None:
                 return
@@ -2338,7 +2343,6 @@ class Music(commands.Cog):
 
         response = requests.get(url)
         content = response.content.decode("utf-8")
-        content = ast.literal_eval(content)
         
         if "<!DOCTYPE HTML>" in content:
             await ctx.send("niggwa pwease shut uwp uwu")
@@ -2352,7 +2356,7 @@ class Music(commands.Cog):
             with open("yes.json", "w") as f:
                 f.write(content)
             print(content)
-            content = json.loads(content)
+            content = ast.literal_eval(content)
         except Exception as w:
             await ctx.send("niggwa will yo ass pwease shut uwp uwu")
             print(w)

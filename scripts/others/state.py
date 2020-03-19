@@ -3,7 +3,7 @@ from discord.utils import get
 from general import db_receive, db_update
 from discord.ext.commands import Context
 
-class guildState:
+class GuildState:
     """Stores state variables of a guild"""
     
     properties = ["rank_roles", "rank_levels", "juke_box", "auto_meme", "vc_text", "level_up", "dj_role", "extra_cooldown", "auto_pause", "auto_disconnect", "doujin_category"]
@@ -14,10 +14,10 @@ class guildState:
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
         
         
-    def get_channel(self, name):
+    def get_channel(self, name) -> discord.TextChannel:
         return get(self.guild.channels, name=name)
     
-    def get_role(self, name):
+    def get_role(self, name) -> discord.Role:
         return get(self.guild.roles, name=name)
     
     def reset(self):
@@ -77,49 +77,52 @@ class guildState:
         return dict(zip(levels, roles))
     
     @property
-    def juke_box_channel(self):
+    def juke_box_channel(self) -> discord.TextChannel:
         name = self.get_property("juke_box")
     
         return self.get_channel(name)
        
     @property
-    def auto_meme_channel(self):
+    def auto_meme_channel(self) -> discord.TextChannel:
         name = self.get_property("auto_meme")
            
         return self.get_channel(name)
     
     @property
-    def voice_text_channel(self):
+    def voice_text_channel(self) -> discord.TextChannel:
         name = self.get_property("vc_text")
         
         return self.get_channel(name)
     
     @property
-    def level_up_channel(self):
+    def level_up_channel(self) -> discord.TextChannel:
         name = self.get_property("level_up")
         
         return self.get_channel(name)
     
     @property
-    def dj_role(self):
+    def dj_role(self) -> discord.Role:
         name = self.get_property("dj_role")
         
         return self.get_role(name)
     
     @property
-    def extra_cooldown(self):
-        return self.get_property("extra_cooldown")
+    def extra_cooldown(self) -> str:
+        res = self.get_property("extra_cooldown")
+        return str(res) if res is not None else "0"
     
     @property
-    def auto_pause_time(self):
-        return self.get_property("auto_pause")
+    def auto_pause_time(self) -> str:
+        res = self.get_property("auto_pause")
+        return res if res is not None else "0"
     
     @property
-    def auto_disconnect_time(self):
-        return self.get_property("auto_disconnect")
+    def auto_disconnect_time(self) -> str:
+        res = self.get_property("auto_disconnect")
+        return res if res is not None else "0"
     
     @property
-    def doujin_category(self):
+    def doujin_category(self) -> str:
         return self.get_property("doujin_category")
     
     @ranks.setter
@@ -173,5 +176,5 @@ class CustomContext(Context):
     
     def __init__(self, **attrs):
         super().__init__(**attrs)
-        self.guildState = guildState(self.guild)
+        self.GuildState = GuildState(self.guild)
         

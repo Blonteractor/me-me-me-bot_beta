@@ -7,6 +7,7 @@ imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
 
 import general as gen
+from state import GuildState
 class Meme(commands.Cog):
     ''':clap: Memes are a part of our culture.'''
 
@@ -143,9 +144,6 @@ class Meme(commands.Cog):
         #! MAKE SUBMISSION EMBED
 
         meme_info = gen.db_receive("meme")
-        channel = self.auto_meme_channel
-        if channel is None:
-            return
 
         for sub_name in meme_info:
             sub_info = meme_info[sub_name]
@@ -163,8 +161,11 @@ class Meme(commands.Cog):
                 
                 meh.set_thumbnail(url = subr.icon_img)
 
-                
-                await channel.send(embed = meh)
+                for guild in self.client.guilds:       
+                    channel = GuildState(guild).auto_meme_channel
+                    if channel is None:
+                        continue        
+                    await channel.send(embed = meh)
 
         #! CLEARING UNSHOWED
        
