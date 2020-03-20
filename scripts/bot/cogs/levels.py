@@ -290,7 +290,7 @@ class levels(commands.Cog):
         return member_info
     
     def guild_entry(self, guild: discord.Guild):
-        self.exp_info[str(user.guild.id)] = {}
+        self.exp_info[str(guild.id)] = {}
         
         gen.db_update("exp", self.exp_info)
 
@@ -320,8 +320,9 @@ class levels(commands.Cog):
 
             member_info["active"] = True
             member_info["messages"] += 1
-
-            self.exp_info[str(guild.id)][str(message.author.id)] = member_info
+            if not str(message.author.guild.id) in self.exp_info:
+                self.guild_entry(message.author.guild)
+            self.exp_info[str(message.author.guild.id)][str(message.author.id)] = member_info
 
         gen.db_update("exp", self.exp_info)
 
