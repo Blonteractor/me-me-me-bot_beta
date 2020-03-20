@@ -6,13 +6,12 @@ from discord.ext.commands import Context
 class GuildState:
     """Stores state variables of a guild"""
     
-    properties = ["rank_roles", "rank_levels", "juke_box", "auto_meme", "vc_text", "level_up", "dj_role", "extra_cooldown", "auto_pause", "auto_disconnect", "doujin_category"]
+    properties = ["rank_roles", "rank_levels", "juke_box", "auto_meme", "vc_text", "level_up", "dj_role", "extra_cooldown", "auto_pause", "auto_disconnect", "doujin_category", "prefix"]
     
     def __init__(self, guild: discord.Guild):
         self.guild = guild
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
-        
         
     def get_channel(self, name) -> discord.TextChannel:
         return get(self.guild.channels, name=name)
@@ -125,6 +124,10 @@ class GuildState:
     def doujin_category(self) -> str:
         return self.get_property("doujin_category")
     
+    @property
+    def prefix(self) -> str:
+        return self.get_property("prefix")
+    
     @ranks.setter
     def ranks(self, new):
         new_ranks = {str(rank): role.name for rank, role in new.items()}
@@ -169,6 +172,10 @@ class GuildState:
     @doujin_category.setter
     def doujin_category(self, name):
         self.set_property(property_name="doujin_category", property_val=name)
+        
+    @prefix.setter
+    def prefix(self, new):
+        self.set_property(property_name="prefix", property_val=new)
         
 
 class CustomContext(Context):

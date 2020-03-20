@@ -56,11 +56,14 @@ def vc_check():
     return commands.check(predicate)
 
 
-def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_duration=20):
+def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_duration=15):
     async def predicate(ctx: commands.Context):
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
+        
+        if ctx.voice_client is None:
+            return True
 
         members = ctx.guild.voice_client.channel.members
 
@@ -78,30 +81,32 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
         while True:
             try:
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration, check=check)
-                response = str(reaction)
+                new_message: discord.Message = await ctx.channel.fetch_message(msg.id)
             except TimeoutError:
                 yes = no = 0
-                for reaction in msg.reactions:
-                    if response == reactions["yes"]:
+                for reaction in new_message.reactions:
+                    if str(reaction) == reactions["yes"]:
                         yes = reaction.count - 1
-                    elif response == reactions["no"]:
-                        no = reaction.count - 1
+                    elif str(reaction) == reactions["no"]:
+                    	no = reaction.count - 1
 
                 total = yes + no
                 result = (yes / total) >= votes_required
 
                 if result:
-                    await msg.edit(content=yes_msg)
+                    await msg.edit(content=yes_msg + f"\n{reactions['yes']}: {yes}{reactions['no']}: {no}")
                 if not result:
-                    await msg.edit(content=no_msg)
+                    await msg.edit(content=no_msg + f"\n{reactions['yes']}: {yes}{reactions['no']}: {no}")
 
+                await new_message.clear_reactions()
+                
                 return result
 
             else:
                 if user.id not in already_voted:
                     already_voted.append(user.id)
                 else:
-                    await msg.remove_reaction(response, user)
+                    await msg.remove_reaction(str(reaction), user)
 
     return commands.check(predicate=predicate)
 
@@ -827,6 +832,8 @@ class Music(commands.Cog):
                         value=vid.title)
         embed.set_image(url=vid.thumbnail)
         embed.set_thumbnail(url=self.music_logo)
+        
+        await message.edit(content="", embed=embed)
 
         self.queue_ct += [vid]
         self.full_queue_ct += [vid]
@@ -1653,7 +1660,7 @@ class Music(commands.Cog):
     @vc_check()
     @vote(votes_required=0.5,
           vote_duration=20,
-          vote_msg="Looks like somone wants to skip the current song",
+          vote_msg="Looks like somone wants to skip the current song, VOTE!",
           no_msg="Vote failed! Not skipping the current song.",
           yes_msg="Vote passed! Skipping the current song now...")
     async def next(self, ctx):
@@ -1823,6 +1830,8 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def seek(self, ctx, time):
+        """Skip ahead to a timestamp in the current song"""
+        
         queue = [x for x in self.queue if type(x) != str]
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
@@ -1840,7 +1849,8 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def forward(self, ctx, time):
-
+        """Go forward by given seconds in the current song"""
+        
         queue = [x for x in self.queue if type(x) != str]
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
@@ -1861,7 +1871,8 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def rewind(self, ctx, time):
-
+        """Go back by given seconds in the current song"""
+        
         queue = [x for x in self.queue if type(x) != str]
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
@@ -1882,6 +1893,7 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def shuffle(self, ctx, amount: int = None):
+        """Shuffle the current queue"""
         self.queue = [x for x in self.queue if type(x) != str]
         self.queue_ct = self.queue[:]
         next_queue = self.queue[1:]
@@ -2106,6 +2118,8 @@ class Music(commands.Cog):
     # ? PLAYLIST NAME
     @playlist.command()
     async def name(self, ctx, name, new_name):
+        """Give a name to your playlist"""
+        
         playlist_db = gen.db_receive("playlist")
         try:
             if name in playlist_db[str(ctx.author.id)]:
@@ -2225,7 +2239,7 @@ class Music(commands.Cog):
                 await ctx.send("Your Playlist has been added to the Queue.")
                 
     # ? PLAYLIST EXPAND
-    @playlist.command()
+    @playlist.command(name="expand")
     async def expandd(self, ctx, name):
         playlist_db = gen.db_receive("playlist")
 
@@ -2296,6 +2310,8 @@ class Music(commands.Cog):
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def export(self, ctx, isFull="queue"):
+        """Convert your playlist to text, gives a pastebin url"""
+        
         if not(isFull.lower() == "full" or isFull.lower() == "queue" or isFull.lower() == "q"):
             await ctx.send("only full or q or queue")
             return 
@@ -2328,6 +2344,7 @@ class Music(commands.Cog):
     @commands.command(name="import")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def _import(self, ctx, url):
+        """Have your playlist saved as text, provide a pastebin url to play the playlist"""
         
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
@@ -2391,6 +2408,8 @@ class Music(commands.Cog):
     @commands.command(name="generic-play", aliases=["gp", "genplay"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def generic_play(self, ctx, url):
+        """This commands tries its hardest to play any video (not just YouTube), provided the link"""
+        
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
 
