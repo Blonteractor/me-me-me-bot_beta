@@ -23,12 +23,22 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
-COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../others/state.py"))
 
+from state import GuildState
+
+COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
 
 # * CLIENT SETUP
 prefix = gen.permu("me! ") + gen.permu("epic ")
-client = commands.Bot(command_prefix=prefix, case_insensitive=True)
+async def determine_prefix(bot, message):
+    if message.guild:
+        return GuildState(message.guild).prefix if GuildState(message.guild).prefix is not None else prefix
+    else:
+        return prefix
+
+client = commands.Bot(command_prefix=determine_prefix, case_insensitive=True)
 status = cycle(gen.status)
 
 # * COG SET UP STUFF
@@ -80,7 +90,7 @@ async def reload_all(ctx):
 def cog_load_startup():
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py") and not filename == "music.py":
+        if filename.endswith(".py"):
             client.load_extension(f"cogs.{filename[:-3]}")
 
 # * BACKING UP AND COMMIT STUFF
@@ -101,9 +111,7 @@ async def re_init(ctx):
     
     await ctx.invoke(client.get_command("unload_all"))
     await ctx.send("DONE")
-    os.execv(sys.executable, ['python'] + sys.argv)
-    
-  
+    os.execv(sys.executable, ['python'] + sys.argv)  
 
 @client.command(aliases=["Debug","Development"])
 #@commands.has_role(gen.admin_role_id)

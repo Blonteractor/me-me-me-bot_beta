@@ -175,7 +175,10 @@ class GuildState:
         
     @prefix.setter
     def prefix(self, new):
-        self.set_property(property_name="prefix", property_val=new)
+        if len(new) == 1:
+            self.set_property(property_name="prefix", property_val=new)
+        else:
+            self.set_property(property_name="prefix", property_val=new + " ")
         
 
 class CustomContext(Context):

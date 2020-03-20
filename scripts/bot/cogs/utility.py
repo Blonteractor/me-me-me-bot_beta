@@ -172,6 +172,8 @@ class Utility(commands.Cog):
             
             embed = discord.Embed(title="Current setUp", color=discord.Color.from_rgb(150, 77, 232))
             
+            embed.add_field(name="Prefix",
+                             value=ctx.GuildState.prefix if ctx.GuildState.prefix is not None else "epic/me!", inline=False)
             embed.add_field(name="Juke box",
                              value=ctx.GuildState.juke_box_channel.mention if ctx.GuildState.juke_box_channel is not None else "Not set", inline=False)
             embed.add_field(name="Auto meme",
@@ -358,6 +360,14 @@ class Utility(commands.Cog):
                     await ctx.send(">>> Reply in human language.", delete_after=5)
                     continue
 
+    @setup.command()
+    @commands.has_permissions(administrator=True)
+    async def prefix(self, ctx, *, pre):
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
+        ctx.GuildState.prefix = pre
+        
+        await ctx.send(f"Bot prefix changed to `{ctx.GuildState.prefix}`")
         
 def setup(client):
     client.add_cog(Utility(client))
