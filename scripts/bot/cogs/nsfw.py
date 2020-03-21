@@ -122,7 +122,8 @@ class nsfw(commands.Cog):
         
         while True:
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time,
+                                                             check=lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id)
             except TimeoutError:
                 await embed_msg.clear_reactions()
                 
@@ -329,15 +330,13 @@ class nsfw(commands.Cog):
         embed_msg = await ctx.send(embed=embed)
         embed_msg: discord.Message
 
-        def check(reaction: discord.Reaction, user):
-            return user == ctx.author and reaction.message.id == embed_msg.id
-
         self.client.loop.create_task(reactions_add(embed_msg, reactions.values()))
 
         while True:
 
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time,
+                                                             check=lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id)
             except TimeoutError:
                 await ctx.send(f">>> Everyone done reading `{doujin_id}`, so I deleted it.")
                 await embed_msg.delete()

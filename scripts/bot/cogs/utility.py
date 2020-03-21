@@ -298,14 +298,10 @@ class Utility(commands.Cog):
         
         await ctx.send(">>> Send the ranks you want to add like this `add @role level_required`, a total of 6 will be accepted")
         
-        def check(m: discord.Message):
-            return m.author == ctx.author and m.content.startswith("add ")
-        
-        
         while True:
         
             try:
-                message = await self.client.wait_for("message", check=check, timeout=60)
+                message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author and m.content.startswith("add "), timeout=60)
                 message: discord.Message
             except asyncio.TimeoutError:
                 await ctx.send("Looks like no one is adding any more roles")
@@ -330,18 +326,15 @@ class Utility(commands.Cog):
     async def reset(self, ctx):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         
-        yes = ["perhaps", "yea", "yes", "y"]
-        no = ["nope", "nah", "no", "n"]
-        
-        def check(m: discord.Message):
-            return m.author == ctx.author
+        yes = ["perhaps", "yea", "yes", "y", "yup", "yeah", "ofc"]
+        no = ["nope", "nah", "no", "n", "nop"]
         
         await ctx.send(">>> You sure you wanna reset the setup?")
           
         while True:
         
             try:
-                message = await self.client.wait_for("message", check=check, timeout=20)
+                message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout=20)
                 message: discord.Message
             except asyncio.TimeoutError:
                 await ctx.send("Looks you couldn't decide")

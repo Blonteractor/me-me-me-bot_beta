@@ -80,7 +80,8 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
 
         while True:
             try:
-                reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration, check=check)
+                reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration,
+                                                        check=lambda reaction, user: user in members and reaction.message.id == msg.id and str(reaction) in reactions.values() and not user == ctx.bot.user)
                 new_message: discord.Message = await ctx.channel.fetch_message(msg.id)
             except TimeoutError:
                 yes = no = 0
@@ -612,7 +613,7 @@ class Music(commands.Cog):
             return user == ctx.author and reaction.message.id == embed_msg.id
 
         if check is None:
-            check = default_check
+            check = lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id
 
         if type(_content) == str:
             content_list = _content.split("\n")
@@ -714,15 +715,13 @@ class Music(commands.Cog):
 
         await embed_msg.edit(content="", embed=embed)
 
-        def check(reaction: discord.Reaction, user):
-            return user == ctx.author and reaction.message.id == embed_msg.id
-
         self.client.loop.create_task(
             reactions_add(embed_msg, reactions.keys()))
 
         while True:
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time,
+                                                             check=lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id)
             except TimeoutError:
                 await ctx.send(f">>> I guess no ones wants to play.")
                 await embed_msg.delete()
@@ -1014,15 +1013,12 @@ class Music(commands.Cog):
 
         await embed_msg.edit(content="", embed=embed)
 
-        def check(reaction: discord.Reaction, user):
-            return user == ctx.author and reaction.message.id == embed_msg.id
-
-        self.client.loop.create_task(
-            reactions_add(embed_msg, reactions.keys()))
+        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()))
         
         while True:
             try:
-                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time, check=check)
+                reaction, user = await self.client.wait_for('reaction_add', timeout=wait_time,
+                                                             check=lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id)
             except TimeoutError:
                 await ctx.send(f">>> I guess no ones wants to see some sweet lyrics.")
                 await embed_msg.delete()
