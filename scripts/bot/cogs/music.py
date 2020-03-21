@@ -61,6 +61,8 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
+                
+        admin_emoji = "🔑"
         
         if ctx.voice_client is None:
             return True
@@ -68,7 +70,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
         members = ctx.guild.voice_client.channel.members
 
         already_voted: List[int] = []
-        reactions = {"yes": "✔", "no": "❌"}
+        reactions = {"yes": "✔", "no": "❌", "admin": admin_emoji}
 
         def check(reaction: discord.Reaction, user):
             return user in members and reaction.message.id == msg.id and str(reaction) in reactions.values() and not user == ctx.bot.user
@@ -82,9 +84,23 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
             try:
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration,
                                                         check=lambda reaction, user: user in members and reaction.message.id == msg.id and str(reaction) in reactions.values() and not user == ctx.bot.user)
-                new_message: discord.Message = await ctx.channel.fetch_message(msg.id)
+                
+                if str(reaction) == reactions["admin"]:
+                    supposed_admins = await reaction.users().flatten()
+                    
+                    for supposed_admin in supposed_admins:
+                        if supposed_admin.top_role.permissions.administrator:
+                            await msg.clear_reactions()
+                            await msg.edit(content=">>> Admin abooz, pls demote!")
+                            await msg.edit(content="Admin power excercised: " + yes_msg)
+                            
+                            return True
+                        
             except TimeoutError:
                 yes = no = 0
+                admin_re = None
+                new_message: discord.Message = await ctx.channel.fetch_message(msg.id)
+                
                 for reaction in new_message.reactions:
                     if str(reaction) == reactions["yes"]:
                         yes = reaction.count - 1
@@ -95,7 +111,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
                 result = (yes / total) >= votes_required
 
                 if result:
-                    await msg.edit(content=yes_msg + f"\n{reactions['yes']}: {yes}{reactions['no']}: {no}")
+                    await msg.edit(content=yes_msg + f"\n{reactions['yes']}: *{yes}* \t\t {reactions['no']}: *{no}*")
                 if not result:
                     await msg.edit(content=no_msg + f"\n{reactions['yes']}: {yes}{reactions['no']}: {no}")
 
@@ -111,13 +127,15 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
 
     return commands.check(predicate=predicate)
 
-def has_role(role_id):
+def is_dj():
     def predicate(ctx):
-        if role_id is None:
+        dj_role = ctx.GuildState.dj_role
+        
+        if dj_role is None:
             return True
 
         for role in ctx.author.roles:
-            if role.id == role_id:
+            if role.id == dj_role.id:
                 return True
             
         return False
@@ -748,10 +766,10 @@ class Music(commands.Cog):
 
     @commands.command(aliases=["j"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    @has_role(role_id=dj_role_id)
-    async def join(self, ctx) -> bool:
+    @is_dj()
+    async def join(self, ctx: CustomContext) -> bool:
         '''Joins the voice channel you are currently in.'''
-
+    
         try:  # user not in vc
             channel = ctx.message.author.voice.channel
         except:

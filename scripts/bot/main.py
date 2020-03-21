@@ -34,7 +34,8 @@ COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
 prefix = gen.permu("me! ") + gen.permu("epic ")
 async def determine_prefix(bot, message):
     if message.guild:
-        return GuildState(message.guild).prefix if GuildState(message.guild).prefix is not None else prefix
+        state_prefix = GuildState(message.guild).prefix
+        return state_prefix if state_prefix is not None else prefix
     else:
         return prefix
 

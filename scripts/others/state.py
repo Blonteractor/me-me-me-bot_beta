@@ -59,6 +59,12 @@ class GuildState:
         db_update("states", states)
         
     @property
+    def admin_role(self):
+        for role in guild.roles:
+            if role.permissions.administrator:
+                return role
+        
+    @property
     def state_variables(self):
         states = db_receive("states")
         if not str(self.guild.id) in states:
