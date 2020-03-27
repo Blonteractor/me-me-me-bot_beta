@@ -376,6 +376,7 @@ class State:
         self.Member = MemberState(member)
         self.Guild = GuildState(guild)
         
+        
 class CustomContext(Context):
     """Use ctx = await bot.get_context(ctx.message, cls=CustomContext) in every command"""
     
