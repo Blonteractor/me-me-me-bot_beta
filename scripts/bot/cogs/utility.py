@@ -102,6 +102,7 @@ class Utility(commands.Cog):
 
     #* CLEAR
     @commands.command()
+    @commands.has_permission(manage_messages=True)
     async def clear(self, ctx, amount=10):
         '''I can delete the evidence of a bully, no one shall know.'''
 

@@ -2,7 +2,7 @@ import os
 from typing import List
 from colorama import init, Fore, Back
 
-setup_dir = r"C:\Users\Administrator\Desktop\MeMeMe_Code\me-me-me-bot\environment"[:-12]
+setup_dir = os.getcwd()[:-12]
 
 ignored = [r"C:\\Users\\Administrator\\Desktop\MeMeMe_Code\\me-me-me-bot\\Database", r"C:\\Users\\Administrator\\Desktop\\MeMeMe_Code\\me-me-me-bot\\cache.nhentai.net"]
 

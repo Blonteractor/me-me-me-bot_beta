@@ -1,7 +1,9 @@
 import discord
 from discord.utils import get
-from general import db_receive, db_update
+from general import db_receive, db_update, DBPATH
 from discord.ext.commands import Context
+from typing import Union
+import os
 
 class GuildState:
     """Stores state variables of a guild"""
@@ -10,6 +12,11 @@ class GuildState:
     
     def __init__(self, guild: discord.Guild):
         self.guild = guild
+        self.db_name = "guild-states"
+        
+        with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
+            if f.read() == "":
+                f.write("{}")
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
         
@@ -30,10 +37,10 @@ class GuildState:
         else:
             temp[property_name] = property_val
     
-        states = db_receive("states")
+        states = db_receive(self.db_name)
         states[str(self.guild.id)] = temp
         
-        db_update("states", states)
+        db_update("guild-states", states)
         
     def get_property(self, property_name: str, rtr=False):
         state_variables = self.state_variables
@@ -52,11 +59,11 @@ class GuildState:
         
         state_variables[property_name] = property_val
         
-        states = db_receive("states")
+        states = db_receive(self.db_name)
         
         states[str(self.guild.id)] = state_variables
         
-        db_update("states", states)
+        db_update(self.db_name, states)
         
     @property
     def admin_role(self):
@@ -66,13 +73,13 @@ class GuildState:
         
     @property
     def state_variables(self):
-        states = db_receive("states")
+        states = db_receive(self.db_name)
         if not str(self.guild.id) in states:
             states[str(self.guild.id)] = {}
 
-            db_update("states", states)      
+            db_update(self.db_name, states)      
             
-        return db_receive("states")[str(self.guild.id)]
+        return db_receive(self.db_name)[str(self.guild.id)]
     
     @property
     def ranks(self) -> dict:
@@ -185,12 +192,187 @@ class GuildState:
             self.set_property(property_name="prefix", property_val=new)
         else:
             self.set_property(property_name="prefix", property_val=new + " ")
+            
+class MemberState:
+    
+    properties = ["role", "level", "xp", "messages", "rel_xp", "rel_bar", "active", "rank"]
+    
+    def __init__(self, member: discord.Member):
+        self.member = member
+        self.db_name = f"member-states->{self.member.guild.id}"
         
+        with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
+            if f.read() == "":
+                f.write("{}")
+        
+        [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
+        
+    def get_role(self, name) -> discord.Role:
+        return get(self.member.roles, name=name)
+    
+    def reset(self):
+        return [self.new_property(pr) for pr in self.properties]
+    
+    def set_property(self, property_name: str, property_val):
+        temp = self.state_variables
+    
+        if type(property_val) == int:
+            temp[property_name] = str(property_val)
+        else:
+            temp[property_name] = property_val
+    
+        states = db_receive(self.db_name)
+        states[str(self.member.id)] = temp
+        
+        db_update(self.db_name, states)
+        
+    def get_property(self, property_name: str, rtr=False):
+        state_variables = self.state_variables
+        exists = property_name in state_variables
+        
+        if not exists:
+            if not rtr:
+                raise AttributeError(f"{property_name} not found in the state variables")
+            elif rtr:
+                return None
+   
+        return state_variables[property_name]
+        
+    def new_property(self, property_name, property_val=None):
+        state_variables = self.state_variables
+        
+        state_variables[property_name] = property_val
+        
+        states = db_receive(self.db_name)
+        
+        states[str(self.member.id)] = state_variables
+        
+        db_update(self.db_name, states)
+        
+    @property
+    def state_variables(self):
+        states = db_receive(self.db_name)
+        if not str(self.member.id) in states:
+            states[str(self.member.id)] = {}
 
+            db_update(self.db_name, states)      
+            
+        return db_receive(self.db_name)[str(self.member.id)]
+    
+        
+class UserState:
+    
+    properties = ["vault", "souls", "playlist", "phone"]
+    
+    def __init__(self, user: Union[discord.User, discord.Member]):
+        self.user = user
+        self.db_name = "user-states"
+        
+        with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
+            if f.read() == "":
+                f.write("{}")
+        
+        [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
+    
+    def reset(self):
+        return [self.new_property(pr) for pr in self.properties]
+    
+    def set_property(self, property_name: str, property_val):
+        temp = self.state_variables
+
+        if type(property_val) == int:
+            temp[property_name] = str(property_val)
+        else:
+            temp[property_name] = property_val
+    
+        states = db_receive(self.db_name)
+        states[str(self.user.id)] = temp
+        
+        db_update(self.db_name, states)
+        
+    def get_property(self, property_name: str, rtr=False):
+        state_variables = self.state_variables
+        exists = property_name in state_variables
+        
+        if not exists:
+            if not rtr:
+                raise AttributeError(f"{property_name} not found in the state variables")
+            elif rtr:
+                return None
+   
+        return state_variables[property_name]
+        
+    def new_property(self, property_name, property_val=None):
+        state_variables = self.state_variables
+        
+        state_variables[property_name] = property_val
+        
+        states = db_receive(self.db_name)
+        
+        states[str(self.user.id)] = state_variables
+        
+        db_update(self.db_name, states)
+        
+    @property
+    def state_variables(self):
+        states = db_receive(self.db_name)
+        if not str(self.user.id.id) in states:
+            states[str(self.user.id)] = {}
+
+            db_update(self.db_name, states)      
+            
+        return db_receive(self.db_name)[str(self.user.id)]
+        
+    @property
+    def vault(self):
+        return self.get_property(property_name="vault")
+    
+    @property
+    def souls(self):
+        return self.get_property(property_name="souls")
+    
+    @property
+    def phone(self):
+        return self.get_property(property_name="phone")
+    
+    @property
+    def playlist(self):
+        return self.get_property(property_name="playlist")
+    
+    @vault.setter
+    def vault(self, new):
+        return self.set_property(property_name="vault", property_val=new)
+    
+    @souls.setter
+    def souls(self, new):
+        return self.set_property(property_name="souls", property_val=new)
+    
+    @playlist.setter
+    def playlist(self, new):
+        return self.set_property(property_name="playlist", property_val=new)
+    
+    @phone.setter
+    def phone(self, new):
+        return self.set_property(property_name="phone", property_val=new)
+        
+        
+class State:
+    
+    def __init__(self, member: discord.Member, user: discord.User=None, guild: discord.Guild=None):
+        if user is None:
+            user = member
+        if guild is None:
+            guild = member.guild
+            
+        self.user = UserState(member)
+        self.member = MemberState(member)
+        self.guild = GuildState(guild)
+        
 class CustomContext(Context):
     """Use ctx = await bot.get_context(ctx.message, cls=CustomContext) in every command"""
     
     def __init__(self, **attrs):
         super().__init__(**attrs)
-        self.GuildState = GuildState(self.guild)
+        
+        self.States = State(self.author)
         

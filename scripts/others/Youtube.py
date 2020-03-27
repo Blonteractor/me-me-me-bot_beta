@@ -21,6 +21,7 @@ chrome_options.add_argument("headless")
 chrome_options.add_argument("log-level=3")
 
 driver = webdriver.Chrome(options = chrome_options) 
+# driver = webdriver.Edge(options = chrome_options)
 driver.get("http://www.youtube.com")
 
 class YoutubeVideo:
