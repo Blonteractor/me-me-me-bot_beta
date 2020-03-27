@@ -194,6 +194,7 @@ class GuildState:
             self.set_property(property_name="prefix", property_val=new + " ")
             
 class MemberState:
+    """Stores guild specific states which change between guilds"""
     
     properties = ["role", "level", "xp", "messages", "rel_xp", "rel_bar", "active", "rank"]
     
@@ -259,8 +260,14 @@ class MemberState:
             
         return db_receive(self.db_name)[str(self.member.id)]
     
+    properties = ["role", "level", "xp", "messages", "rel_xp", "rel_bar", "active", "rank"]
+    
+    @property
+    def role(self):
+        pass
         
 class UserState:
+    """Stores global states which don't change between guilds."""
     
     properties = ["vault", "souls", "playlist", "phone"]
     
@@ -357,6 +364,7 @@ class UserState:
         
         
 class State:
+    """Stores all the state objects"""
     
     def __init__(self, member: discord.Member, user: discord.User=None, guild: discord.Guild=None):
         if user is None:
@@ -364,9 +372,9 @@ class State:
         if guild is None:
             guild = member.guild
             
-        self.user = UserState(member)
-        self.member = MemberState(member)
-        self.guild = GuildState(guild)
+        self.User = UserState(member)
+        self.Member = MemberState(member)
+        self.Guild = GuildState(guild)
         
 class CustomContext(Context):
     """Use ctx = await bot.get_context(ctx.message, cls=CustomContext) in every command"""

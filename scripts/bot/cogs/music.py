@@ -129,7 +129,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
 
 def is_dj():
     def predicate(ctx):
-        dj_role = ctx.GuildState.dj_role
+        dj_role = ctx.States.Guild.dj_role
         
         if dj_role is None:
             return True
@@ -196,11 +196,11 @@ class Music(commands.Cog):
 
     time = 0
     QPATH = os.path.join(
-        os.path.dirname(__file__), '../../../Queue')
+        os.path.dirname(__file__), '../../../cache.bot/Queue')
     QPATH = os.path.abspath(QPATH)
 
     DPATH = os.path.join(
-        os.path.dirname(__file__), '../../../Download')
+        os.path.dirname(__file__), '../../../cache.bot/Download')
     DPATH = os.path.abspath(DPATH)
     
     dj_role_id = 0

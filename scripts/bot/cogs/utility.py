@@ -174,23 +174,23 @@ class Utility(commands.Cog):
             embed = discord.Embed(title="Current setUp", color=discord.Color.from_rgb(150, 77, 232))
             
             embed.add_field(name="Prefix",
-                             value=ctx.GuildState.prefix if ctx.GuildState.prefix is not None else "epic/me!", inline=False)
+                             value=ctx.States.Guild.prefix if ctx.States.Guild.prefix is not None else "epic/me!", inline=False)
             embed.add_field(name="Juke box",
-                             value=ctx.GuildState.juke_box_channel.mention if ctx.GuildState.juke_box_channel is not None else "Not set", inline=False)
+                             value=ctx.States.Guild.juke_box_channel.mention if ctx.States.Guild.juke_box_channel is not None else "Not set", inline=False)
             embed.add_field(name="Auto meme",
-                             value=ctx.GuildState.auto_meme_channel.mention if ctx.GuildState.auto_meme_channel is not None else "Not set", inline=False)
+                             value=ctx.States.Guild.auto_meme_channel.mention if ctx.States.Guild.auto_meme_channel is not None else "Not set", inline=False)
             embed.add_field(name="Level up",
-                             value=ctx.GuildState.level_up_channel.mention if ctx.GuildState.level_up_channel is not None else "Not set", inline=False)
+                             value=ctx.States.Guild.level_up_channel.mention if ctx.States.Guild.level_up_channel is not None else "Not set", inline=False)
             embed.add_field(name="VC text",
-                             value=ctx.GuildState.voice_text_channel.mention if ctx.GuildState.voice_text_channel is not None else "Not set", inline=False)
+                             value=ctx.States.Guild.voice_text_channel.mention if ctx.States.Guild.voice_text_channel is not None else "Not set", inline=False)
             embed.add_field(name="Extra cooldown",
-                             value=f"`{ctx.GuildState.extra_cooldown}`" + " seconds", inline=False)
+                             value=f"`{ctx.States.Guild.extra_cooldown}`" + " seconds", inline=False)
             embed.add_field(name="Auto-disconenct time",
-                             value=f"`{ctx.GuildState.auto_disconnect_time}`" + " seconds", inline=False)
+                             value=f"`{ctx.States.Guild.auto_disconnect_time}`" + " seconds", inline=False)
             embed.add_field(name="Auto-pause time",
-                             value=f"`{ctx.GuildState.auto_pause_time}`" + " seconds", inline=False)
+                             value=f"`{ctx.States.Guild.auto_pause_time}`" + " seconds", inline=False)
             embed.add_field(name="DJ role",
-                             value=ctx.GuildState.dj_role.mention if ctx.GuildState.dj_role is not None else "@everyone", inline=False)
+                             value=ctx.States.Guild.dj_role.mention if ctx.States.Guild.dj_role is not None else "@everyone", inline=False)
             
             await ctx.send(embed=embed)
         
@@ -200,10 +200,10 @@ class Utility(commands.Cog):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(channel) in rem:
-            ctx.GuildState.juke_box_channel = None
+            ctx.States.Guild.juke_box_channel = None
             await ctx.send(f">>> Juke box removed")
             return    
-        ctx.GuildState.juke_box_channel = channel
+        ctx.States.Guild.juke_box_channel = channel
        
         await ctx.send(f">>> Juke box channel set to {channel.mention}")
         
@@ -213,10 +213,10 @@ class Utility(commands.Cog):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(channel) in rem:
-            ctx.GuildState.auto_meme_channel = None
+            ctx.States.Guild.auto_meme_channel = None
             await ctx.send(f">>> Auto meme removed")
             return    
-        ctx.GuildState.auto_meme_channel = channel
+        ctx.States.Guild.auto_meme_channel = channel
         
         await ctx.send(f">>> Auto meme channel set to {channel.mention}")
     
@@ -229,7 +229,7 @@ class Utility(commands.Cog):
             gen.extra_cooldown = 0
             await ctx.send(f">>> Extra cooldown removed")
             return    
-        ctx.GuildState.extra_cooldown = extra
+        ctx.States.Guild.extra_cooldown = extra
         
         await ctx.send(f">>> Cooldown of all commands increased by `{extra}`")
         
@@ -239,10 +239,10 @@ class Utility(commands.Cog):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(role) in rem:
-            ctx.GuildState.dj_role = None
+            ctx.States.Guild.dj_role = None
             await ctx.send(f">>> DJ role removed")
             return    
-        ctx.GuildState.dj_role = role
+        ctx.States.Guild.dj_role = role
         
         await ctx.send(f">>> DJ role changed to {role.mention}")  
         
@@ -253,10 +253,10 @@ class Utility(commands.Cog):
         
         rem = ["disable", "remove"]
         if str(channel) in rem:
-            ctx.GuildState.level_up_channel = None
+            ctx.States.Guild.level_up_channel = None
             await ctx.send(f">>> The level up channel was removed")
             return    
-        ctx.GuildState.level_up_channel = channel
+        ctx.States.Guild.level_up_channel = channel
         
         await ctx.send(f">>> The level up channel chaged to to {channel.mention}")  
         
@@ -267,10 +267,10 @@ class Utility(commands.Cog):
         
         rem = ["disable", "remove"]
         if str(channel) in rem:
-            ctx.GuildState.voice_text_channel = None
+            ctx.States.Guild.voice_text_channel = None
             await ctx.send(f">>> The primary voice text channel was removed")
             return    
-        ctx.GuildState.voice_text_channel = channel
+        ctx.States.Guild.voice_text_channel = channel
         
         await ctx.send(f">>> The primary voice text channel chaged to to {channel.mention}") 
         
@@ -281,11 +281,11 @@ class Utility(commands.Cog):
         
         rem = ["disable", "remove"]
         if name in rem:
-            ctx.GuildState.doujin_category = None
+            ctx.States.Guild.doujin_category = None
             await ctx.send(">> All doujin channels will not be created in any category.")
             return
         
-        ctx.GuildState.doujin_category = name
+        ctx.States.Guild.doujin_category = name
         
         await ctx.send(f">>> All doujin channels will be created in `{name}` from now on.")
         
@@ -318,9 +318,9 @@ class Utility(commands.Cog):
                     rank = int(spl[2])
                     res[rank] = role
                     
-        ctx.GuildState.ranks = res
+        ctx.States.Guild.ranks = res
         
-        print(ctx.GuildState.ranks)
+        print(ctx.States.Guild.ranks)
         
     @setup.command(aliases=["default"])
     @commands.has_permissions(administrator=True)
@@ -344,7 +344,7 @@ class Utility(commands.Cog):
                 response = message.content
                 if response in yes:
                     await ctx.send(">>> All the setUp has been reset")
-                    ctx.GuildState.reset()
+                    ctx.States.Guild.reset()
                     return
                 
                 elif response in no:
@@ -359,9 +359,9 @@ class Utility(commands.Cog):
     async def prefix(self, ctx, *, pre):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         
-        ctx.GuildState.prefix = pre
+        ctx.States.Guild.prefix = pre
         
-        await ctx.send(f"Bot prefix changed to `{ctx.GuildState.prefix}`")
+        await ctx.send(f"Bot prefix changed to `{ctx.States.Guild.prefix}`")
         
 def setup(client):
     client.add_cog(Utility(client))
