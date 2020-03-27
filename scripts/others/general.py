@@ -6,6 +6,7 @@ import json
 import git
 from git import Repo
 from datetime import datetime
+import concurrent.futures
 
 server_id = 617021917622173747
 awoo_id = 640862189288423425
@@ -24,8 +25,14 @@ subreddits = ["memes", "dankmemes", "cursedcomments", "animemes"]
 
 cog_colours = {"levels":"cyan", "music":"green"}
 
+cog_cooldown = {"music": 3, "default": 2, "nsfw": 3}
+
 epic = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
+dj_role = None
+auto_meme_channel = None
+juke_box_channel = None
+extra_cooldown = 0
 
 admin_role_id = 632906375839744001
 
@@ -38,66 +45,69 @@ level_Player = 25
 level_Hero = 50
 level_CON = 85
 
-reddit = praw.Reddit(
-    client_id=os.environ.get("REDDIT_CLIENT_ID"),
-    client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
-    username=os.environ.get("REDDIT_USERNAME"),
-    password=os.environ.get("REDDIT_PASSWORD"),
-    user_agent="FuqU"
-)
+try:
+    reddit = praw.Reddit(
+        client_id=os.environ.get("REDDIT_CLIENT_ID"),
+        client_secret=os.environ.get("REDDIT_CLIENT_SECRET"),
+        username=os.environ.get("REDDIT_USERNAME"),
+        password=os.environ.get("REDDIT_PASSWORD"),
+        user_agent="FuqU"
+    )
+except praw.exceptions.ClientException:
+    pass
 
 
-def commit(sp_msg: str()):
+# def commit(sp_msg: str()):
    
-    try:
-        os.rename(f"{DBPATH}\\gothy", f"{DBPATH}\\.git")
-    except Exception as e:
-        if not os.path.exists(f"{DBPATH}\\.git"):
-            print(e)
-            return
+#     try:
+#         os.rename(f"{DBPATH}\\gothy", f"{DBPATH}\\.git")
+#     except Exception as e:
+#         if not os.path.exists(f"{DBPATH}\\.git"):
+#             print(e)
+#             return
 
-    now = datetime.now()
-    date_time = now.strftime("%d/%m/%Y %H:%M:%S")
-    commit_msg = f"Database updated - {date_time} -> {sp_msg} "
-    g = git.Git(DBPATH)
-    try:
-        g.execute(f'git add --all')
-        g.execute(f'git commit -m "{commit_msg}" ')
-        g.execute("git push --force")
-    except:
-        print("Commit upto the point. Can't commit.")
-        done = False
-    else:
-        done = True
+#     now = datetime.now()
+#     date_time = now.strftime("%d/%m/%Y %H:%M:%S")
+#     commit_msg = f"Database updated - {date_time} -> {sp_msg} "
+#     g = git.Git(DBPATH)
+#     try:
+#         g.execute(f'git add --all')
+#         g.execute(f'git commit -m "{commit_msg}" ')
+#         g.execute("git push --force")
+#     except:
+#         print("Commit upto the point. Can't commit.")
+#         done = False
+#     else:
+#         done = True
             
-    os.rename(f"{DBPATH}\\.git", f"{DBPATH}\\gothy")
-    return done
+#     os.rename(f"{DBPATH}\\.git", f"{DBPATH}\\gothy")
+#     return done
 
 
-def reset():
-    try:
-        os.rename(f"{DBPATH}\\gothy", f"{DBPATH}\\.git")
-    except Exception as e:
-        if not os.path.exists(f"{DBPATH}\\.git"):
-            print(e)
-            return
+# def reset():
+#     try:
+#         os.rename(f"{DBPATH}\\gothy", f"{DBPATH}\\.git")
+#     except Exception as e:
+#         if not os.path.exists(f"{DBPATH}\\.git"):
+#             print(e)
+#             return
 
-    g = git.Git(DBPATH)
+#     g = git.Git(DBPATH)
     
 
-    try:
-        g.execute("git stash")
-        g.execute("git stash drop")
-    except:
-        pass
+#     try:
+#         g.execute("git stash")
+#         g.execute("git stash drop")
+#     except:
+#         pass
  
-    repo = Repo(f"{DBPATH}\\.git")
-    origin = repo.remote(name="origin")
-    origin.pull()
+#     repo = Repo(f"{DBPATH}\\.git")
+#     origin = repo.remote(name="origin")
+#     origin.pull()
 
  
-    print("Pulled Database Successfully")
-    os.rename(f"{DBPATH}\\.git", f"{DBPATH}\\gothy")
+#     print("Pulled Database Successfully")
+#     os.rename(f"{DBPATH}\\.git", f"{DBPATH}\\gothy")
  
 
 def permu(strs):
@@ -128,8 +138,7 @@ def error_message(error, color="white"):
     print(Fore.WHITE+Back.BLACK)
 
 
-def db_receive(name):
-    
+def db_receive(name) -> dict:
     with open(f'{DBPATH}\\{name}.json', 'r') as f:
         return json.load(f)
 

@@ -9,3 +9,5 @@ cache.nhentai.net/*
 .mypy_cache/*
 environment/.mypy_cache/*
 scripts/bot/cache.nhentai.net/*
+try_seek.py
+Database

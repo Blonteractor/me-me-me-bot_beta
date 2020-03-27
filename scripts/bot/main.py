@@ -13,6 +13,7 @@ from discord.ext import commands, tasks
 #? ALL OTHERS
 from itertools import cycle
 import asyncio
+from selenium.webdriver import Chrome as webdriver
 
 #? FILES
 import Help
@@ -22,15 +23,23 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
-imp.load_source("Youtube", os.path.join(
-    os.path.dirname(__file__), "../others/Youtube.py"))
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../others/state.py"))
 
-import Youtube
+from state import GuildState
 
+COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
 
 # * CLIENT SETUP
 prefix = gen.permu("me! ") + gen.permu("epic ")
-client = commands.Bot(command_prefix=prefix, case_insensitive=True)
+async def determine_prefix(bot, message):
+    if message.guild:
+        state_prefix = GuildState(message.guild).prefix
+        return state_prefix if state_prefix is not None else prefix
+    else:
+        return prefix
+
+client = commands.Bot(command_prefix=determine_prefix, case_insensitive=True)
 status = cycle(gen.status)
 
 # * COG SET UP STUFF
@@ -41,11 +50,10 @@ async def load(ctx, extension):
     client.load_extension(f"cogs.{extension}")
     await ctx.send(f">>> {extension.capitalize()} commands are now ready to deploy.")
     
-@load.error
-async def load_error(ctx,error):
-    if isinstance(error, commands.MissingRole):
-        await ctx.send(f">>> You thought that you could do that? How Cute.")
-
+@client.command(aliases=["enable_all"])
+#@commands.has_role(gen.admin_role_id)
+async def load_all(ctx):
+    cog_load_startup()
 
 @client.command(aliases=["disable"])
 #@commands.has_role(gen.admin_role_id)
@@ -54,19 +62,35 @@ async def unload(ctx, extension):
     client.unload_extension(f"cogs.{extension}")
     await ctx.send(f">>> {extension.capitalize()} commands were stopped, Master. ")
 
+@client.command(aliases=["disable_all"])
+#@commands.has_role(gen.admin_role_id)
+async def unload_all(ctx):
+    
+    for filename in os.listdir(COGS_PATH):
+        if filename.endswith(".py"):        
+            client.unload_extension(f"cogs.{filename[:-3]}")
 
 @client.command(aliases=["refresh"])
 #@commands.has_role(gen.admin_role_id)
 async def reload(ctx, extension):
-
     client.unload_extension(f"cogs.{extension}")
     client.load_extension(f"cogs.{extension}")
     await ctx.send(f">>> {extension.capitalize()} commands drank some coke, they are now refreshed. ")
 
 
+@client.command(aliases=["refresh_all"])
+#@commands.has_role(gen.admin_role_id)
+async def reload_all(ctx):
+    
+    for filename in os.listdir(COGS_PATH):
+        if filename.endswith(".py"):        
+            client.unload_extension(f"cogs.{filename[:-3]}")
+            client.load_extension(f"cogs.{filename[:-3]}")
+
+
 def cog_load_startup():
     
-    for filename in os.listdir("./cogs"):
+    for filename in os.listdir(COGS_PATH):
         if filename.endswith(".py"):
             client.load_extension(f"cogs.{filename[:-3]}")
 
@@ -82,15 +106,13 @@ async def backup(ctx, *, msg=""):
     else:
         await ctx.send(">>> Couldn't Backup Since Commit upto the mark.")
 
-
-@client.command()
+@client.command(aliases = ["reboot"])
 #@commands.has_role(gen.admin_role_id)
 async def re_init(ctx):
     
-    os.startfile(__file__)
+    await ctx.invoke(client.get_command("unload_all"))
     await ctx.send("DONE")
-    Youtube.driver.quit()
-    sys.exit()
+    os.execv(sys.executable, ['python'] + sys.argv)  
 
 @client.command(aliases=["Debug","Development"])
 #@commands.has_role(gen.admin_role_id)
@@ -154,10 +176,10 @@ async def on_ready():
     
     client.help_command = Help.MyHelpCommand()
     change_status.start()
-    auto_backup.start() 
+    #auto_backup.start() 
     cog_load_startup()
     
-    gen.reset()
+    #gen.reset()
 
     print('Bot is ready as sef!')
 
@@ -172,8 +194,14 @@ async def on_command_error(ctx, error):
             await message.delete()
         except:
             pass
-    if not isinstance(error,commands.MissingRequiredArgument):
-        gen.error_message(error)
+    elif isinstance(error, commands.CommandOnCooldown):
+            embed = discord.Embed(title="Woah woah, gonnae wait??",
+                                  color = discord.Color.red(),
+                                   description=f"We have cooldowns here, try again after `{round(error.retry_after, 1)}s` ")
+            await ctx.send(embed=embed)
+    else:
+        if not isinstance(error,commands.MissingRequiredArgument):
+            gen.error_message(error)    
 
 
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")

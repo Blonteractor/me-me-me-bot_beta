@@ -11,9 +11,18 @@ import general as gen
 
 class Phone(commands.Cog):
     ''':iphone: PHONE SIMULATOR 2019.'''
+    
+    cooldown = 0
 
     def __init__(self, client):
         self.client = client
+        
+        if self.qualified_name in gen.cog_cooldown:
+            self.cooldown = gen.cog_cooldown[self.qualified_name]
+        else:
+            self.cooldown = gen.cog_cooldown["default"]
+            
+        self.cooldown += gen.extra_cooldown
     
     def log(self, msg):  # ! funciton for logging if developer mode is on
         cog_name = os.path.basename(__file__)[:-3]
@@ -52,6 +61,7 @@ class Phone(commands.Cog):
         
     
     @commands.group()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def phone(self,ctx):
         '''Shows your Phone.'''
         

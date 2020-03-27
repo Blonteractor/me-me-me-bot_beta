@@ -1,17 +1,136 @@
 {
-    "413287145323626496": [
-        "Saksynator's Playlist",
-        [
-            "34Na4j8AVgA",
-            "JZjAg6fK-BQ",
-            "PLN1mxegxWPd3d8jItTyrAxwm-iq-KrM-e"
+    "413287145323626496": {
+        "Saksynator's Playlist": [
+            {
+                "id": "JZjAg6fK-BQ",
+                "uploader": "TheWeekndVEVO",
+                "uploader_id": "TheWeekndVEVO",
+                "uploader_url": "http://www.youtube.com/user/TheWeekndVEVO",
+                "channel_id": "UCF_fDSgPpBQuh1MsUTgIARQ",
+                "channel_url": "http://www.youtube.com/channel/UCF_fDSgPpBQuh1MsUTgIARQ",
+                "upload_date": "20170216",
+                "license": null,
+                "creator": "The Weeknd",
+                "title": "The Weeknd - Reminder",
+                "alt_title": "Reminder",
+                "thumbnail": "https://i.ytimg.com/vi/JZjAg6fK-BQ/maxresdefault.jpg",
+                "description": "Reminder (Official Video)\nTaken from the album Starboy\nhttp://theweeknd.co/StarboyYD\n\nXO Official Store: http://theweeknd.co/MR001YD\n\nConnect with The Weeknd\nhttp://www.facebook.com/theweeknd\nhttp://instagram.com/theweeknd\nhttps://soundcloud.com/theweeknd\nhttps://twitter.com/TheWeeknd\nhttps://www.theweeknd.com\n\nDirected by Kid Studio\nProduced by Vince Tran & Ryan Hahn\nFor HPLA\n\nMusic video by The Weeknd performing Reminder. \u00a9 2017 The Weeknd XO, Inc., Manufactured and Marketed by Republic Records, a Division of UMG Recordings, Inc.\n\nhttp://vevo.ly/79j4RW\nBest of The Weeknd: https://goo.gl/76DXjL\nSubscribe here: https://goo.gl/GWXGWM",
+                "categories": [
+                    "Music"
+                ],
+                "tags": [
+                    "Weeknd",
+                    "Reminder",
+                    "reminder the weeknd",
+                    "reminder the weekend",
+                    "reminder lyrics",
+                    "reminder the weeknd audio",
+                    "reminder the weeknd instrumental",
+                    "reminder the weeknd cover",
+                    "reminder acoustic weeknd",
+                    "reminder bryson tiller",
+                    "reminder drake",
+                    "reminder lyrics the weekend",
+                    "the weekend",
+                    "bryson tiller",
+                    "drake",
+                    "the weeknd starboy",
+                    "the weeknd i feel it coming",
+                    "the weeknd acquainted",
+                    "the weeknd starboy lyrics",
+                    "the weeknd the hills",
+                    "the weeknd starboy album"
+                ],
+                "subtitles": {},
+                "automatic_captions": {},
+                "duration": 231,
+                "age_limit": 0,
+                "annotations": null,
+                "chapters": null,
+                "webpage_url": "https://www.youtube.com/watch?v=JZjAg6fK-BQ",
+                "view_count": 267097860,
+                "like_count": 1758280,
+                "dislike_count": 68093,
+                "average_rating": 4.8508673,
+                "formats": {
+                    "format_id": "251",
+                    "url": "https://r2---sn-2vfxgoxupo-qxae.googlevideo.com/videoplayback?expire=1583417310&ei=frNgXqmSM4TKpgfzx77oCQ&ip=43.225.2.171&id=o-AGfglqPIv0BYAvfw3ZSv5lRlpN-2QRYzqdRJGqYYvt-P&itag=251&source=youtube&requiressl=yes&mm=31%2C29&mn=sn-2vfxgoxupo-qxae%2Csn-qxa7sn7z&ms=au%2Crdu&mv=m&mvi=1&pl=24&gcr=in&initcwndbps=953750&vprv=1&mime=audio%2Fwebm&gir=yes&clen=4098825&dur=230.641&lmt=1579682565121489&mt=1583395646&fvip=5&keepalive=yes&fexp=23842630%2C23882513&c=WEB&txp=5531432&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cgcr%2Cvprv%2Cmime%2Cgir%2Cclen%2Cdur%2Clmt&lsparams=mm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=ABSNjpQwRQIgEWAvAp1L2uukKtqCs9_PchSHQc8W3-caSqISYxtyp_ACIQD2-JHeu06r5GC_2ZokbgFwbgMdJuUfOnIIY9_3wb6MUQ%3D%3D&sig=ADKhkGMwRgIhAKrk4Fz75BC4Os7DyalfUYnoxDQGl6arXV6vWedEePihAiEAwp7k8DhUghZ7C21uhpmelhc1XhAuDDHt5oqU6_4OecM=&ratebypass=yes",
+                    "player_url": "/yts/jsbin/player_ias-vfle4a9aa/en_US/base.js",
+                    "ext": "webm",
+                    "format_note": "tiny",
+                    "acodec": "opus",
+                    "abr": 160,
+                    "asr": 48000,
+                    "filesize": 4098825,
+                    "fps": null,
+                    "height": null,
+                    "tbr": 149.032,
+                    "width": null,
+                    "vcodec": "none",
+                    "downloader_options": {
+                        "http_chunk_size": 10485760
+                    },
+                    "format": "251 - audio only (tiny)",
+                    "protocol": "https",
+                    "http_headers": {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3706.3 Safari/537.36",
+                        "Accept-Charset": "ISO-8859-1,utf-8;q=0.7,*;q=0.7",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                        "Accept-Encoding": "gzip, deflate",
+                        "Accept-Language": "en-us,en;q=0.5"
+                    }
+                },
+                "is_live": null,
+                "start_time": null,
+                "end_time": null,
+                "series": null,
+                "season_number": null,
+                "episode_number": null,
+                "track": "Reminder",
+                "artist": "The Weeknd",
+                "album": null,
+                "release_date": null,
+                "release_year": null,
+                "extractor": "youtube",
+                "webpage_url_basename": "JZjAg6fK-BQ",
+                "extractor_key": "Youtube",
+                "playlist": null,
+                "playlist_index": null,
+                "thumbnails": [
+                    {
+                        "url": "https://i.ytimg.com/vi/JZjAg6fK-BQ/maxresdefault.jpg",
+                        "id": "0"
+                    }
+                ],
+                "display_id": "JZjAg6fK-BQ",
+                "requested_subtitles": null,
+                "format_id": "251",
+                "url": "https://r2---sn-2vfxgoxupo-qxae.googlevideo.com/videoplayback?expire=1583417310&ei=frNgXqmSM4TKpgfzx77oCQ&ip=43.225.2.171&id=o-AGfglqPIv0BYAvfw3ZSv5lRlpN-2QRYzqdRJGqYYvt-P&itag=251&source=youtube&requiressl=yes&mm=31%2C29&mn=sn-2vfxgoxupo-qxae%2Csn-qxa7sn7z&ms=au%2Crdu&mv=m&mvi=1&pl=24&gcr=in&initcwndbps=953750&vprv=1&mime=audio%2Fwebm&gir=yes&clen=4098825&dur=230.641&lmt=1579682565121489&mt=1583395646&fvip=5&keepalive=yes&fexp=23842630%2C23882513&c=WEB&txp=5531432&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cgcr%2Cvprv%2Cmime%2Cgir%2Cclen%2Cdur%2Clmt&lsparams=mm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Cinitcwndbps&lsig=ABSNjpQwRQIgEWAvAp1L2uukKtqCs9_PchSHQc8W3-caSqISYxtyp_ACIQD2-JHeu06r5GC_2ZokbgFwbgMdJuUfOnIIY9_3wb6MUQ%3D%3D&sig=ADKhkGMwRgIhAKrk4Fz75BC4Os7DyalfUYnoxDQGl6arXV6vWedEePihAiEAwp7k8DhUghZ7C21uhpmelhc1XhAuDDHt5oqU6_4OecM=&ratebypass=yes",
+                "player_url": "/yts/jsbin/player_ias-vfle4a9aa/en_US/base.js",
+                "ext": "webm",
+                "format_note": "tiny",
+                "acodec": "opus",
+                "abr": 160,
+                "asr": 48000,
+                "filesize": 4098825,
+                "fps": null,
+                "height": null,
+                "tbr": 149.032,
+                "width": null,
+                "vcodec": "none",
+                "downloader_options": {
+                    "http_chunk_size": 10485760
+                },
+                "format": "251 - audio only (tiny)",
+                "protocol": "https",
+                "http_headers": {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3706.3 Safari/537.36",
+                    "Accept-Charset": "ISO-8859-1,utf-8;q=0.7,*;q=0.7",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Encoding": "gzip, deflate",
+                    "Accept-Language": "en-us,en;q=0.5"
+                }
+            }
         ]
-    ],
-    "497450643007602688": [
-        "Karthicc's Playlist",
-        [
-            "o5_FzJJj7ZI",
-            "3w-C0-zVaW8"
-        ]
-    ]
+    }
 }
