@@ -116,7 +116,7 @@ class nsfw(commands.Cog):
             
         doujin_id = str(doujin).split("]")[0][2:]   
                 
-        reactions = {"read": "📖","delete": "❌", "save": "💾"}
+        reactions = {"read": "📖","delete": "❌", "save": "💾", "download": "📩"}
         
         self.client.loop.create_task(reactions_add(reactions=reactions.values(), message=embed_msg))
         
@@ -140,6 +140,21 @@ class nsfw(commands.Cog):
 
                     elif response == reactions["save"]:
                         self.vault_add(user=ctx.author, item=doujin_id)
+                        
+                    elif response == reactions["download"]:
+                        download_path = "..\\..\\..\\doujin_dnlds"
+                        
+                        embed = discord.Embed(title="Now Downloading", description=doujin.title,
+                                               color=discord.Color.dark_purple(), url=doujin.url)
+                        embed.set_thumbnail(self.nhentai_logo)
+                        embed.set_image(doujin.pages[0])
+                        
+                        dnld_msg = await ctx.send(embed=embed)
+                        
+                        doujin.download_zip(filename=doujin_id, path=download_path)
+                        file = discord.File(download_path)
+                        
+                        await dnld_msg.edit(file=file)
                         
                     elif response == reactions["delete"]:
                         await embed_msg.delete(delay=3)
@@ -294,7 +309,7 @@ class nsfw(commands.Cog):
                 await channel.send(embed=embed)
 
         elif channel_exists:
-            channel = discord.utils.get(guild.text_channels, name=doujin_id)
+            channel = discord.utils.get(ctx.guild.text_channels, name=doujin_id)
 
             await ctx.send(f">>> Go to {channel.mention} and enjoy your doujin!")
 

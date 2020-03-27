@@ -102,6 +102,14 @@ class NHentaiDoujin():
             self.get_images()   
 
         return self._images
+    
+    @property
+    def url(self):
+        return f"www.nhentai.net/g/{self.number}"
+    
+    @property
+    def number(self):
+        return self.__str__().split("]")[0][2:]
 
     def get_images(self):
         self._call_soup()
