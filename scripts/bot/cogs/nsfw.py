@@ -528,7 +528,7 @@ class nsfw(commands.Cog):
             
             for index, item in enumerate(content):
                 item_id = str(item).split("]")[0][2:]
-                embed.add_field(name=f"{index + 1}.", value=f"{item.title} --> ***{item_id}***", inline=False)
+                embed.add_field(name=f"{index + 1}.", value=f"{item.title} -> ***{item_id}***", inline=False)
                 
             await ctx.send(embed=embed)
         

@@ -168,7 +168,7 @@ class levels(commands.Cog):
             for i in range(len(xplist)):
                 self.exp_info[str(guild.id)][xplist[i][1]]["rank"] = len(xplist) - i
 
-            gen.db_update("exp", self.exp_info[str(guild.id)])
+            gen.db_update("exp", self.exp_info)
 
     def rank_creation(self, ctx, member, roles):
 
@@ -377,6 +377,39 @@ class levels(commands.Cog):
         await ctx.send(file=discord.File(f"{ctx.author.guild.id + ctx.author.id}.png"))
         
         os.remove(f"{ctx.author.guild.id + ctx.author.id}.png")
+        
+    @commands.group()
+    async def exp(self, ctx):
+        """Change the member's exp count, only for my admins"""
+        
+        await ctx.send(f"_ _")
+    
+    @exp.command()
+    @commands.has_role(gen.admin_role_id)
+    async def add(self, ctx: commands.Context, ammount: int, member: discord.Member):
+        """Give exp to a member"""
+        
+        mem_info = gen.db_receive("exp")[str(member.guild.id)]
+        mem_info["xp"] += ammount
+        
+        self.exp_info[str(member.guild.id)][str(member.id)] = mem_info
+        
+        gen.db_update("exp", self.exp_info)
+    
+    @exp.command()
+    @commands.has_role(gen.admin_role_id)
+    async def sub(self, ctx: commands.Context, ammount: int, member: discord.Member):
+        """Take exp from a member"""
+        
+        mem_info = gen.db_receive("exp")[str(member.guild.id)]
+        mem_info["xp"] -= ammount
+        
+        self.exp_info[str(member.guild.id)][str(member.id)] = mem_info
+        
+        gen.db_update("exp", self.exp_info)
+    
+    
+    
 
 
 def setup(client):
