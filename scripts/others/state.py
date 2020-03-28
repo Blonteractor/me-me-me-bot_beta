@@ -1,9 +1,10 @@
-import discord
-from discord.utils import get
-from general import db_receive, db_update, DBPATH
-from discord.ext.commands import Context
-from typing import Union
 import os
+import discord
+
+from typing import Union
+from discord.utils import get
+from discord.ext.commands import Context
+from general import db_receive, db_update, DBPATH
 
 class GuildState:
     """Stores state variables of a guild"""
@@ -268,6 +269,20 @@ class MemberState:
             if level[0] == rel_role:
                 return role
             
+    def update_ranks(self):
+        states = self.database
+            
+        exp_values = [value["exp"] for value in list(states.values())]
+        
+        exp_to_rank = self.rank_gen(exp_values)
+        
+        for member, exp in states.items():
+            exp = exp["exp"] 
+            for _exp, rank in exp_to_rank.items():
+                if _exp == exp:
+                    self.set_property(property_name="rank", property_val=rank)
+                    continue
+            
     @staticmethod
     def total_exp_needed(lvl):
         total_xp_needed = 0
@@ -347,23 +362,16 @@ class MemberState:
     
     @property
     def rank(self) -> int:
-        states = self.database
-        
-        exp_values = [value["exp"] for value in list(states.values())]
-        
-        exp_to_rank = self.rank_gen(exp_values)
+        return self.get_property(property_name="rank")
     
     @xp.setter
     def xp(self, new: int):
         self.set_property(property_name="exp", property_val=new)
+        self.update_ranks()
     
     @messages.setter
     def messages(self, new: int):
         self.set_property(property_name="messages", property_val=new)
-    
-    @rank.setter
-    def rank(self, new: int):
-        self.set_property(property_name="rank", property_val=new)
     
 class UserState:
     """Stores global states which don't change between guilds."""
