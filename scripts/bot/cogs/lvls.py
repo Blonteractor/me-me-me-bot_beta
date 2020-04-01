@@ -16,7 +16,7 @@ import general as gen
 
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
-from state import GuildState, CustomContext
+from state import State, CustomContext
 
 class levels(commands.Cog):
     ''':up: Level up by sending messages, earn new ranks and powers by doing so.'''
@@ -27,6 +27,7 @@ class levels(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.client: commands.Bot
         self.exp_info = gen.db_receive('exp')
 
         if self.qualified_name in gen.cog_cooldown:
@@ -54,131 +55,26 @@ class levels(commands.Cog):
     def gen_xp(self):
         return randint(15, 25)
 
-    def get_level(self, exp):
-        info = {}
-
-        lvl_found = False
-        i = 0
-        total_xp_needed_now = 0
-        while not lvl_found:
-            total_xp_needed_now += ((5 * (i ** 2)) + (50 * i) + 100)
-            if exp < total_xp_needed_now:
-                lvl_found = True
-            else:
-                i += 1
-
-        rel_bar = (5 * (i ** 2) + 50 * i + 100)
-        rel_exp = exp - self.total_exp_needed(i)
-
-        info["level"] = i
-        info["rel_xp"] = rel_exp
-        info["rel_bar"] = rel_bar
-
-        return info
-
-    def total_exp_needed(self, lvl):
-        total_xp_needed = 0
-        for i in range(lvl):
-            total_xp_needed += ((5 * (i ** 2)) + (50 * i) + 100)
-
-        return total_xp_needed
-
     @tasks.loop(minutes=1)
-    async def give_exp(self):
+    async def give_xp(self):
         for guild in self.client.guilds:
-            self.log(f"\nRegular Check for {guild.name}")
-            state = GuildState(guild)
-        
-            self.roles = {role.name: (int(level), role.color.to_rgb()) for level, role in state.ranks}
-            
-            if str(guild.id) not in self.exp_info:
-                self.guild_entry(guild)
-            
-            for member in self.exp_info[str(guild.id)]:
-                  
-                if self.exp_info[str(guild.id)][member]["active"]:
-                    self.log(f"{self.exp_info[str(guild.id)][member]['name']}  is active.")
+            for member in guild.members:
+                state = State(member).Member
+                if state.active:
+                    prev_des = state.role
+                    state.xp += self.gen_xp()
+                    new_des = state.role
                     
-                    self.exp_info[str(guild.id)][member]["xp"] += self.gen_xp()
-                    self.exp_info[str(guild.id)][member]["active"] = False
+                    if not new_des == prev_des:
+                        await member.remove_roles(prev_des)
+                        await member.add_roles(new_des)
                     
-                    level_dicc = self.get_level(self.exp_info[str(guild.id)][member]["xp"])
-
-                    self.exp_info[str(guild.id)][member]["rel_xp"] = level_dicc["rel_xp"]
-
-                    if level_dicc["level"] > self.exp_info[str(guild.id)][member]["level"]:
-                        self.exp_info[str(guild.id)][member]["level"] = level_dicc["level"]
-
-                        self.log(
-                            f"{self.exp_info[str(guild.id)][member]['name']} leveled up to level {self.exp_info[str(guild.id)][member]['level']}")
-                        
-                        channel = state.level_up_channel
-                        
-                        membob = guild.get_member(int(member))
-                        rolename = self.exp_info[str(guild.id)][member]["role"]
-                        roles_list = membob.roles
-
-                        for role in roles_list:
-                            if str(role) in self.roles and str(role) != "Council of Numericons":
-                                await membob.remove_roles(role)
-
-                        roleob = discord.utils.get(
-                            guild.roles, name=rolename)
-                        await membob.add_roles(roleob)
-
-                        send = f'Congrats {guild.get_member(int(member)).mention}, now you are of level {self.exp_info[str(guild.id)][member]["level"]} :middle_finger: .'
-                        if channel is not None:
-                            await channel.send(send)
-                        else:
-                            await membob.send(send)
-
-                    self.exp_info[str(guild.id)][member]["rel_bar"] = level_dicc["rel_bar"]
-
-                    temp = self.exp_info[str(guild.id)][member]["role"]
-                    self.exp_info[str(guild.id)][member]["role"] = self.get_designation(
-                        self.exp_info[str(guild.id)][member]["level"], roles=self.roles)
-
-                    if temp != self.exp_info[str(guild.id)][member]["role"]:
-                        channel = state.level_up_channel
-                        
-                        self.log(f"\n {self.exp_info[str(guild.id)][member]['name']} is now a {self.exp_info[str(guild.id)][member]['role']} .")
-                        membob = guild.get_member(int(member))
-                        rolename = self.exp_info[str(guild.id)][member]["role"]
-                        roles_list = membob.roles
-
-                        for role in roles_list:
-                            if str(role) in self.roles and str(role) != "Council of Numericons":
-                                await membob.remove_roles(role)
-
-                        roleob = discord.utils.get(
-                            guild.roles, name=rolename)
-                        await membob.add_roles(roleob)
-
-                        send = f'Congrats {membob.mention}, now you are {roleob.mention} :middle_finger: .'
-                        if channel is not None:
-                            await channel.send(send)
-                        else:
-                            await membob.send(send)
-
-            xplist = []
-            for i in self.exp_info[str(guild.id)]:
-                xplist += [[self.exp_info[str(guild.id)][i]["xp"], i]]
-
-            xplist = sorted(xplist, key=lambda x: x[0])
-            for i in range(len(xplist)):
-                self.exp_info[str(guild.id)][xplist[i][1]]["rank"] = len(xplist) - i
-
-            gen.db_update("exp", self.exp_info)
 
     def rank_creation(self, ctx, member, roles):
 
-        try:
-            mem_info = self.exp_info[str(member.guild.id)][str(member.id)]
-        except:
-            mem_info = self.user_entry(member)
-
-        level = mem_info["level"]
-        rank = mem_info["rank"]
+        state = State(member)
+        level = state.level
+        rank = state.role.name
         response = requests.get(member.avatar_url)
         avatar_photo = Image.open(io.BytesIO(response.content))
 
@@ -192,7 +88,7 @@ class levels(commands.Cog):
             avatar_photo, mask.size, centering=(0.5, 0.5))
         avatar_photo.putalpha(mask)
 
-        percent = mem_info["rel_xp"]/mem_info["rel_bar"]
+        percent = state.rel_xp / state.rel_bar
         arc_length = percent*(360)
         if arc_length > 360:
             arc_length = 360
@@ -269,62 +165,10 @@ class levels(commands.Cog):
 
         bg.save(f"{member.guild.id + member.id}.png")
 
-    def user_entry(self, user: discord.Member):
-        member_info = {}
-        member_info["name"] = user.name
-        member_info["xp"] = 0
-        member_info["level"] = 0
-        member_info["rank"] = 0
-        member_info["role"] = GuildState(user.guild).ranks.keys()[0].name
-        member_info["messages"] = 1
-        member_info["rel_bar"] = 100
-        member_info["rel_xp"] = 0
-
-        if not str(user.guild.id) in self.exp_info:
-            self.guild_entry(guild=user.guild)
-            
-        self.exp_info[str(user.guild.id)][str(user.id)] = member_info
-        
-        gen.db_update("exp", self.exp_info)
-
-        return member_info
-    
-    def guild_entry(self, guild: discord.Guild):
-        self.exp_info[str(guild.id)] = {}
-        
-        gen.db_update("exp", self.exp_info)
-
-    def get_designation(self, level: int, roles: dict):
-        a = list(roles.values())
-        for i in range(len(a)):
-            if a[i][0] > level:
-                rel_role = a[i - 1][0]
-                break
-
-            else:
-                rel_role = a[-1][0]
-
-        for role, level in roles.items():
-            if level[0] == rel_role:
-                return role
-
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-
         if not message.author.bot:
-            if str(message.author.id) not in self.exp_info.keys():
-                member_info = self.user_entry(message.author)
-
-            else:
-                member_info = self.exp_info[str(message.author.id)]
-
-            member_info["active"] = True
-            member_info["messages"] += 1
-            if not str(message.author.guild.id) in self.exp_info:
-                self.guild_entry(message.author.guild)
-            self.exp_info[str(message.author.guild.id)][str(message.author.id)] = member_info
-
-        gen.db_update("exp", self.exp_info)
+            State(message.author).Member.active = True
 
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
@@ -389,28 +233,20 @@ class levels(commands.Cog):
     async def add(self, ctx: commands.Context, ammount: int, member: discord.Member):
         """Give exp to a member"""
         
-        mem_info = gen.db_receive("exp")[str(member.guild.id)]
-        mem_info["xp"] += ammount
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        ctx.State.Member.xp += ammount
         
-        self.exp_info[str(member.guild.id)][str(member.id)] = mem_info
-        
-        gen.db_update("exp", self.exp_info)
+        await ctx.send(f">>> `{ammount}`xp given to {member.mention}")
     
     @exp.command()
     @commands.has_role(gen.admin_role_id)
     async def sub(self, ctx: commands.Context, ammount: int, member: discord.Member):
         """Take exp from a member"""
         
-        mem_info = gen.db_receive("exp")[str(member.guild.id)]
-        mem_info["xp"] -= ammount
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        ctx.State.Member.xp += ammount
         
-        self.exp_info[str(member.guild.id)][str(member.id)] = mem_info
-        
-        gen.db_update("exp", self.exp_info)
-    
-    
-    
-
+        await ctx.send(f">>> `{ammount}`xp taken from {member.mention}")
 
 def setup(client):
     client.add_cog(levels(client))

@@ -376,7 +376,7 @@ class MemberState:
 class UserState:
     """Stores global states which don't change between guilds."""
     
-    properties = ["vault", "souls", "playlist", "phone"]
+    properties = ["vault", "souls", "playlist", "phone_type", "phone_bg", "phone_body"]
     
     def __init__(self, user: Union[discord.User, discord.Member]):
         self.user = user
@@ -446,8 +446,16 @@ class UserState:
         return self.get_property(property_name="souls")
     
     @property
-    def phone(self):
-        return self.get_property(property_name="phone")
+    def phone_type(self):
+        return self.get_property(property_name="phone_type")
+    
+    @property
+    def phone_bg(self):
+        return self.get_property(property_name="phone_bg")
+    
+    @property
+    def phone_body(self):
+        return self.get_property(property_name="phone_body")
     
     @property
     def playlist(self):
@@ -465,9 +473,17 @@ class UserState:
     def playlist(self, new):
         return self.set_property(property_name="playlist", property_val=new)
     
-    @phone.setter
-    def phone(self, new):
-        return self.set_property(property_name="phone", property_val=new)
+    @phone_type.setter
+    def phone_type(self, new):
+        return self.set_property(property_name="phone_type", property_val=new)
+    
+    @phone_bg.setter
+    def phone_bg(self, new):
+        return self.set_property(property_name="phone_bg", property_val=new)
+ 
+    @phone_body.setter
+    def phone_body(self, new):
+        return self.set_property(property_name="phone_body", property_val=new)
         
         
 class State:
