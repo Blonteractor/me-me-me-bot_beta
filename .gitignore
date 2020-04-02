@@ -2,7 +2,6 @@
 __pycache__
 *.mp3
 .vscode
-Queue/*
 Database/gothy
 nhenpy/cache.nhentai.net/*
 cache.nhentai.net/*
@@ -11,3 +10,8 @@ environment/.mypy_cache/*
 scripts/bot/cache.nhentai.net/*
 try_seek.py
 Database
+scripts/others/test.py
+cache.bot
+cache.nhentai.net
+Bin
+Fonts

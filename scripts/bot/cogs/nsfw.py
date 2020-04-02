@@ -22,7 +22,7 @@ import nhenpy
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
 
-from state import CustomContext as cc
+from state import State
 
 
 #* DECORATOR FOR CHECKING IF COMMAND IS BEING RUN IN A NSFW CHANNEL
@@ -68,7 +68,9 @@ class nsfw(commands.Cog):
             return gen.error_message(msg, gen.cog_colours[cog_name])
         
     def vault_add(self, user: discord.User, item):
-        vault = gen.db_receive("vault")
+        st = State(member=user).User
+        
+        vault = st.vault
         user_id = str(user.id)
         
         if user_id not in vault.keys():
@@ -76,10 +78,12 @@ class nsfw(commands.Cog):
             
         vault[user_id][len(vault[user_id]) + 1] = item
         
-        gen.db_update("vault", vault)
+        st.vault = vault
     
     def vault_remove(self, user: discord.User, index):
-        vault = gen.db_receive("vault")
+        st = State(member=user).User
+        
+        vault = st.vault
         user_id = str(user.id)
         
         if len(vault[user_id].keys()) < int(index):
@@ -87,7 +91,7 @@ class nsfw(commands.Cog):
 
         removed = vault[user_id].pop(index)
         
-        gen.db_update("vault", vault)
+        st.vault = vault
         
         return removed
 

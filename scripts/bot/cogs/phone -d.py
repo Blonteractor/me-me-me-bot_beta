@@ -9,6 +9,10 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../../others/state.py"))
+
+from state import CustomContext as cc
 class Phone(commands.Cog):
     ''':iphone: PHONE SIMULATOR 2019.'''
     
@@ -33,7 +37,8 @@ class Phone(commands.Cog):
             debug_info[cog_name] = 0
         if debug_info[cog_name] == 1:
             return gen.error_message(msg, gen.cog_colours[cog_name])
-    def phone_create(self,i_d):
+    
+    def phone_create(self, i_d):
         i_d = str(i_d)
          
         phone_db = gen.db_receive("phone")        
@@ -59,11 +64,11 @@ class Phone(commands.Cog):
         image.paste(Vtube,vtube_pos,Vtube)
         image.save(f'./assets/saved_phones/{i_d}.png') 
         
-    
     @commands.group()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def phone(self,ctx):
         '''Shows your Phone.'''
+        ctx = await self.client.get_context(ctx.message, cls=cc)
         
         if ctx.invoked_subcommand is None:
             
@@ -83,7 +88,9 @@ class Phone(commands.Cog):
 
     @phone.command(aliases = ["color"])
     async def colour(self,ctx,place,r:int,g:int,b:int):
-        '''Changes wallpaper and body's colour.'''        
+        '''Changes wallpaper and body's colour.'''   
+        
+        ctx = await self.client.get_context(ctx.message, cls=cc)     
 
         if r>255 or g>255 or b>255 or r<0 or g<0 or b<0:
             await ctx.send("SHUT UP")
@@ -106,9 +113,12 @@ class Phone(commands.Cog):
     @phone.command()
     async def type(self,ctx,*,Ptype = None):
         '''Well you can at least get new phones in this virtual world.'''
+        
+        ctx = await self.client.get_context(ctx.message, cls=cc)
 
         phone_db = gen.db_receive("phone")
         phones = gen.db_receive("phone_types")
+        
         if Ptype in phones.keys():
             phone_db[str(ctx.author.id)]["type"]=Ptype
             gen.db_update("phone",phone_db)  
@@ -119,7 +129,7 @@ class Phone(commands.Cog):
             send_string = '```Please choose out of the following:\n'
             for i in phones:
                 send_string += f"-> {i} \n"
-            send_string+="```"
+            send_string += "```"
             await ctx.send(send_string)
 
          

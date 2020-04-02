@@ -8,6 +8,10 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
+imp.load_source("general", os.path.join(
+    os.path.dirname(__file__), "../../others/general.py"))
+from state import CustomContext as cc 
+
 
 
 class Currency(commands.Cog):
@@ -42,15 +46,13 @@ class Currency(commands.Cog):
     async def bet(self, ctx, amount : int):
         '''Well, this is the only fun part, BET, hail KAKEGURUI.'''
         
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+
         name = ctx.author.name
         disc = ctx.author.discriminator
+        
         #! GET COINS
-        mem_info = gen.db_receive("inf")
-        if disc in mem_info:                   
-            coins = (mem_info[disc])["coins"]
-        else:                                                                                                                       
-            gen.new_entry(name,disc)
-            coins = (mem_info[disc])["coins"]
+        coins = ctx.State.User.souls
 
         #! REAL BITCH ASS CODE
         if amount <= coins and amount>0:
@@ -68,9 +70,11 @@ class Currency(commands.Cog):
                 won_lost = "Bet Lost"
                 amount_rec =- (amount)
                 Multiplier =- 100
+                
             coins+=amount_rec
 
-            (mem_info[disc])["coins"] = coins
+            ctx.State.User.souls = coins
+            
         elif amount<= 0:
             await ctx.send(f">>> So you want a spanky {name}.")
         else:
@@ -100,59 +104,42 @@ class Currency(commands.Cog):
         await ctx.send(embed = bet_list)
         #! SAVE THOSE DAMN COINS
 
-        gen.db_update("inf",mem_info)
-
     @bet.error
     async def ball_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(">>> You need to bet something to gamble, seems like common sense tbh.")
         elif isinstance(error, commands.BadArgument):
             await ctx.send(">>> U need to have actual souls, go hunt POET.")
+    
     #BANK
     @commands.command()
     @commands.cooldown(rate=3, per=30, type=commands.BucketType.user)
     async def bank(self, ctx):
         '''When you are broke, cry in front of the GOVT. and get some loan to use in a game which will have no impact on your true irl broke ass.'''
-
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+        
         name = ctx.author.name
         disc = ctx.author.discriminator
         a = random.randrange(1,10)
 
-        mem_info=gen.db_receive("inf")     
-
-        if disc in mem_info:
-            coins = (mem_info[disc])["coins"]
-        else:
-            gen.new_entry(name,disc)                                  
-            coins = (mem_info[disc])["coins"]
+        coins = ctx.State.User.souls
 
         if coins == 0:
             (mem_info[disc])["coins"] = a
-            await ctx.send(f">>> Given {a} SOULS to {name} get rekt.")
+            await ctx.send(f">>> Given {a} SOULS to {name}, get rekt.")
+            ctx.State.User.souls += a
         else:
             await ctx.send(">>> You are way too rich for us, get lost.") 
-
-        gen.db_update("inf",mem_info)
 
     #SOULS
     @commands.command(aliases=['bal','coins'])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def souls(self, ctx):
         '''Just the balance of your souls. THATS IT.'''
-
-        name = ctx.author.name
-        disc = ctx.author.discriminator 
         
-        mem_info=gen.db_receive("inf")
-
-        if disc in mem_info:
-            coins = (mem_info[disc])["coins"]
-        else:
-            mem_info[disc] = {"name": name, "messages" : 0 , "level" : "Prostitute" , "coins" : 500}                                         #! REPLACE
-            coins = (mem_info[disc])["coins"]
-        await ctx.send(f">>> Souls of {name}: {coins}.")
-      
-        gen.db_update("inf",mem_info)
+        ctx = await self.client.get_context(ctx.message, cls=cc)
+    
+        await ctx.send(f">>> Souls of {ctx.author.name}: {ctx.State.User.souls}.")
 
 
 def setup(client):

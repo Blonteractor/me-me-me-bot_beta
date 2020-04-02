@@ -1,9 +1,10 @@
-import discord
-from discord.utils import get
-from general import db_receive, db_update, DBPATH
-from discord.ext.commands import Context
-from typing import Union
 import os
+import discord
+
+from typing import Union
+from discord.utils import get
+from discord.ext.commands import Context
+from general import db_receive, db_update, DBPATH
 
 class GuildState:
     """Stores state variables of a guild"""
@@ -196,11 +197,13 @@ class GuildState:
 class MemberState:
     """Stores guild specific states which change between guilds"""
     
-    properties = ["role", "level", "xp", "messages", "rel_xp", "rel_bar", "active", "rank"]
+    properties = ["exp", "messages", "rank"]
     
     def __init__(self, member: discord.Member):
         self.member = member
+        self.guild_state = GuildState(member.guild)
         self.db_name = f"member-states->{self.member.guild.id}"
+        self.active = False
         
         with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
             if f.read() == "":
@@ -250,26 +253,130 @@ class MemberState:
         
         db_update(self.db_name, states)
         
+    def get_designation(self, level: int):
+        roles = self.guild_state.ranks
+        
+        a = list(roles.values())
+        for i in range(len(a)):
+            if a[i][0] > level:
+                rel_role = a[i - 1][0]
+                break
+
+            else:
+                rel_role = a[-1][0]
+
+        for role, level in roles.items():
+            if level[0] == rel_role:
+                return role
+            
+    def update_ranks(self):
+        states = self.database
+            
+        exp_values = [value["exp"] for value in list(states.values())]
+        
+        exp_to_rank = self.rank_gen(exp_values)
+        
+        for member, exp in states.items():
+            exp = exp["exp"] 
+            for _exp, rank in exp_to_rank.items():
+                if _exp == exp:
+                    self.set_property(property_name="rank", property_val=rank)
+                    continue
+            
+    @staticmethod
+    def total_exp_needed(lvl):
+        total_xp_needed = 0
+        
+        for i in range(lvl):
+            total_xp_needed += ((5 * (i ** 2)) + (50 * i) + 100)
+            
+    @staticmethod
+    def rank_gen(l: list) -> dict:
+        output = [0] * len(l)
+        for i, x in enumerate(sorted(range(len(l)), key=lambda y: l[y], reverse=True)):
+            output[x] = i+1
+        
+        return dict(zip(l, output))
+        
+    @property
+    def info(self):
+        info = {}
+        exp = self.xp
+        lvl_found = False
+        i = 0
+        total_xp_needed_now = 0
+        
+        while not lvl_found:
+            total_xp_needed_now += ((5 * (i ** 2)) + (50 * i) + 100)
+            if exp < total_xp_needed_now:
+                lvl_found = True
+            else:
+                i += 1
+
+        rel_bar = (5 * (i ** 2) + 50 * i + 100)
+        rel_exp = exp - self.total_exp_needed(i)
+
+        info["level"] = i
+        info["rel_xp"] = rel_exp
+        info["rel_bar"] = rel_bar
+
+        return info
+        
     @property
     def state_variables(self):
-        states = db_receive(self.db_name)
+        states = self.database
         if not str(self.member.id) in states:
             states[str(self.member.id)] = {}
 
             db_update(self.db_name, states)      
             
-        return db_receive(self.db_name)[str(self.member.id)]
-    
-    properties = ["role", "level", "xp", "messages", "rel_xp", "rel_bar", "active", "rank"]
+        return self.database[str(self.member.id)] 
     
     @property
-    def role(self):
-        pass
-        
+    def database(self) -> dict:
+        return db_receive(self.db_name)
+    
+    @property
+    def role(self) -> discord.Role:
+        return self.guild_state.get_role(self.get_designation(self.level))
+    
+    @property
+    def level(self) -> int:
+        return self.info["level"]
+    
+    @property
+    def xp(self) -> int:
+        return int(self.get_property(property_name="exp"))
+    
+    @property
+    def messages(self) -> int:
+        return int(self.get_property(property_name="messages"))
+    
+    @property
+    def rel_xp(self) -> int:
+        return int(self.info["rel_xp"])
+    
+    @property
+    def rel_bar(self) -> int:
+        return int(self.info["rel_bar"])
+    
+    @property
+    def rank(self) -> int:
+        return self.get_property(property_name="rank")
+    
+    @xp.setter
+    def xp(self, new: int):
+        self.set_property(property_name="exp", property_val=new)
+        self.update_ranks()
+    
+    @messages.setter
+    def messages(self, new: int):
+        self.set_property(property_name="messages", property_val=new)
+    
 class UserState:
     """Stores global states which don't change between guilds."""
     
-    properties = ["vault", "souls", "playlist", "phone"]
+    properties = ["vault", "souls", "playlist", "phone_type", "phone_bg", "phone_body"]
     
     def __init__(self, user: Union[discord.User, discord.Member]):
         self.user = user
@@ -339,8 +446,16 @@ class UserState:
         return self.get_property(property_name="souls")
     
     @property
-    def phone(self):
-        return self.get_property(property_name="phone")
+    def phone_type(self):
+        return self.get_property(property_name="phone_type")
+    
+    @property
+    def phone_bg(self):
+        return self.get_property(property_name="phone_bg")
+    
+    @property
+    def phone_body(self):
+        return self.get_property(property_name="phone_body")
     
     @property
     def playlist(self):
@@ -358,9 +473,17 @@ class UserState:
     def playlist(self, new):
         return self.set_property(property_name="playlist", property_val=new)
     
-    @phone.setter
-    def phone(self, new):
-        return self.set_property(property_name="phone", property_val=new)
+    @phone_type.setter
+    def phone_type(self, new):
+        return self.set_property(property_name="phone_type", property_val=new)
+    
+    @phone_bg.setter
+    def phone_bg(self, new):
+        return self.set_property(property_name="phone_bg", property_val=new)
+ 
+    @phone_body.setter
+    def phone_body(self, new):
+        return self.set_property(property_name="phone_body", property_val=new)
         
         
 class State:
@@ -375,6 +498,7 @@ class State:
         self.User = UserState(member)
         self.Member = MemberState(member)
         self.Guild = GuildState(guild)
+        
         
 class CustomContext(Context):
     """Use ctx = await bot.get_context(ctx.message, cls=CustomContext) in every command"""

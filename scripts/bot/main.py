@@ -29,7 +29,7 @@ imp.load_source("state", os.path.join(
 from state import GuildState
 
 COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
-
+PATHS = ["./Bin"]
 # * CLIENT SETUP
 prefix = gen.permu("me! ") + gen.permu("epic ")
 async def determine_prefix(bot, message):
@@ -43,6 +43,8 @@ client = commands.Bot(command_prefix=determine_prefix, case_insensitive=True)
 status = cycle(gen.status)
 
 # * COG SET UP STUFF
+
+is_cog = lambda filename: filename.endswith(".py") and not filename.endswith("-d.py")
 
 @client.command(aliases=["enable"])
 #@commands.has_role(gen.admin_role_id)
@@ -67,7 +69,7 @@ async def unload(ctx, extension):
 async def unload_all(ctx):
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):        
+        if is_cog(filename=filename):        
             client.unload_extension(f"cogs.{filename[:-3]}")
 
 @client.command(aliases=["refresh"])
@@ -83,7 +85,7 @@ async def reload(ctx, extension):
 async def reload_all(ctx):
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):        
+        if is_cog(filename=filename):        
             client.unload_extension(f"cogs.{filename[:-3]}")
             client.load_extension(f"cogs.{filename[:-3]}")
 
@@ -91,7 +93,7 @@ async def reload_all(ctx):
 def cog_load_startup():
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):
+        if is_cog(filename=filename):
             client.load_extension(f"cogs.{filename[:-3]}")
 
 # * BACKING UP AND COMMIT STUFF
@@ -172,8 +174,7 @@ async def auto_backup():
 # * ON READY
 @client.event
 async def on_ready():
-    
-    
+    [os.sys.path.append(os.path.abspath(path)) for path in PATHS]
     client.help_command = Help.MyHelpCommand()
     change_status.start()
     #auto_backup.start() 
