@@ -29,7 +29,7 @@ imp.load_source("state", os.path.join(
 from state import GuildState
 
 COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
-
+PATHS = ["./Bin"]
 # * CLIENT SETUP
 prefix = gen.permu("me! ") + gen.permu("epic ")
 async def determine_prefix(bot, message):
@@ -174,8 +174,7 @@ async def auto_backup():
 # * ON READY
 @client.event
 async def on_ready():
-    
-    
+    [os.sys.path.append(os.path.abspath(path)) for path in PATHS]
     client.help_command = Help.MyHelpCommand()
     change_status.start()
     #auto_backup.start() 

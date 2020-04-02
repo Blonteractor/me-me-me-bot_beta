@@ -56,7 +56,7 @@ class levels(commands.Cog):
         return randint(15, 25)
 
     @tasks.loop(minutes=1)
-    async def give_xp(self):
+    async def give_exp(self):
         for guild in self.client.guilds:
             for member in guild.members:
                 state = State(member).Member
