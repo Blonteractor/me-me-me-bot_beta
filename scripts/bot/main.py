@@ -44,6 +44,8 @@ status = cycle(gen.status)
 
 # * COG SET UP STUFF
 
+is_cog = lambda filename: filename.endswith(".py") and not filename.endswith("-d.py")
+
 @client.command(aliases=["enable"])
 #@commands.has_role(gen.admin_role_id)
 async def load(ctx, extension):
@@ -67,7 +69,7 @@ async def unload(ctx, extension):
 async def unload_all(ctx):
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):        
+        if is_cog(filename=filename):        
             client.unload_extension(f"cogs.{filename[:-3]}")
 
 @client.command(aliases=["refresh"])
@@ -83,7 +85,7 @@ async def reload(ctx, extension):
 async def reload_all(ctx):
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):        
+        if is_cog(filename=filename):        
             client.unload_extension(f"cogs.{filename[:-3]}")
             client.load_extension(f"cogs.{filename[:-3]}")
 
@@ -91,7 +93,7 @@ async def reload_all(ctx):
 def cog_load_startup():
     
     for filename in os.listdir(COGS_PATH):
-        if filename.endswith(".py"):
+        if is_cog(filename=filename):
             client.load_extension(f"cogs.{filename[:-3]}")
 
 # * BACKING UP AND COMMIT STUFF
