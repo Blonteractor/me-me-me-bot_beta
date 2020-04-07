@@ -9,7 +9,7 @@ import urllib.parse
 from typing import List,Any
 from selenium.webdriver.chrome.options import Options
 import youtube_dl
-
+import os.path 
 
 import tracemalloc
 tracemalloc.start()
@@ -20,8 +20,8 @@ chrome_options.add_argument("disable-gpu")
 chrome_options.add_argument("headless")
 chrome_options.add_argument("log-level=3")
 
-driver = webdriver.Chrome(options = chrome_options) 
-# driver = webdriver.Edge(options = chrome_options)
+driver = webdriver.Chrome(options = chrome_options, executable_path=os.path.abspath("./Bin/chromedriver.exe")) 
+
 driver.get("http://www.youtube.com")
 
 class YoutubeVideo:
