@@ -203,7 +203,10 @@ class Utility(commands.Cog):
             ctx.States.Guild.juke_box_channel = None
             await ctx.send(f">>> Juke box removed")
             return    
+        
         ctx.States.Guild.juke_box_channel = channel
+        
+        self.client.get_cog("music").juke_box.start()
        
         await ctx.send(f">>> Juke box channel set to {channel.mention}")
         
@@ -212,11 +215,15 @@ class Utility(commands.Cog):
     async def automeme(self, ctx, channel: discord.TextChannel):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
+        
         if str(channel) in rem:
             ctx.States.Guild.auto_meme_channel = None
             await ctx.send(f">>> Auto meme removed")
             return    
+        
         ctx.States.Guild.auto_meme_channel = channel
+        
+        self.client.get_cog("meme").a_meme.start()
         
         await ctx.send(f">>> Auto meme channel set to {channel.mention}")
     
@@ -299,7 +306,7 @@ class Utility(commands.Cog):
         
         await ctx.send(">>> Send the ranks you want to add like this `add @role level_required`, a total of 6 will be accepted")
         
-        while True:
+        while len(res) < 6:
         
             try:
                 message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author and m.content.startswith("add "), timeout=60)
@@ -307,20 +314,21 @@ class Utility(commands.Cog):
             except asyncio.TimeoutError:
                 await ctx.send("Looks like no one is adding any more roles")
                 res = {}
-                return
+                break
             else:
-                if len(res) == 6:
-                    await ctx.send("All 6 roles added")
-                    return
+                if message.content in rem:
+                    res = {}
+                    await ctx.send("All rank roles removed, exp counting disabled.")
+                    break
                 else:
                     spl = message.content.split()
                     role = discord.utils.get(ctx.guild.roles, id=int(spl[1][3:][:-1]))
                     rank = int(spl[2])
                     res[rank] = role
-                    
-        ctx.States.Guild.ranks = res
+        else:
+            await ctx.send("All 6 roles added")
         
-        print(ctx.States.Guild.ranks)
+        ctx.States.Guild.ranks = res
         
     @setup.command(aliases=["default"])
     @commands.has_permissions(administrator=True)
@@ -338,7 +346,7 @@ class Utility(commands.Cog):
                 message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author, timeout=20)
                 message: discord.Message
             except asyncio.TimeoutError:
-                await ctx.send("Looks you couldn't decide")
+                await ctx.send("Looks like you couldn't decide")
                 return
             else:
                 response = message.content
