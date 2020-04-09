@@ -1,10 +1,15 @@
 import os
 import discord
-
+import json
 from typing import Union
 from discord.utils import get
 from discord.ext.commands import Context
 from general import db_receive, db_update, DBPATH
+
+def make_db_if_not_exists(path: str):
+    if not os.path.exists(path):
+        with open(path, "w+b") as f:
+            f.write(b"{}")
 
 class GuildState:
     """Stores state variables of a guild"""
@@ -15,9 +20,7 @@ class GuildState:
         self.guild = guild
         self.db_name = "guild-states"
         
-        with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
-            if f.read() == "":
-                f.write("{}")
+        make_db_if_not_exists(path=f"{DBPATH}\\{self.db_name}.json")
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
         
@@ -197,19 +200,30 @@ class GuildState:
 class MemberState:
     """Stores guild specific states which change between guilds"""
     
-    properties = ["exp", "messages", "rank"]
+    properties = ["exp", "messages", "rank", "active"]
     
     def __init__(self, member: discord.Member):
+        
+        if member.bot:
+            del self
+            return
+        
         self.member = member
         self.guild_state = GuildState(member.guild)
-        self.db_name = f"member-states->{self.member.guild.id}"
-        self.active = False
+        self.db_name = f"member-states----{self.member.guild.id}"
         
-        with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
-            if f.read() == "":
-                f.write("{}")
+        make_db_if_not_exists(path=f"{DBPATH}\\{self.db_name}.json")
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
+        
+    def __del__(self):
+        if self.user.bot:
+            db = db_receive(self.db_name)
+            
+            if str(self.user.id):
+                db.pop(str(self.user.id))
+            
+            db_update(self.db_name, db)
         
     def get_role(self, name) -> discord.Role:
         return get(self.member.roles, name=name)
@@ -271,17 +285,16 @@ class MemberState:
             
     def update_ranks(self):
         states = self.database
-            
-        exp_values = [value["exp"] for value in list(states.values())]
         
+        exp_values = [int(value["exp"]) for value in list(states.values()) if value["exp"] is not None]
         exp_to_rank = self.rank_gen(exp_values)
         
-        for member, exp in states.items():
-            exp = exp["exp"] 
+        for member, exp in states.items():   
+            exp = int(exp["exp"]) if exp["exp"] is not None else 0
             for _exp, rank in exp_to_rank.items():
                 if _exp == exp:
                     self.set_property(property_name="rank", property_val=rank)
-                    continue
+                    break
             
     @staticmethod
     def total_exp_needed(lvl):
@@ -346,22 +359,37 @@ class MemberState:
     
     @property
     def xp(self) -> int:
-        return int(self.get_property(property_name="exp"))
+        prop = self.get_property(property_name="exp")
+        
+        return int(prop) if prop is not None else 0
     
     @property
     def messages(self) -> int:
-        return int(self.get_property(property_name="messages"))
+        prop = self.get_property(property_name="messages")
+        
+        return int(prop) if prop is not None else 0
     
     @property
     def rel_xp(self) -> int:
-        return int(self.info["rel_xp"])
+        prop = self.info["rel_xp"]
+        
+        return int(prop) if prop is not None else 0
     
     @property
     def rel_bar(self) -> int:
-        return int(self.info["rel_bar"])
+        prop = self.info["rel_bar"]
+        
+        return int(prop) if prop is not None else 0
+    
+    @property
+    def active(self) -> bool:
+        prop = self.get_property(property_name="active")
+        
+        return True if prop is not None else False
     
     @property
     def rank(self) -> int:
+        prop = self.get_property(property_name="rank")
         return self.get_property(property_name="rank")
     
     @xp.setter
@@ -372,6 +400,10 @@ class MemberState:
     @messages.setter
     def messages(self, new: int):
         self.set_property(property_name="messages", property_val=new)
+        
+    @active.setter
+    def active(self, new):
+        self.set_property(property_name="active", property_val=new)
     
 class UserState:
     """Stores global states which don't change between guilds."""
@@ -379,15 +411,27 @@ class UserState:
     properties = ["vault", "souls", "playlist", "phone_type", "phone_bg", "phone_body"]
     
     def __init__(self, user: Union[discord.User, discord.Member]):
+        
+        if user.bot:
+            del self
+            return
+        
         self.user = user
         self.db_name = "user-states"
         
-        with open(f"{DBPATH}/{self.db_name}.json", "w+") as f:
-            if f.read() == "":
-                f.write("{}")
+        make_db_if_not_exists(path=f"{DBPATH}\\{self.db_name}.json")
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
-    
+        
+    def __del__(self):
+        if self.user.bot:
+            db = db_receive(self.db_name)
+            
+            if str(self.user.id):
+                db.pop(str(self.user.id))
+            
+            db_update(self.db_name, db)
+        
     def reset(self):
         return [self.new_property(pr) for pr in self.properties]
     
@@ -430,7 +474,7 @@ class UserState:
     @property
     def state_variables(self):
         states = db_receive(self.db_name)
-        if not str(self.user.id.id) in states:
+        if not str(self.user.id) in states:
             states[str(self.user.id)] = {}
 
             db_update(self.db_name, states)      

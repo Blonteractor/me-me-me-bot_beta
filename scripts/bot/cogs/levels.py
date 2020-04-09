@@ -28,7 +28,6 @@ class levels(commands.Cog):
     def __init__(self, client):
         self.client = client
         self.client: commands.Bot
-        self.exp_info = gen.db_receive('exp')
 
         if self.qualified_name in gen.cog_cooldown:
             self.cooldown = gen.cog_cooldown[self.quailifed_name]
@@ -55,19 +54,20 @@ class levels(commands.Cog):
     def gen_xp(self):
         return randint(15, 25)
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(seconds=10)
     async def give_exp(self):
         for guild in self.client.guilds:
             for member in guild.members:
-                state = State(member).Member
+                state = State(member).Member 
                 if state.active:
-                    prev_des = state.role
-                    state.xp += self.gen_xp()
-                    new_des = state.role
+                    # prev_des = state.role
+                    state.xp += self.gen_xp()  # TODO Make a handler if guild doesn't have any roles
+                    state.active = False
+                    # new_des = state.role
                     
-                    if not new_des == prev_des:
-                        await member.remove_roles(prev_des)
-                        await member.add_roles(new_des)
+                    # if not new_des == prev_des:
+                    #     await member.remove_roles(prev_des)
+                    #     await member.add_roles(new_des)
                     
 
     def rank_creation(self, ctx, member, roles):
@@ -168,14 +168,16 @@ class levels(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if not message.author.bot:
-            State(message.author).Member.active = True
+            state = State(message.author).Member
+            state.active = True
+            state.messages += 1
 
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def rank(self, ctx, member=''):
         '''Shows your level and rank, all epic style.'''
         
-        ctx = self.client.get_context(ctx.message, cls=CustomContext)
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         try:
             int(member)
