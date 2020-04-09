@@ -16,7 +16,7 @@ import general as gen
 
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
-from state import State, CustomContext
+from state import State, CustomContext, GuildState
 
 class levels(commands.Cog):
     ''':up: Level up by sending messages, earn new ranks and powers by doing so.'''
@@ -57,17 +57,18 @@ class levels(commands.Cog):
     @tasks.loop(seconds=10)
     async def give_exp(self):
         for guild in self.client.guilds:
-            for member in guild.members:
-                state = State(member).Member 
-                if state.active:
-                    # prev_des = state.role
-                    state.xp += self.gen_xp()  # TODO Make a handler if guild doesn't have any roles
-                    state.active = False
-                    # new_des = state.role
-                    
-                    # if not new_des == prev_des:
-                    #     await member.remove_roles(prev_des)
-                    #     await member.add_roles(new_des)
+            if GuildState(guild).exp_counting:
+                for member in guild.members:
+                    state = State(member).Member 
+                    if state.active:
+                        prev_des = state.role
+                        state.xp += self.gen_xp() 
+                        state.active = False
+                        new_des = state.role
+                        
+                        if not new_des == prev_des:
+                            await member.remove_roles(prev_des)
+                            await member.add_roles(new_des)
                     
 
     def rank_creation(self, ctx, member, roles):
@@ -168,9 +169,9 @@ class levels(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if not message.author.bot:
-            state = State(message.author).Member
-            state.active = True
-            state.messages += 1
+            state = State(message.author)
+            state.Member.messages += 1
+            state.Member.active = True
 
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)

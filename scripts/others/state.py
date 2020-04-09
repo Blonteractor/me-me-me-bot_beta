@@ -145,6 +145,10 @@ class GuildState:
     def prefix(self) -> str:
         return self.get_property("prefix")
     
+    @property
+    def exp_counting(self) -> bool:
+        return not self.ranks == {}
+    
     @ranks.setter
     def ranks(self, new):
         new_ranks = {str(rank): role.name for rank, role in new.items()}
