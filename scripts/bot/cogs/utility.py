@@ -304,9 +304,10 @@ class Utility(commands.Cog):
         rem = ["disable", "remove"]
         res = {}
         
-        await ctx.send(">>> Send the ranks you want to add like this `add @role level_required`, a total of 6 will be accepted")
+        await ctx.send(""">>> Send the ranks you want to add like this `add @role level_required`, a total of 6 will be accepted, say `stop` when done.
+                        You can only add a maximum of 10 roles""")
         
-        while len(res) < 6:
+        while len(res) <= 10:
         
             try:
                 message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author and m.content.startswith("add "), timeout=60)
@@ -320,11 +321,22 @@ class Utility(commands.Cog):
                     res = {}
                     await ctx.send("All rank roles removed, exp counting disabled.")
                     break
-                else:
+                elif message.content.startswith("add @"):
                     spl = message.content.split()
                     role = discord.utils.get(ctx.guild.roles, id=int(spl[1][3:][:-1]))
                     rank = int(spl[2])
+                    
+                    if role in res.values():
+                        await ctx.send("That's a duplicate you phoccin.", delete_after=5)
+                        continue
+                    if rank in res.keys():
+                        await ctx.send("Two roles cant have the same level requirement u phoccin", delete_after=5)
+                    
                     res[rank] = role
+                elif message.content == "stop":
+                    break
+                else:
+                    await ctx.send(f"`{message.content}` is not a valid response.")
         else:
             await ctx.send("All 6 roles added")
         

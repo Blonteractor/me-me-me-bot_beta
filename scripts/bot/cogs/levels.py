@@ -73,9 +73,9 @@ class levels(commands.Cog):
 
     def rank_creation(self, ctx, member, roles):
 
-        state = State(member)
+        state = State(member).Member
         level = state.level
-        rank = state.role.name
+        rank = state.rank
         response = requests.get(member.avatar_url)
         avatar_photo = Image.open(io.BytesIO(response.content))
 
@@ -97,24 +97,28 @@ class levels(commands.Cog):
         arc_end = arc_length-90
 
         a = list(roles.keys())
+       
 
-        for i in range(len(a)):
+        for i in range(0,len(a)):
             if level < roles[a[i]][0]:
-                role = a[i-1]
-                role_cap, role_colour = [a[i-1]]
-                role_colour = role_colour[:]
-                role_next, role_next_colour = roles[a[i]]
-                break
-        else:
-            role = a[-1].name
-            role_cap = 85
-            role_colour = a[-1].color.to_rgb()
-            role_next_colour = a[-1].color.to_rgb()
-            role_next = level
+                if i == 0:                                                                  #! hardcoded
+                    role = "Undefined"
+                    role_cap, role_colour =(0,[255,255,255])
+                    role_colour = role_colour[:]
+                    role_next, role_next_colour = roles[a[0]]
+                else:
+                    role = a[i-1]
+                    role_cap, role_colour = roles[a[i-1]]
+                    role_colour = role_colour[:]
+                    role_next, role_next_colour = roles[a[i]]
+
+                break    
+
             
         role_percent = (level - role_cap)/(role_next - role_cap)
 
         for i in range(3):
+        
             colour_diff = int(
                 (role_next_colour[i] - role_colour[i])*role_percent)
             role_colour[i] += colour_diff
@@ -133,8 +137,8 @@ class levels(commands.Cog):
         if len(name) > 15:
             name = name[:11]+'...'
         discrim = member.discriminator
-        nanotech = ImageFont.truetype('NanoTech Regular.otf', 100)
-        roboto_cond = ImageFont.truetype('RobotoCondensed-Light.ttf', 60)
+        nanotech = ImageFont.truetype('./Fonts/NanoTech Regular.otf', 100)
+        roboto_cond = ImageFont.truetype('./Fonts/RobotoCondensed-Light.ttf', 60)
         d = nanotech.getsize(name)[0]
 
         draw.text((50, 750), name, font=nanotech)
@@ -151,18 +155,24 @@ class levels(commands.Cog):
         draw.text((50, 50), "RANK", font=roboto_cond)
         draw.text((70+d, 10), str(rank), font=roboto_black)
 
-        if len(role) > 28:
-            role = role.upper()
-            x = 10
-            for i in range(11, 20):
-                draw.text((950, x), role[i],
-                          font=roboto_cond, fill=role_colour)
-                x += roboto_cond.getsize(role[i])[0]+40
-        else:
-            x = 10
-            for i in role.upper():
-                draw.text((950, x), i, font=roboto_cond, fill=role_colour)
-                x += roboto_cond.getsize(i)[0]+40
+        if len(role) > 13:
+            role = role.split()
+            nrole = []
+            for i in role:
+                nrole += [i[0]]
+            if len(nrole)<=6:
+                role = " ".join(nrole)
+            else:
+                role = "".join(nrole)
+            
+        if len(role) > 13:
+            role = role[:13]
+
+
+        x = 10
+        for i in role.upper():
+            draw.text((950, x), i, font=roboto_cond, fill=role_colour)
+            x += roboto_cond.getsize(i)[0]+40
 
         bg.save(f"{member.guild.id + member.id}.png")
 
@@ -179,6 +189,10 @@ class levels(commands.Cog):
         '''Shows your level and rank, all epic style.'''
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        
+        if not ctx.States.Guild.exp_counting:
+            await ctx.send(f">>> Counting exp is disabled in this server, setUp the ranks using `{ctx.prefix}setup roles` to enable.")
+            return
 
         try:
             int(member)
@@ -215,15 +229,26 @@ class levels(commands.Cog):
         if member.bot:
             return
         
-        self.roles = {role.name: (int(level), role.color.to_rgb()) for level, role in ctx.States.Guild.ranks}
-        
-        thrd = Thread(target=self.rank_creation, args=(ctx, member, self.roles))
+    
+        levels = [level for level,role in list(ctx.States.Guild.ranks.items())]
+        levels.sort()
+        roles = {}
+       
+        for ulevel in levels:
+            for level, role in list(ctx.States.Guild.ranks.items()):
+                
+                if level == ulevel:
+                    roles[role.name] =  [int(level), list(role.color.to_rgb())]
+                    break
+                    
+    
+        thrd = Thread(target=self.rank_creation, args=(ctx, member, roles))
         thrd.start()
         thrd.join()
+        filename = f"{member.guild.id + member.id}.png"
+        await ctx.send(file=discord.File(filename))
         
-        await ctx.send(file=discord.File(f"{ctx.author.guild.id + ctx.author.id}.png"))
-        
-        os.remove(f"{ctx.author.guild.id + ctx.author.id}.png")
+        os.remove(filename)
         
     @commands.group()
     async def exp(self, ctx):

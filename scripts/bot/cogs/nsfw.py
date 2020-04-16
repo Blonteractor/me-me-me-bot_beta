@@ -22,7 +22,7 @@ import nhenpy
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
 
-from state import State
+from state import State, CustomContext
 
 
 #* DECORATOR FOR CHECKING IF COMMAND IS BEING RUN IN A NSFW CHANNEL
@@ -226,12 +226,12 @@ class nsfw(commands.Cog):
         while not found:
             prev = rand
             search = self.nh.search(f"{search_by}:{search_tag}", rand)
-            found = await self.doujin_found(search)
+            ch = choice(search)
+            found = await self.doujin_found(ch)
             if not found:
                 rand = randint(1, prev)
         else:
             return search
-
     #* ERROR HANDLER
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -466,9 +466,8 @@ class nsfw(commands.Cog):
 
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai, parody of `{query}`.......{self.loading_emoji}")
-            
-        search = await self.find_doujins(search_by="parody", search_tag=query, page_limit=20)
         
+        search = await self.find_doujins(search_by="parody", search_tag=query, page_limit=20)
         if len(search) > 0:
             doujin = choice(search)
             doujin_id = str(doujin).split("]")[0][2:]
@@ -507,7 +506,7 @@ class nsfw(commands.Cog):
 
         search = await self.find_doujins(search_by="character", search_tag=query, page_limit=15)
 
-        if len(search) > 0:
+        if len(search) < 0:
             doujin = choice(search)
             doujin_id = str(doujin).split("]")[0][2:]
 
@@ -521,7 +520,9 @@ class nsfw(commands.Cog):
     @nsfw_command()
     async def vault(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            user_vault = list(gen.db_receive("vault")[str(ctx.author.id)].values())
+            ctx = self.client.get_context(ctx.message, cls=CustomContext)
+            
+            user_vault = ctx.States.User.vault #TODO use vault with states
             content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
             
             embed: discord.Embed = discord.Embed(title=f"{ctx.author.name}'s vault",

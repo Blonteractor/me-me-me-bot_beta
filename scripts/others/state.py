@@ -87,8 +87,12 @@ class GuildState:
     
     @property
     def ranks(self) -> dict:
+
+        if self.get_property("rank_roles") is None or self.get_property("rank_nums") is None:
+            return {}
+        
+        levels = [int(level) for level in self.get_property("rank_nums")]
         roles = [self.get_role(role) for role in self.get_property("rank_roles")]
-        levels = [int(level) for level in self.get_property("rank_levels")]
         
         return dict(zip(levels, roles))
     
@@ -208,24 +212,25 @@ class MemberState:
     
     def __init__(self, member: discord.Member):
         
+        self.member = member
+        self.db_name = f"member-states----{self.member.guild.id}"
+        
         if member.bot:
             del self
             return
         
-        self.member = member
         self.guild_state = GuildState(member.guild)
-        self.db_name = f"member-states----{self.member.guild.id}"
         
         make_db_if_not_exists(path=f"{DBPATH}\\{self.db_name}.json")
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
         
     def __del__(self):
-        if self.user.bot:
+        if self.member.bot:
             db = db_receive(self.db_name)
             
-            if str(self.user.id):
-                db.pop(str(self.user.id))
+            if str(self.member.id) in db:
+                db.pop(str(self.member.id))
             
             db_update(self.db_name, db)
         
@@ -271,21 +276,32 @@ class MemberState:
         
         db_update(self.db_name, states)
         
-    def get_designation(self, level: int):
+    def get_designation(self, level_member: int):
         roles = self.guild_state.ranks
         
-        a = list(roles.values())
-        for i in range(len(a)):
-            if a[i][0] > level:
-                rel_role = a[i - 1][0]
-                break
+        # a = list(roles.keys())
+        # for i in range(len(a)):
+        #     if a[i] > level:
+        #         rel_role = a[i - 1]
+        #         break
 
+        #     else:
+        #         rel_role = a[-1]
+
+        # for role, level in roles.items():
+        #     if level == rel_role:
+        #         return role
+        
+        temp = list(roles.items())[0][1]
+        for level, role in roles.items():
+            if level_member > level:
+                temp = role
             else:
-                rel_role = a[-1][0]
-
-        for role, level in roles.items():
-            if level[0] == rel_role:
-                return role
+                break
+        else:
+            return list(roles.items())[-1][1]
+            
+        return temp
             
     def update_ranks(self):
         states = self.database
@@ -306,6 +322,8 @@ class MemberState:
         
         for i in range(lvl):
             total_xp_needed += ((5 * (i ** 2)) + (50 * i) + 100)
+            
+        return total_xp_needed
             
     @staticmethod
     def rank_gen(l: list) -> dict:
@@ -329,10 +347,10 @@ class MemberState:
                 lvl_found = True
             else:
                 i += 1
-
+                
         rel_bar = (5 * (i ** 2) + 50 * i + 100)
         rel_exp = exp - self.total_exp_needed(i)
-
+        
         info["level"] = i
         info["rel_xp"] = rel_exp
         info["rel_bar"] = rel_bar
@@ -355,7 +373,7 @@ class MemberState:
     
     @property
     def role(self) -> discord.Role:
-        return self.guild_state.get_role(self.get_designation(self.level))
+        return self.get_designation(self.level) 
     
     @property
     def level(self) -> int:
@@ -394,7 +412,7 @@ class MemberState:
     @property
     def rank(self) -> int:
         prop = self.get_property(property_name="rank")
-        return self.get_property(property_name="rank")
+        return prop if prop is not None else 0
     
     @xp.setter
     def xp(self, new: int):
@@ -416,12 +434,12 @@ class UserState:
     
     def __init__(self, user: Union[discord.User, discord.Member]):
         
+        self.user = user
+        self.db_name = "user-states"
+        
         if user.bot:
             del self
             return
-        
-        self.user = user
-        self.db_name = "user-states"
         
         make_db_if_not_exists(path=f"{DBPATH}\\{self.db_name}.json")
         
@@ -431,7 +449,7 @@ class UserState:
         if self.user.bot:
             db = db_receive(self.db_name)
             
-            if str(self.user.id):
+            if str(self.user.id) in db:
                 db.pop(str(self.user.id))
             
             db_update(self.db_name, db)
