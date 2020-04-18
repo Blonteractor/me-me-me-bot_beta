@@ -9,6 +9,7 @@ from colorama import Fore, Back, Style, init
 from PIL import Image, ImageDraw, ImageOps, ImageFont
 import imp
 import os
+from colorthief import ColorThief
 
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
@@ -59,10 +60,12 @@ class levels(commands.Cog):
         for guild in self.client.guilds:
             if GuildState(guild).exp_counting:
                 for member in guild.members:
+                    if member.bot:
+                        continue
                     state = State(member).Member 
                     if state.active:
                         prev_des = state.role
-                        state.xp += self.gen_xp() 
+                        state.xp += self.gen_xp()
                         state.active = False
                         new_des = state.role
                         
@@ -74,10 +77,14 @@ class levels(commands.Cog):
     def rank_creation(self, ctx, member, roles):
 
         state = State(member).Member
+        blend = State(member).User.card_blend
         level = state.level
         rank = state.rank
         response = requests.get(member.avatar_url)
-        avatar_photo = Image.open(io.BytesIO(response.content))
+        content = response.content
+        avatar_photo = Image.open(io.BytesIO(content))
+        
+        ct = ColorThief(io.BytesIO(content))
 
         size = (600, 600)
         avatar_photo = avatar_photo.resize(size)
@@ -103,14 +110,17 @@ class levels(commands.Cog):
             if level < roles[a[i]][0]:
                 if i == 0:                                                                  #! hardcoded
                     role = "Undefined"
-                    role_cap, role_colour =(0,[255,255,255])
+                    role_cap, role_colour =(0, list(ct.get_color(quality=1)))
                     role_colour = role_colour[:]
                     role_next, role_next_colour = roles[a[0]]
                 else:
                     role = a[i-1]
                     role_cap, role_colour = roles[a[i-1]]
-                    role_colour = role_colour[:]
                     role_next, role_next_colour = roles[a[i]]
+                    if blend:
+                        dominant_colour = list(ct.get_color(quality=1))
+                        role_next_colour = role_colour = dominant_colour
+                    role_colour = role_colour[:]
 
                 break    
 
@@ -144,7 +154,7 @@ class levels(commands.Cog):
         draw.text((50, 750), name, font=nanotech)
         draw.text((70+d, 750), f"#{discrim}", font=roboto_cond)
 
-        roboto_black = ImageFont.truetype('Roboto-Black.ttf', 110)
+        roboto_black = ImageFont.truetype('./Fonts/Roboto-Black.ttf', 110)
 
         d = roboto_cond.getsize("LEVEL")[0]
         draw.text((600, 850), "LEVEL", font=roboto_cond, fill=role_colour)
@@ -275,6 +285,30 @@ class levels(commands.Cog):
         ctx.State.Member.xp += ammount
         
         await ctx.send(f">>> `{ammount}`xp taken from {member.mention}")
+        
+    @commands.command()
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    async def blend(self, ctx, resp):
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        
+        yes = ["yes", "enable", "sure", "y"]
+        no = ["nop", "disable", "no", "n"]
+        
+        state = ctx.States.User
+        
+        if resp in yes:
+            state.card_blend = True
+            await ctx.send("Your rank card color will now blend with your profile pic.")
+            return
+        
+        elif resp in no:
+            state.card_blend = False
+            await ctx.send("Your rank card color will now not blend with your profile pic.")
+            return
+        
+        else:
+            await ctx.send("Invalid response, reply like a hooman.")
+            return
 
 def setup(client):
     client.add_cog(levels(client))

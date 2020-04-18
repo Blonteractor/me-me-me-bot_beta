@@ -331,6 +331,8 @@ class Utility(commands.Cog):
                         continue
                     if rank in res.keys():
                         await ctx.send("Two roles cant have the same level requirement u phoccin", delete_after=5)
+                    if rank < 0:
+                        await ctx.send("I dont remember asking your pp size, give a number greater than zero please.")
                     
                     res[rank] = role
                 elif message.content == "stop":
