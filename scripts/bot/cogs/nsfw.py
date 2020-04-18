@@ -69,14 +69,10 @@ class nsfw(commands.Cog):
         
     def vault_add(self, user: discord.User, item):
         st = State(member=user).User
-        
+    
         vault = st.vault
-        user_id = str(user.id)
-        
-        if user_id not in vault.keys():
-            vault[user_id] = {}
             
-        vault[user_id][len(vault[user_id]) + 1] = item
+        vault[len(vault) + 1] = item
         
         st.vault = vault
     
@@ -84,12 +80,11 @@ class nsfw(commands.Cog):
         st = State(member=user).User
         
         vault = st.vault
-        user_id = str(user.id)
         
-        if len(vault[user_id].keys()) < int(index):
+        if len(vault.keys()) < int(index):
             return None
 
-        removed = vault[user_id].pop(index)
+        removed = vault.pop(index)
         
         st.vault = vault
         
@@ -120,7 +115,7 @@ class nsfw(commands.Cog):
             
         doujin_id = str(doujin).split("]")[0][2:]   
                 
-        reactions = {"read": "📖","delete": "❌", "save": "💾", "download": "📩"}
+        reactions = {"read": "📖","delete": "❌", "save": "⭐", "download": "📩"}
         
         self.client.loop.create_task(reactions_add(reactions=reactions.values(), message=embed_msg))
         
@@ -146,19 +141,23 @@ class nsfw(commands.Cog):
                         self.vault_add(user=ctx.author, item=doujin_id)
                         
                     elif response == reactions["download"]:
-                        download_path = "..\\..\\..\\doujin_dnlds"
+                        if len(doujin.pages) > 30:
+                            await ctx.send("Sorry! The doujin is too large, nitro boost your server for Me! to be able to upload larger files.")
+                            continue
+                        
+                        download_path = os.path.abspath("./cache.bot/doujin_dnlds")
                         
                         embed = discord.Embed(title="Now Downloading", description=doujin.title,
                                                color=discord.Color.dark_purple(), url=doujin.url)
-                        embed.set_thumbnail(self.nhentai_logo)
-                        embed.set_image(doujin.pages[0])
+                        embed.set_thumbnail(url=self.nhentai_logo)
+                        embed.set_image(url=doujin.pages[0])
                         
                         dnld_msg = await ctx.send(embed=embed)
                         
-                        doujin.download_zip(filename=doujin_id, path=download_path)
-                        file = discord.File(download_path)
+                        downloaded_path = doujin.download_zip(filename=f"{doujin_id}.zip", path=download_path)
                         
-                        await dnld_msg.edit(file=file)
+                        downloaded_file = discord.File(downloaded_path)
+                    
                         
                     elif response == reactions["delete"]:
                         await embed_msg.delete(delay=3)
@@ -520,10 +519,14 @@ class nsfw(commands.Cog):
     @nsfw_command()
     async def vault(self, ctx: commands.Context):
         if ctx.invoked_subcommand is None:
-            ctx = self.client.get_context(ctx.message, cls=CustomContext)
+            ctx = await self.client.get_context(ctx.message, cls=CustomContext)
             
-            user_vault = ctx.States.User.vault #TODO use vault with states
-            content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
+            user_vault = ctx.States.User.vault
+            
+            if user_vault == {}:
+                await ctx.send("Looks like your vault is empty! Add doujins to you rvault by pressing ⭐ on the doujin embed")
+                return
+            content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault.values()]
             
             embed: discord.Embed = discord.Embed(title=f"{ctx.author.name}'s vault",
                                                 color=discord.Color.from_rgb(255, 9, 119))
@@ -539,14 +542,16 @@ class nsfw(commands.Cog):
         
     @vault.command()
     async def release(self, ctx: commands.Context):
-        user_vault = list(gen.db_receive("vault")[str(ctx.author.id)].values())      
-        content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault]
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+            
+        user_vault = ctx.States.User.vault      
+        content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault.values()]
         
         await ctx.send(">>> Your whole vault is being sent to your DM.")
         await ctx.author.send(">>> Here's your vault, enjoy!")
         
         for item in content:
-            await ctx.author.send(embed=self.doujin_embed(doujin=item, author=ctx.author, doujin_id=str(item).split("]")[0][2:]))
+            await ctx.author.send(embed=self.doujin_embed(doujin=item, author=ctx.author, doujin_id=item.number))
             
         await ctx.author.send("That's all folks.")
     
@@ -560,7 +565,7 @@ class nsfw(commands.Cog):
             return
         
         removed_id = self.vault_remove(ctx.author, index=index)
-        removed_name = nhenpy.NHentaiDoujin(f"/g/{removed_id}").name
+        removed_name = nhenpy.NHentaiDoujin(f"/g/{removed_id}").title
         
         if removed_id is None:
             await ctx.send(">>> The index you entered is bigger than the size of your vault.")

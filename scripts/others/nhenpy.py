@@ -105,7 +105,7 @@ class NHentaiDoujin():
     
     @property
     def url(self):
-        return f"www.nhentai.net/g/{self.number}"
+        return f"https://www.nhentai.net/g/{self.number}"
     
     @property
     def number(self):
@@ -190,7 +190,8 @@ class NHentaiDoujin():
         # Ensures that there's a title.
         images = self.get_images()
         filename = kwargs["filename"] if "filename" in kwargs else self._sanitize(self.title)+".zip"
-        with zipfile.ZipFile(os.path.join(*[x for x in [kwargs.get("path"), filename] if x]), "w") as z:
+        path = os.path.join(*[x for x in [kwargs.get("path"), filename] if x])
+        with zipfile.ZipFile(path, "w") as z:
             print(f"Downloading: {filename}")
             with tqdm.tqdm(total=len(images), unit="images") as progress:
                 q = queue.Queue()
@@ -212,7 +213,7 @@ class NHentaiDoujin():
                     t.running = False
                     del(t)
 
-            print(f"Finished!")
+            return path
 
 
     def download(self, **kwargs):

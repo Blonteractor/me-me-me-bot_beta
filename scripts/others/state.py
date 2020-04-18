@@ -256,13 +256,14 @@ class MemberState:
     def get_property(self, property_name: str, rtr=False):
         state_variables = self.state_variables
         exists = property_name in state_variables
-        
+       
         if not exists:
             if not rtr:
                 raise AttributeError(f"{property_name} not found in the state variables")
+
             elif rtr:
                 return None
-   
+    
         return state_variables[property_name]
         
     def new_property(self, property_name, property_val=None):
@@ -306,15 +307,14 @@ class MemberState:
     def update_ranks(self):
         states = self.database
         
-        exp_values = [int(value["exp"]) for value in list(states.values()) if value["exp"] is not None]
+        exp_values = [int(value["exp"]) for value in list(states.values()) if "exp" in value and value["exp"] is not None]
         exp_to_rank = self.rank_gen(exp_values)
-        
-        for member, exp in states.items():   
-            exp = int(exp["exp"]) if exp["exp"] is not None else 0
-            for _exp, rank in exp_to_rank.items():
-                if _exp == exp:
-                    self.set_property(property_name="rank", property_val=rank)
-                    break
+        exp = states[str(self.member.id)]["exp"] if states[str(self.member.id)]["exp"] is not None else 0
+      
+        for _exp, rank in exp_to_rank.items():
+            if str(_exp) == str(exp):
+                self.set_property(property_name="rank", property_val=rank)
+                return
             
     @staticmethod
     def total_exp_needed(lvl):
@@ -406,8 +406,8 @@ class MemberState:
     @property
     def active(self) -> bool:
         prop = self.get_property(property_name="active")
-        
-        return True if prop is not None else False
+
+        return prop if prop is not None else False
     
     @property
     def rank(self) -> int:
@@ -417,6 +417,7 @@ class MemberState:
     @xp.setter
     def xp(self, new: int):
         self.set_property(property_name="exp", property_val=new)
+        
         self.update_ranks()
     
     @messages.setter
@@ -430,7 +431,7 @@ class MemberState:
 class UserState:
     """Stores global states which don't change between guilds."""
     
-    properties = ["vault", "souls", "playlist", "phone_type", "phone_bg", "phone_body"]
+    properties = ["vault", "souls", "playlist", "phone_type", "phone_bg", "phone_body", "card_blend"]
     
     def __init__(self, user: Union[discord.User, discord.Member]):
         
@@ -476,7 +477,7 @@ class UserState:
         
         if not exists:
             if not rtr:
-                raise AttributeError(f"{property_name} not found in the state variables")
+                pass
             elif rtr:
                 return None
    
@@ -505,11 +506,13 @@ class UserState:
         
     @property
     def vault(self):
-        return self.get_property(property_name="vault")
+        prop = self.get_property(property_name="vault")
+        return prop if prop is not None else {}
     
     @property
     def souls(self):
-        return self.get_property(property_name="souls")
+        prop = self.get_property(property_name="souls")
+        return prop if prop is not None else 0
     
     @property
     def phone_type(self):
@@ -526,6 +529,11 @@ class UserState:
     @property
     def playlist(self):
         return self.get_property(property_name="playlist")
+    
+    @property
+    def card_blend(self) -> bool:
+        prop = self.get_property(property_name="card_blend")
+        return prop if prop is not None else False
     
     @vault.setter
     def vault(self, new):
@@ -550,6 +558,10 @@ class UserState:
     @phone_body.setter
     def phone_body(self, new):
         return self.set_property(property_name="phone_body", property_val=new)
+    
+    @card_blend.setter
+    def card_blend(self, new):
+        return self.set_property(property_name="card_blend", property_val=new)
         
         
 class State:
