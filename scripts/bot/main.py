@@ -48,6 +48,7 @@ PERMISSIONS = discord.Permissions(administrator=True,
                                   manage_emojis=True
                                   )
 WELCOME_MSG = """
+asasas
 """
 EMOJIS_PATH = os.path.abspath("./assets/emojis")
 # * CLIENT SETUP
@@ -220,7 +221,7 @@ async def on_ready():
 #* WELCOME MESSAGE AND ADD NECESSARY EMOJIS OT GUILD WHEN BOT JOINS A GUILD
 @client.event
 async def on_guild_join(guild: discord.Guild):
-    general = guild.channels[0]
+    general = guild.text_channels[0]
     await general.send(WELCOME_MSG)
     
     for emoji_img in os.listdir(EMOJIS_PATH):
