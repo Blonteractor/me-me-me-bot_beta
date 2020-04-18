@@ -47,7 +47,9 @@ PERMISSIONS = discord.Permissions(administrator=True,
                                   manage_roles=True,
                                   manage_emojis=True
                                   )
-
+WELCOME_MSG = """
+"""
+EMOJIS_PATH = os.path.abspath("./assets/emojis")
 # * CLIENT SETUP
 prefix = gen.permu("me! ") + gen.permu("epic ")
 async def determine_prefix(bot, message):
@@ -214,9 +216,24 @@ async def on_ready():
     #gen.reset()
 
     print('Bot is ready as sef!')
-
-
-
+    
+#* WELCOME MESSAGE AND ADD NECESSARY EMOJIS OT GUILD WHEN BOT JOINS A GUILD
+@client.event
+async def on_guild_join(guild: discord.Guild):
+    general = guild.channels[0]
+    await general.send(WELCOME_MSG)
+    
+    for emoji_img in os.listdir(EMOJIS_PATH):
+        name = emoji_img.split(".")[0]
+        
+        with open(os.path.join(EMOJIS_PATH, emoji_img), "rb") as emoji:
+            b = emoji.read()
+            
+        await guild.create_custom_emoji(name=name,
+                                        reason="This emoji is needed by the Me!Me!Me! bot to function properly",
+                                        roles=discord.utils.get(guild.roles, name="Me!Me!Me!"),
+                                        image=b
+                                        )
 # * COMMAND NOT FOUND
 @client.event
 async def on_command_error(ctx, error):
