@@ -27,8 +27,8 @@ class GuildState:
     def get_channel(self, name) -> discord.TextChannel:
         return get(self.guild.channels, name=name)
     
-    def get_role(self, name) -> discord.Role:
-        return get(self.guild.roles, name=name)
+    def get_role(self, **kwargs) -> discord.Role:
+        return get(self.guild.roles, name=kwargs.get("name")) if "name" in kwargs else get(self.guild.roles, id=int(kwargs.get("id")))
     
     def reset(self):
         return [self.new_property(pr) for pr in self.properties]
@@ -92,7 +92,7 @@ class GuildState:
             return {}
         
         levels = [int(level) for level in self.get_property("rank_nums")]
-        roles = [self.get_role(role) for role in self.get_property("rank_roles")]
+        roles = [self.get_role(id=role) for role in self.get_property("rank_roles")]
         
         return dict(zip(levels, roles))
     
@@ -122,9 +122,9 @@ class GuildState:
     
     @property
     def dj_role(self) -> discord.Role:
-        name = self.get_property("dj_role")
+        role = self.get_property("dj_role")
         
-        return self.get_role(name)
+        return self.get_role(id=role)
     
     @property
     def extra_cooldown(self) -> str:
@@ -155,7 +155,7 @@ class GuildState:
     
     @ranks.setter
     def ranks(self, new):
-        new_ranks = {str(rank): role.name for rank, role in new.items()}
+        new_ranks = {str(rank): int(role.id) for rank, role in new.items()}
         ranks = list(new_ranks.keys())
         roles = list(new_ranks.values())
         
@@ -192,7 +192,7 @@ class GuildState:
       
     @dj_role.setter
     def dj_role(self, role: discord.Role):
-        self.set_property(property_name="dj_role", property_val=role.name)
+        self.set_property(property_name="dj_role", property_val=int(role.id))
         
     @doujin_category.setter
     def doujin_category(self, name):

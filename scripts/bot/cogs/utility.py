@@ -340,9 +340,10 @@ class Utility(commands.Cog):
                 else:
                     await ctx.send(f"`{message.content}` is not a valid response.")
         else:
-            await ctx.send("All 6 roles added")
+            pass
         
         ctx.States.Guild.ranks = res
+        await ctx.send(f"All {len(res)} roles added")
         
     @setup.command(aliases=["default"])
     @commands.has_permissions(administrator=True)
