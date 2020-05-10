@@ -440,40 +440,32 @@ class Music(commands.Cog):
         
         await asyncio.gather(*coros)
 
-    async def jbe_update(self, vid):
-        async def up(guild):
-            try:
-                GuildState(guild).juke_box_embed_msg
-            except:
-                return
-            embed = discord.Embed(title=vid.title,
-                                color=discord.Colour.from_rgb(0, 255, 255))
+    async def jbe_update(self, vid, guild):
+        try:
+            GuildState(guild).juke_box_embed_msg
+        except:
+            return
+        embed = discord.Embed(title=vid.title,
+                            color=discord.Colour.from_rgb(0, 255, 255))
 
-            embed.set_image(url=vid.thumbnail)
-            await GuildState(guild).juke_box_embed_msg.edit(embed=embed)
+        embed.set_image(url=vid.thumbnail)
+        await GuildState(guild).juke_box_embed_msg.edit(embed=embed)
             
-        coros = [up(guild) for guild in self.client.guilds]
-        
-        await asyncio.gather(*coros)
 
-    async def jbq_update(self, vid):
-        async def up(guild):
-            try:
-                GuildState(guild).juke_box_queue
-            except:
-                return
+    async def jbq_update(self, vid, guild):
+        try:
+            GuildState(guild).juke_box_queue
+        except:
+            return
 
-            string = "__QUEUE__\n"
-            for index in range(len(GuildState(guild).queue_ct)):
-                i = GuildState(guild).queue_ct[index]
+        string = "__QUEUE__\n"
+        for index in range(len(GuildState(guild).queue_ct)):
+            i = GuildState(guild).queue_ct[index]
 
-                string += f"{index+1}. {i.title} ({i.duration}) \n"
+            string += f"{index+1}. {i.title} ({i.duration}) \n"
 
-            await GuildState(guild).juke_box_queue.edit(content=string)
-            
-        coros = [up(guild) for guild in self.client.guilds]
-        
-        await asyncio.gather(*coros)
+        await GuildState(guild).juke_box_queue.edit(content=string)
+
 
     @tasks.loop(seconds=1)
     async def jbl_update(self):
@@ -627,14 +619,15 @@ class Music(commands.Cog):
                     voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options=" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
                                after=lambda e: check_queue())
                     GuildState(ctx.author.guild).time = 0
-                    if (self.clock.current_loop == 0): #! WOT
-                        self.clock.start()
-                        
-                    await self.jbe_update(queue[0])
-                    await self.jbq_update(queue[0])
                     
-                    if (self.jbl_update.current_loop == 0):
-                        self.jbl_update.start()
+                    # if (self.clock.current_loop == 0): #! WOT
+                    #     self.clock.start()
+                        
+                    await self.jbe_update(queue[0], ctx.author.guild)
+                    await self.jbq_update(queue[0], ctx.author.guild)
+                    
+                    # if (self.jbl_update.current_loop == 0):
+                    #     self.jbl_update.start()
 
                     if self.shuffle_lim:
                         
@@ -911,7 +904,7 @@ class Music(commands.Cog):
 
         state.queue_ct += [vid]
         state.full_queue_ct += [vid]
-        await self.jbq_update(vid)
+        await self.jbq_update(vid, ctx.author.guild)
 
         if isinstance(vid, YoutubeVideo):
             old_queue = [x for x in state.queue if type(x) != str]
