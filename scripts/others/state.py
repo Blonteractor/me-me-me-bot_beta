@@ -5,12 +5,13 @@ from typing import Union
 from discord.utils import get
 from discord.ext.commands import Context
 from general import db_receive, db_update, DBPATH
+import temp_db
 
 def make_db_if_not_exists(path: str):
     if not os.path.exists(path):
         with open(path, "w+b") as f:
             f.write(b"{}")
-
+    
 class GuildState:
     """Stores state variables of a guild"""
     
@@ -33,30 +34,46 @@ class GuildState:
     def reset(self):
         return [self.new_property(pr) for pr in self.properties]
     
-    def set_property(self, property_name: str, property_val):
-        temp = self.state_variables
+    @property
+    def temp_data(self):
+        if not self in temp_db.temp_data:
+            temp_db.temp_data[self] = {}
+        return temp_db.temp_data[self] 
     
-        if type(property_val) == int:
-            temp[property_name] = str(property_val)
+    def set_property(self, property_name: str, property_val, temp=False):
+        if not temp:
+            temp = self.state_variables
+        
+            if type(property_val) == int:
+                temp[property_name] = str(property_val)
+            else:
+                temp[property_name] = property_val
+        
+            states = db_receive(self.db_name)
+            states[str(self.guild.id)] = temp
+            
+            db_update("guild-states", states)
         else:
-            temp[property_name] = property_val
-    
-        states = db_receive(self.db_name)
-        states[str(self.guild.id)] = temp
+            try:
+                self.temp_data[property_name] = property_val
+            except:
+                pass
         
-        db_update("guild-states", states)
+    def get_property(self, property_name: str, rtr=False, temp=False):
         
-    def get_property(self, property_name: str, rtr=False):
-        state_variables = self.state_variables
-        exists = property_name in state_variables
-        
-        if not exists:
-            if not rtr:
-                raise AttributeError(f"{property_name} not found in the state variables")
-            elif rtr:
-                return None
-   
-        return state_variables[property_name]
+        if not temp:
+            state_variables = self.state_variables
+            exists = property_name in state_variables
+            
+            if not exists:
+                if not rtr:
+                    raise AttributeError(f"{property_name} not found in the state variables")
+                elif rtr:
+                    return None
+
+            return state_variables[property_name]
+        else:
+            return self.temp_data[property_name] if property_name in self.temp_data else self.set_property(property_name=property_name, property_val=None)
         
     def new_property(self, property_name, property_val=None):
         state_variables = self.state_variables

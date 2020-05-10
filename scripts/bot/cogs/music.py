@@ -170,6 +170,9 @@ genius.verbose = False
 
 class Music(commands.Cog):
     ''':musical_note: The title says it all, commands related to music and stuff.'''
+    
+    properties = ["queue", "full_queue", "queue_ct", "full_queue_ct", "cooldown", "loop_song", "loop_q", "skip_song", "time_for_disconnect", "shuffle_lim", "shuffle_var"]
+    
     queue: List[Any] = [
     ]                                      # queue of the format [items,"playlist name",playlist items,"/playlist name",items]
     full_queue: List[Any] = []
@@ -210,13 +213,17 @@ class Music(commands.Cog):
    # * ------------------------------------------------------------------------------PREREQUISITES--------------------------------------------------------------------------------------------------------------
 
     def __init__(self, client):
-        print(__name__)
         self.client = client
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
         self.juke_box.start()
         self.guild_dis = []
         self.guild_res_cancel = []
+        self.time_l = []
+    
+        for prop in self.properties:
+            setattr(GuildState, prop, property(lambda self: self.get_property(property_name=prop, temp=True),
+                                                lambda self,new: self.set_property(property_name=prop, property_val=new, temp=True)))
         
         if gen.dj_role is not None:
             self.dj_role_id = gen.dj_role.id
@@ -311,7 +318,8 @@ class Music(commands.Cog):
 
     @tasks.loop(seconds=1)
     async def clock(self):
-        self.time += 1
+        for guild in self.time_l:
+            GuildState(guild).time += 1
 
     @tasks.loop(seconds=2)
     # disconnect if player is idle for the disconnecting time provided
@@ -364,7 +372,7 @@ class Music(commands.Cog):
             awoo_channel = GuildState(guild).voice_text_channel
     
             await voice.disconnect()
-            self.queue.clear()
+            GuildState(guild).queue.clear()
             self.log(f"Auto disconnected from {voice.channel.name}")
             
             if awoo_channel is None:
@@ -374,7 +382,7 @@ class Music(commands.Cog):
     @tasks.loop(seconds=1)
     async def juke_box(self):
 
-        for guild in self.client.guilds:
+        async def set_jb(guild):
             channel = GuildState(guild).juke_box_channel
 
             if channel is None:
@@ -401,8 +409,8 @@ class Music(commands.Cog):
             embed_msg = await channel.send(embed=embed)
             embed_msg: discord.Message
 
-            self.juke_box_embed = embed
-            self.juke_box_embed_msg = embed_msg
+            GuildState(guild).juke_box_embed = embed
+            GuildState(guild).juke_box_embed_msg = embed_msg
 
             def check(reaction: discord.Reaction, user):
                 return reaction.message.id == embed_msg.id
@@ -417,17 +425,90 @@ class Music(commands.Cog):
             loading_bar = await channel.send(f"0:00/0:00 - {':black_large_square:'*10}")
             loading_bar: discord.Message
 
-            self.juke_box_loading = loading_bar
+            GuildState(guild).uke_box_loading = loading_bar
 
             queue_msg = await channel.send("__QUEUE LIST__")
             queue_msg: discord.Message
 
-            self.juke_box_queue = queue_msg
+            GuildState(guild).juke_box_queue = queue_msg
 
-            self.juke_box_channel = channel
+            GuildState(guild).juke_box_channel = channel
 
-            self.juke_box.cancel()
+            # self.juke_box.cancel()
+            
+        coros = [set_jb(guild) for guild in self.client.guilds]
+        
+        await asyncio.gather(*coros)
 
+    async def jbe_update(self, vid):
+        async def up(guild):
+            try:
+                GuildState(guild).juke_box_embed_msg
+            except:
+                return
+            embed = discord.Embed(title=vid.title,
+                                color=discord.Colour.from_rgb(0, 255, 255))
+
+            embed.set_image(url=vid.thumbnail)
+            await GuildState(guild).juke_box_embed_msg.edit(embed=embed)
+            
+        coros = [up(guild) for guild in self.client.guilds]
+        
+        await asyncio.gather(*coros)
+
+    async def jbq_update(self, vid):
+        async def up(guild):
+            try:
+                GuildState(guild).juke_box_queue
+            except:
+                return
+
+            string = "__QUEUE__\n"
+            for index in range(len(GuildState(guild).queue_ct)):
+                i = GuildState(guild).queue_ct[index]
+
+                string += f"{index+1}. {i.title} ({i.duration}) \n"
+
+            await GuildState(guild).juke_box_queue.edit(content=string)
+            
+        coros = [up(guild) for guild in self.client.guilds]
+        
+        await asyncio.gather(*coros)
+
+    @tasks.loop(seconds=1)
+    async def jbl_update(self):
+        async def up(guild):
+            state = GuildState(guild)
+            try:
+                GuildState(guild).juke_box_loading
+            except:
+                return
+            queue = [x for x in GuildState(guild).queue if type(x) != str]
+            if queue == []:
+                jbl_update.cancel()
+            vid = queue[0]
+
+            def two_dig(number):
+                if number < 10:
+                    return f"0{number}"
+                else:
+                    return str(number)
+
+            if vid.duration.count(":") == 1:
+                ntime = f"{state.time//60}:{two_dig(state.time%60)}"
+            else:
+                ntime = f"{state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
+
+            amt = int(state.time/vid.seconds*10)
+
+            await GuildState(guild).juke_box_loading.edit(content=f"{ntime}/{vid.duration}-{':black_square_button:'*amt +':black_large_square:'*(10-amt) }")
+            
+        coros = [up(guild) for guild in self.client.guilds]
+        
+        await asyncio.gather(*coros)
+        
+    #* EVENTS
+    
     @commands.Cog.listener()
     async def on_message(self, message):
         juke_box_channel = GuildState(message.author.guild).juke_box_channel
@@ -437,18 +518,18 @@ class Music(commands.Cog):
 
                 await message.delete()
             else:
-                if message.id != self.juke_box_loading.id and message.id != self.juke_box_queue.id:
+                if message.id != GuildState(message.author.guild).juke_box_loading.id and message.id != GuildState(message.author.guild).juke_box_queue.id:
                     await message.delete()
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user):
 
         try:
-            self.juke_box_channel
+            GuildState(user.guild).juke_box_channel
         except:
             pass
         else:
-            if user != self.client.user and reaction.message.id == self.juke_box_embed_msg.id:
+            if user != GuildState(user.guild).client.user and reaction.message.id == GuildState(user.guild).juke_box_embed_msg.id:
                 reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
                              "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
                 voice = get(self.client.voice_clients,
@@ -473,108 +554,56 @@ class Music(commands.Cog):
 
                 await reaction.remove(user)
 
-    async def jbe_update(self, vid):
-        try:
-            self.juke_box_embed_msg
-        except:
-            return
-        embed = discord.Embed(title=vid.title,
-                              color=discord.Colour.from_rgb(0, 255, 255))
-
-        embed.set_image(url=vid.thumbnail)
-        await self.juke_box_embed_msg.edit(embed=embed)
-
-    async def jbq_update(self, vid):
-        try:
-            self.juke_box_queue
-        except:
-            return
-
-        string = "__QUEUE__\n"
-        for index in range(len(self.queue_ct)):
-            i = self.queue_ct[index]
-
-            string += f"{index+1}. {i.title} ({i.duration}) \n"
-
-        await self.juke_box_queue.edit(content=string)
-
-    @tasks.loop(seconds=1)
-    async def jbl_update(self):
-
-        try:
-            self.juke_box_loading
-        except:
-            return
-        queue = [x for x in self.queue if type(x) != str]
-        if queue == []:
-            jbl_update.cancel()
-        vid = queue[0]
-
-        def two_dig(number):
-            if number < 10:
-                return f"0{number}"
-            else:
-                return str(number)
-
-        if vid.duration.count(":") == 1:
-            ntime = f"{self.time//60}:{two_dig(self.time%60)}"
-        else:
-            ntime = f"{self.time//3600}:{two_dig(self.time%3600//60)}:{two_dig(self.time//60)}"
-
-        amt = int(self.time/vid.seconds*10)
-
-        await self.juke_box_loading.edit(content=f"{ntime}/{vid.duration}-{':black_square_button:'*amt +':black_large_square:'*(10-amt) }")
-
     # * MAIN
 
     # ? PLAYER
 
     async def player(self, ctx, voice):  # checks queue and plays the song accordingly
         def check_queue():
-
-            if (not self.loop_song) or (self.skip_song):
+            state = GuildState(ctx.author.guild)
+            if (not GuildState(ctx.author.guild).loop_song) or (GuildState(ctx.author.guild).skip_song):
                 try:
-                    queue = [x for x in self.queue if not type(x) == str]
+                    queue = [x for x in GuildState(ctx.author.guild).queue if not type(x) == str]
                     temp = queue[0]
 
-                    self.queue.remove(temp)
+                    GuildState(ctx.author.guild).queue.remove(temp)
 
-                    if self.loop_q:
-                        self.queue += [temp]
-                        self.queue_ct += [temp]
-                        self.full_queue += [temp]
-                        self.full_queue_ct += [temp]
-                        self.full_queue.remove(temp)
+                    if state.loop_q:
+                        state.queue += [temp]
+                        state.queue_ct += [temp]
+                        state.full_queue += [temp]
+                        state.full_queue_ct += [temp]
+                        state.full_queue.remove(temp)
                         try:
-                            self.full_queue_ct.remove(temp)
+                            state.full_queue_ct.remove(temp)
                         except:
                             pass
 
                     try:
-                        self.queue_ct.remove(temp)
-                        if self.loop_q:
-                            self.queue_ct += [temp]
+                        state.queue_ct.remove(temp)
+                        if state.loop_q:
+                            state.queue_ct += [temp]
                     except:
                         pass
 
                     def clear_pl():
-                        for i in range(len(self.queue)):
-                            if i != len(self.queue)-1:
-                                if isinstance(self.queue[i], str) and self.queue[i] == self.queue[i+1]:
-                                    if "----" in self.queue[i]:
-                                        temp = self.queue[i]
-                                        self.queue.remove(temp)
-                                        self.queue.remove(temp)
+                        for i in range(len(state.queue)):
+                            if i != len(state.queue)-1:
+                                if isinstance(state.queue[i], str) and state.queue[i] == state.queue[i+1]:
+                                    if "----" in state.queue[i]:
+                                        temp = state.queue[i]
+                                        state.queue.remove(temp)
+                                        state.queue.remove(temp)
                                         clear_pl()
                                     else:
-                                        temp = self.queue[i]
-                                        self.queue.remove(temp)
-                                        self.queue.remove(temp)
+                                        temp = state.queue[i]
+                                        state.queue.remove(temp)
+                                        state.queue.remove(temp)
                                         temp = temp[2:][:-2]
-                                        for j in range(len(self.queue_ct)):
+                                        for j in range(len(state.queue_ct)):
 
-                                            if self.queue_ct[j].title == temp:
-                                                self.queue_ct.pop(j)
+                                            if state.queue_ct[j].title == temp:
+                                                state.queue_ct.pop(j)
                                         clear_pl()
 
                     clear_pl()
@@ -590,15 +619,15 @@ class Music(commands.Cog):
 
         flag = True
         while flag:
-            queue = [x for x in self.queue if not type(x) == str]
+            queue = [x for x in state.queue if not type(x) == str]
             if queue != []:
                 try:
                     await ctx.send(f"{queue[0].title} playing now.")
                     self.log("Downloaded song.")
                     voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options=" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
                                after=lambda e: check_queue())
-                    self.time = 0
-                    if (self.clock.current_loop == 0):
+                    GuildState(ctx.author.guild).time = 0
+                    if (self.clock.current_loop == 0): #! WOT
                         self.clock.start()
                         
                     await self.jbe_update(queue[0])
@@ -609,10 +638,10 @@ class Music(commands.Cog):
 
                     if self.shuffle_lim:
                         
-                        self.shuffle_var += 1
-                        if self.shuffle_var == self.shuffle_lim:
+                        state.shuffle_var += 1
+                        if state.shuffle_var == state.shuffle_lim:
                             await ctx.invoke(self.client.get_command("shuffle"))
-                            self.shuffle_var = 0
+                            state.shuffle_var = 0
 
                     self.log(f"{queue[0].title} is playing.")
                     voice.source = discord.PCMVolumeTransformer(voice.source)
@@ -622,9 +651,9 @@ class Music(commands.Cog):
                     self.log(f"{queue[0].title} cannot be played.")
                     await ctx.send(f"{queue[0].title} cannot be played.")
 
-                    self.queue.remove(queue[0])
+                    state.queue.remove(queue[0])
                     try:
-                        self.queue_ct.remove(queue[0])
+                        state.queue_ct.remove(queue[0])
                     except:
                         pass
                     queue.pop(0)
@@ -635,11 +664,12 @@ class Music(commands.Cog):
             else:
                 await ctx.send(">>> All songs played. No more songs to play.")
                 self.log("Ending the queue")
-                self.clock.cancel()
+                if ctx.author.guild not in self.time_l:
+                    self.time_l.append(ctx.author.guild)
                 self.jbl_update.cancel()
-                await self.juke_box_embed_msg.edit(embed=self.juke_box_embed)
-                await self.juke_box_queue.edit(content="__QUEUE__")
-                await self.juke_box_loading.edit(content=f"00:00/00:00 - {':black_large_square:'*10}")
+                await state.juke_box_embed_msg.edit(embed=state.juke_box_embed)
+                await state.juke_box_queue.edit(content="__QUEUE__")
+                await state.juke_box_loading.edit(content=f"00:00/00:00 - {':black_large_square:'*10}")
                 break
 
     async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
@@ -826,6 +856,8 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def play(self, ctx, *, query):
         '''Plays the audio of the video in the provided VTUBE url.'''
+        
+        state = GuildState(ctx.author.guild)
 
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
@@ -854,7 +886,7 @@ class Music(commands.Cog):
         #! Queueing starts here
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
-        old_queue = [x for x in self.queue if type(x) != str]
+        old_queue = [x for x in state.queue if type(x) != str]
 
         q_num = len(old_queue) + 1
 
@@ -877,29 +909,29 @@ class Music(commands.Cog):
         
         await message.edit(content="", embed=embed)
 
-        self.queue_ct += [vid]
-        self.full_queue_ct += [vid]
+        state.queue_ct += [vid]
+        state.full_queue_ct += [vid]
         await self.jbq_update(vid)
 
         if isinstance(vid, YoutubeVideo):
-            old_queue = [x for x in self.queue if type(x) != str]
-            self.queue += [vid]
-            self.full_queue += [vid]
+            old_queue = [x for x in state.queue if type(x) != str]
+            state.queue += [vid]
+            state.full_queue += [vid]
 
             if len(old_queue) == 0:
                 await self.player(ctx, voice)
             else:
                 self.log("Song added to queue")
         else:
-            self.queue += [f"--{vid.title}--"]
-            self.full_queue += [f"--{vid.title}--"]
+            state.queue += [f"--{vid.title}--"]
+            state.full_queue += [f"--{vid.title}--"]
             temp = []
-            old_queue = [x for x in self.queue if type(x) != str]
+            old_queue = [x for x in GuildState(ctx.author.guild).queue if type(x) != str]
             for i in range(len(vid.entries)):
                 _vid = YoutubeVideo(vid.entries[i][0])
                                     
                 if len(old_queue) == 0:
-                    self.queue.append(_vid)
+                    state.queue.append(_vid)
                     await self.player(ctx, voice)
                 else:
                     self.log("Song added to queue")
@@ -907,15 +939,15 @@ class Music(commands.Cog):
                 temp.append(_vid)
                 
             if len(old_queue) == 0:
-                self.queue = []    
+                state.queue = []    
             
-            self.queue += temp
-            self.full_queue += temp
+            state.queue += temp
+            state.full_queue += temp
             vid._info["entries"] = temp
             
 
-            self.queue += [f"--{vid.title}--"]
-            self.full_queue += [f"--{vid.title}--"]
+            state.queue += [f"--{vid.title}--"]
+            state.full_queue += [f"--{vid.title}--"]
 
     # ? PLAY PLAYLIST
     @commands.command(name="play-playlist", aliases=["ppl"])
@@ -955,7 +987,8 @@ class Music(commands.Cog):
     @commands.command(name="now-playing", aliases=["np"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def now_playing(self, ctx):
-        queue = [x for x in self.queue if type(x) != str]
+        state = GuildState(ctx.author.guild)
+        queue = [x for x in state.queue if type(x) != str]
         vid = queue[0]
 
         embed = discord.Embed(title="NOW PLAYING",  # TODO make a function
@@ -974,11 +1007,11 @@ class Music(commands.Cog):
                 return str(number)
 
         if vid.duration.count(":") == 1:
-            ntime = f"{self.time//60}:{two_dig(self.time%60)}"
+            ntime = f"{state.time//60}:{two_dig(state.time%60)}"
         else:
-            ntime = f"{self.time//3600}:{two_dig(self.time%3600//60)}:{two_dig(self.time//60)}"
+            ntime = f"state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
         embed.add_field(name=f"{vid.title}", value="**  **", inline=False)
-        amt = int(self.time/vid.seconds*10)
+        amt = int(state.time/vid.seconds*10)
         embed.add_field(
             name=f"{ntime}/{vid.duration} {':black_square_button:'*amt +':black_large_square:'*(10-amt) }", value="**  **", inline=False)
 
@@ -988,11 +1021,13 @@ class Music(commands.Cog):
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def lyrics(self, ctx: commands.Context):
+        
+        state = GuildState(ctx.author.guild)
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
 
-        queue = [x for x in self.queue if type(x) != str]
+        queue = [x for x in state.queue if type(x) != str]
         vid = queue[0]
         song = genius.search_song(vid.title)
 
@@ -1014,10 +1049,11 @@ class Music(commands.Cog):
     @commands.command(name="choose-lyrics")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def clyrics(self, ctx: commands.Context,query = None):
-        if not query and self.queue == []:
+        state = GuildState(ctx.author.guild)
+        if not query and state.queue == []:
             await ctx.send("no song sad lyf")
         elif not query:
-            query = self.queue[0].title
+            query = state.queue[0].title
         
         title = query
         response = genius.search_genius_web(title)
@@ -1150,18 +1186,18 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def Queue(self, ctx):
         '''Shows the current queue.'''
-
+        state = GuildState(ctx.author.guild)
         if ctx.invoked_subcommand is None:
             i = 0
             j = 1
             desc = ""
-            while i < len(self.queue):
-                if isinstance(self.queue[i], YoutubeVideo):
-                    desc += f"{j}. {self.queue[i].title} ({self.queue[i].duration}) \n"
+            while i < len(state.queue):
+                if isinstance(state.queue[i], YoutubeVideo):
+                    desc += f"{j}. {state.queue[i].title} ({state.queue[i].duration}) \n"
                     i += 1
                     j += 1
                 else:
-                    desc += f"***{self.queue[i]}*** \n"
+                    desc += f"***{state.queue[i]}*** \n"
                     i += 1
 
             desc_l = []
@@ -1186,17 +1222,17 @@ class Music(commands.Cog):
     @vc_check()
     async def replace(self, ctx, change1, change2):
         '''Replaces two queue members.'''
-
+        state = GuildState(ctx.author.guild)
         try:
             change1, change2 = int(change1), int(change2)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = [x for x in self.queue if type(x) != str]
+        queue = [x for x in state.queue if type(x) != str]
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue):
             await ctx.send(f">>> Switched the places of **{queue[change2-1].title}** and **{queue[change1-1].title}**")
-            self.queue[self.queue.index(queue[change1-1])], self.queue[self.queue.index(queue[change2-1])
-                                                                       ] = self.queue[self.queue.index(queue[change2-1])], self.queue[self.queue.index(queue[change1-1])]
+            state.queue[state.queue.index(queue[change1-1])], state.queue[state.queue.index(queue[change2-1])
+                                                                       ] = state.queue[state.queue.index(queue[change2-1])], state.queue[state.queue.index(queue[change1-1])]
         else:
             await ctx.send("The numbers you entered are just as irrelevant as your existence.")
             return
@@ -1206,16 +1242,16 @@ class Music(commands.Cog):
     @vc_check()
     async def remove(self, ctx, remove):
         '''Removes the Queue member.'''
-
+        state = GuildState(ctx.author.guild)
         try:
             remove = int(remove)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = [x for x in self.queue if type(x) != str]
+        queue = [x for x in state.queue if type(x) != str]
         if remove > 1 and remove <= len(queue):
             await ctx.send(f">>> Removed **{(queue[remove - 1].title)}** from the queue.")
-            self.queue.remove(queue[remove-1])
+            state.queue.remove(queue[remove-1])
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1225,17 +1261,17 @@ class Music(commands.Cog):
     @vc_check()
     async def now(self, ctx, change):
         '''Plays a queue member NOW.'''
-
+        state = GuildState(ctx.author.guild)
         try:
             change = int(change)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = [x for x in self.queue if type(x) != str]
+        queue = [x for x in state.queue if type(x) != str]
         if change > 1 and change <= len(queue):
             temp = queue[change-1]
-            self.queue.pop(self.queue.index(queue[change-1]))
-            self.queue.insert(self.queue.index(queue[0]) + 1, temp)
+            state.queue.pop(state.queue.index(queue[change-1]))
+            state.queue.insert(state.queue.index(queue[0]) + 1, temp)
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1246,9 +1282,10 @@ class Music(commands.Cog):
     async def contracted(self, ctx):
         if ctx.invoked_subcommand is None:
             desc = ""
+            #TODO shit
 
-            for index in range(len(self.queue_ct)):
-                i = self.queue_ct[index]
+            for index in range(len(GuildState(ctx.author.guild).queue_ct)):
+                i = GuildState(ctx.author.guild).queue_ct[index]
 
                 desc += f"{index+1}. {i.title} ({i.duration}) \n"
 
@@ -1267,24 +1304,26 @@ class Music(commands.Cog):
     @contracted.command()
     async def remm(self, ctx, remove):
         '''Removes the Queue member.'''
+        
+        state = GuildState(ctx.author.guild)
         try:
             remove = int(remove)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = self.queue_ct
+        queue = state.queue_ct
         if remove > 1 and remove <= len(queue):
             temp = queue[remove-1]
-            self.queue_ct.remove(temp)
+            state.queue_ct.remove(temp)
             if isinstance(temp, YoutubeVideo):
 
-                self.queue.remove(temp)
+                state.queue.remove(temp)
                 await ctx.send(f">>> Removed **{(temp.title)}** from the queue.")
             else:
 
-                i1 = self.queue.index(f"--{temp.name}--")
-                i2 = self.queue[i1+1:].index(f"--{temp.name}--")
-                self.queue[i1:i2+1] = []
+                i1 = state.queue.index(f"--{temp.name}--")
+                i2 = state.queue[i1+1:].index(f"--{temp.name}--")
+                state.queue[i1:i2+1] = []
 
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
@@ -1295,35 +1334,35 @@ class Music(commands.Cog):
     @vc_check()
     async def repla(self, ctx, change1, change2):
         '''Replaces two queue members.'''
-
+        state = GuildState(ctx.author.guild)
         try:
             change1, change2 = int(change1), int(change2)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = self.queue_ct
+        queue = state.queue_ct
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue):
             temp1 = queue[change2-1]
             temp2 = queue[change1-1]
             await ctx.send(f">>> Switched the places of **{temp1.title}** and **{temp2.title}**")
-            self.queue_ct[self.queue_ct.index(temp1)], self.queue_ct[self.queue_ct.index(
-                temp2)] = self.queue_ct[self.queue_ct.index(temp2)], self.queue_ct[self.queue_ct.index(temp1)]
+            state.queue_ct[state.queue_ct.index(temp1)], state.queue_ct[state.queue_ct.index(
+                temp2)] = state.queue_ct[state.queue_ct.index(temp2)], state.queue_ct[state.queue_ct.index(temp1)]
 
             if isinstance(temp1, YoutubeVideo):
-                i11 = self.queue.index(temp1)
+                i11 = state.queue.index(temp1)
                 i12 = i11 + 1
             else:
-                i11 = self.queue.index(f"--{temp1.name}--")
-                i12 = self.queue[i11+1:].index(f"--{temp1.name}--") + 1
+                i11 = state.queue.index(f"--{temp1.name}--")
+                i12 = state.queue[i11+1:].index(f"--{temp1.name}--") + 1
 
             if isinstance(temp2, YoutubeVideo):
-                i21 = self.queue.index(temp2)
+                i21 = state.queue.index(temp2)
                 i22 = i21 + 1
             else:
-                i21 = self.queue.index(f"--{temp2.name}--")
-                i22 = self.queue[i21+1:].index(f"--{temp2.name}--") + 1
+                i21 = state.queue.index(f"--{temp2.name}--")
+                i22 = state.queue[i21+1:].index(f"--{temp2.name}--") + 1
 
-            self.queue[i11:i12], self.queue[i21:i22] = self.queue[i21:i22], self.queue[i11:i12]
+            state.queue[i11:i12], state.queue[i21:i22] = state.queue[i21:i22], state.queue[i11:i12]
         else:
             await ctx.send("The numbers you entered are just as irrelevant as your existence.")
             return
@@ -1334,37 +1373,37 @@ class Music(commands.Cog):
     @vc_check()
     async def no(self, ctx, change):
         '''Plays a queue member NOW.'''
-
+        state = GuildState(ctx.author.guild)
         try:
             change = int(change)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = self.queue_ct
+        queue = state.queue_ct
         if change > 1 and change <= len(queue):
             temp1 = queue[change-1]
             temp2 = queue[0]
-            self.queue_ct.pop(self.queue.index(temp1))
-            self.queue_ct.insert(1, temp1)
-            self.queue_ct.pop(0)
+            state.queue_ct.pop(state.queue.index(temp1))
+            state.queue_ct.insert(1, temp1)
+            state.queue_ct.pop(0)
 
             if isinstance(temp1, YoutubeVideo):
-                i11 = self.queue.index(temp1)
+                i11 = state.queue.index(temp1)
                 i12 = i11 + 1
             else:
-                i11 = self.queue.index(f"--{temp1.name}--")
-                i12 = self.queue[i11+1:].index(f"--{temp1.name}--") + 1
+                i11 = state.queue.index(f"--{temp1.name}--")
+                i12 = GuildState(ctx.author.guild).queue[i11+1:].index(f"--{temp1.name}--") + 1
 
             if isinstance(temp2, YoutubeVideo):
-                i21 = self.queue.index(temp2)
+                i21 = state.queue.index(temp2)
                 i22 = i21 + 1
             else:
-                i21 = self.queue.index(f"--{temp2.name}--")
-                i22 = self.queue[i21+1:].index(f"--{temp2.name}--") + 1
+                i21 = state.queue.index(f"--{temp2.name}--")
+                i22 = state.queue[i21+1:].index(f"--{temp2.name}--") + 1
 
-            queue = [x for x in self.queue if type(x) != str]
-            self.queue[i11:i12], self.queue[i21:i22] = [
-            ], queue[0:1] + [self.queue[i11:i12]]
+            queue = [x for x in state.queue if type(x) != str]
+            state.queue[i11:i12], state.queue[i21:i22] = [
+            ], queue[0:1] + [state.queue[i11:i12]]
 
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
@@ -1374,17 +1413,18 @@ class Music(commands.Cog):
     # ? QUEUE FULL
     @Queue.group(name="full")
     async def full(self, ctx):
+        state = GuildState(ctx.author.guild)
         if ctx.invoked_subcommand is None:
             i = 0
             j = 1
             desc = ""
-            while i < len(self.full_queue):
-                if isinstance(self.full_queue[i], YoutubeVideo):
-                    desc += f"{j}. {self.full_queue[i].title} ({self.full_queue[i].duration}) \n"
+            while i < len(state.full_queue):
+                if isinstance(state.full_queue[i], YoutubeVideo):
+                    desc += f"{j}. {state.full_queue[i].title} ({state.full_queue[i].duration}) \n"
                     i += 1
                     j += 1
                 else:
-                    desc += f"***{self.full_queue[i]}*** \n"
+                    desc += f"***{state.full_queue[i]}*** \n"
                     i += 1
 
             embed = discord.Embed(title="QUEUE",
@@ -1404,18 +1444,19 @@ class Music(commands.Cog):
     @vc_check()
     async def ow(self, ctx, change1, change2):
         '''Plays a queue member NOW.'''
+        state = GuildState(ctx.author.guild)
 
         try:
             change1, change2 = int(change1), int(change2)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = [x for x in self.full_queue if type(x) != str]
+        queue = [x for x in state.full_queue if type(x) != str]
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue) and change2 >= change1:
             temp = queue[change1:change2+1]
-            queue = [x for x in self.queue if type(x) != str]
-            self.queue[self.queue.index(
-                queue[0]) + 1, self.queue.index(queue[0]) + 1] = temp
+            queue = [x for x in state.queue if type(x) != str]
+            state.queue[state.queue.index(
+queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             self, queue_ct[1:1] = temp
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
@@ -1427,17 +1468,18 @@ class Music(commands.Cog):
     @vc_check()
     async def ad(self, ctx, change1, change2):
         '''Plays a queue member NOW.'''
+        state = GuildState(ctx.author.guild)
 
         try:
             change1, change2 = int(change1), int(change2)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = [x for x in self.full_queue if type(x) != str]
+        queue = [x for x in state.full_queue if type(x) != str]
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue) and change2 >= change1:
             temp = queue[change1:change2+1]
-            self.queue += temp
-            self.queue_ct += temp
+            state.queue += temp
+            state.queue_ct += temp
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1446,8 +1488,9 @@ class Music(commands.Cog):
 
     @full.group(aliases=['fct'])
     async def full_contracted(self, ctx):
+        state = GuildState(ctx.author.guild)
         desc = ""
-        for index, i in enumerate(self.queue_ct):
+        for index, i in enumerate(state.queue_ct):
             desc += f"{index+1}. {i.title} ({i.duration}) \n"
 
         embed = discord.Embed(title="QUEUE",
@@ -1473,10 +1516,10 @@ class Music(commands.Cog):
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = self.full_queue_ct
+        queue = state.full_queue_ct
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue) and change2 >= change1:
             temp = queue[change1:change2+1]
-            self.queue_ct[1, 1] = temp
+            state.queue_ct[1, 1] = temp
             temp2 = []
             for i in temp:
                 if not isinstance(i, YoutubeVideo):
@@ -1486,9 +1529,9 @@ class Music(commands.Cog):
                     temp2 += [f"--{i.name}--"]
                 else:
                     temp2 += [i]
-            queue = [x for x in self.queue if type(x) != str]
-            self.queue[self.queue.index(
-                queue[0]) + 1, self.queue.index(queue[0]) + 1] = temp2
+            queue = [x for x in state.queue if type(x) != str]
+            state.queue[state.queue.index(
+                queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp2
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1499,16 +1542,17 @@ class Music(commands.Cog):
     @vc_check()
     async def cad(self, ctx, change1, change2):
         '''Plays a queue member NOW.'''
+        state = GuildState(ctx.author.guild)
 
         try:
             change1, change2 = int(change1), int(change2)
         except:
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
-        queue = self.full_queue_ct
+        queue = state.full_queue_ct
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue) and change2 >= change1:
             temp = queue[change1:change2+1]
-            self.queue_ct += temp
+            state.queue_ct += temp
             temp2 = []
             for i in temp:
                 if not isinstance(i, YoutubeVideo):
@@ -1518,8 +1562,8 @@ class Music(commands.Cog):
                     temp2 += [f"--{i.name}--"]
                 else:
                     temp2 += [i]
-            queue = [x for x in self.queue if type(x) != str]
-            self.queue += temp2
+            queue = [x for x in state.queue if type(x) != str]
+            state.queue += temp2
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1534,24 +1578,25 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def loop(self, ctx, toggle=""):
+        state = GuildState(ctx.author.guild)
         '''Loops the current song, doesn't affect the skip command tho. If on/off not passed it will toggle it.'''
 
         if toggle.lower() == "on":
-            self.loop_song = True
+            state.loop_song = True
             await ctx.send(">>> **Looping current song now**")
 
         elif toggle.lower() == 'off':
-            self.loop_song = False
+            state.loop_song = False
             await ctx.send(">>> **NOT Looping current song now**")
 
         else:
 
-            if self.loop_song:
-                self.loop_song = False
+            if state.loop_song:
+                state.loop_song = False
                 await ctx.send(">>> **NOT Looping current song now**")
 
             else:
-                self.loop_song = True
+                state.loop_song = True
                 await ctx.send(">>> **Looping current song now**")
 
     # ? LOOP_QUEUE
@@ -1561,23 +1606,23 @@ class Music(commands.Cog):
     @vc_check()
     async def loop_queue(self, ctx, toggle=""):
         '''Loops the queue. If on/off not passed it will toggle it.'''
-
+        state = GuildState(ctx.author.guild)
         if toggle.lower() == "on":
-            self.loop_q = True
+            state.loop_q = True
             await ctx.send(">>> **Looping queue now**")
 
         elif toggle.lower() == 'off':
-            self.loop_q = False
+            state.loop_q = False
             await ctx.send(">>> **NOT Looping queue now**")
 
         else:
 
-            if self.loop_q:
-                self.loop_q = False
+            if state.loop_q:
+                state.loop_q = False
                 await ctx.send(">>> **NOT Looping queue now**")
 
             else:
-                self.loop_q = True
+                state.loop_q = True
                 await ctx.send(">>> **Looping queue now**")
 
     # ? RESTART
@@ -1587,14 +1632,15 @@ class Music(commands.Cog):
     @vc_check()
     async def restart(self, ctx):
         '''Restarts the current song.'''
+        state = GuildState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
         if voice and voice.is_playing():
-            temp = self.loop_song
-            self.loop_song = True
+            temp = state.loop_song
+            state.loop_song = True
 
             voice.stop()
             await asyncio.sleep(0.1)
-            self.loop_song = temp
+            state.loop_song = temp
         else:
             self.log("Restart failed")
             await ctx.send(">>> Ya know to restart stuff, stuff also needs to be playing first.")
@@ -1612,7 +1658,8 @@ class Music(commands.Cog):
         if voice and voice.is_playing():
             self.log("Player paused")
             voice.pause()
-            self.clock.cancel()
+            if ctx.author.guild in self.time_l:
+                self.time_l.remove(ctx.author.guild)
             self.jbl_update.cancel()
             await ctx.send(">>> Music Paused")
         else:
@@ -1632,7 +1679,8 @@ class Music(commands.Cog):
         if voice and voice.is_paused():
             self.log("Music resumed")
             voice.resume()
-            self.clock.start()
+            if ctx.author.guild not in self.time_l:
+                self.time_l.append(ctx.author.guild)
             self.jbl_update.start()
             await ctx.send(">>> Resumed Music")
         else:
@@ -1645,18 +1693,19 @@ class Music(commands.Cog):
     @vc_check()
     async def stop(self, ctx):
         '''Stops the current music AND clears the current queue.'''
-
+        state = GuildState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
-        self.queue.clear()
-        self.queue_ct.clear()
+        state.queue.clear()
+        state.queue_ct.clear()
 
         if voice and voice.is_playing:
             self.log("Player stopped")
             voice.stop()
-            self.clock.cancel()
+            if ctx.author.guild in self.time_l:
+                self.time_l.remove(ctx.author.guild)
             self.jbl_update.cancel()
-            self.time = 0
-            self.shuffle_lim = None
+            state.time = 0
+            state.shuffle_lim = None
             await ctx.send(">>> Music stopped")
 
         else:
@@ -1669,27 +1718,28 @@ class Music(commands.Cog):
     @vc_check()
     async def hard_stop(self, ctx):
         '''Stops the current music AND clears the current queue.'''
-
+        state = GuildState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
-        self.queue.clear()
-        self.full_queue.clear()
-        self.queue_ct.clear()
-        self.full_queue_ct.clear()
+        state.queue.clear()
+        state.full_queue.clear()
+        state.queue_ct.clear()
+        state.full_queue_ct.clear()
 
         if voice and voice.is_playing:
             self.log("Player stopped")
             voice.stop()
-            self.clock.cancel()
+            if ctx.author.guild in self.time_l:
+                self.time_l.remove(ctx.author.guild)
             self.jbl_update.cancel()
-            self.time = 0
-            self.shuffle_lim = None
+            state.time = 0
+            state.shuffle_lim = None
             await ctx.send(">>> Music stopped")
 
         else:
             self.log("Stop failed")
             await ctx.send(">>> Ya know to stop stuff, stuff also needs to be playing first.")
         try:
-            self.queue_delete()
+            self.queue_delete() #! WOT
         except:
             pass
     # ? SKIP
@@ -1710,7 +1760,7 @@ class Music(commands.Cog):
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         if voice and voice.is_playing():
-            self.skip_song = True
+            state.skip_song = True
             self.log("Playing next song")
             voice.stop()
             await ctx.send(">>> ***Song skipped.***")
@@ -1725,15 +1775,16 @@ class Music(commands.Cog):
     @vc_check()
     async def back(self, ctx):
         '''Plays previous song.'''
+        state = GuildState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         if voice:
-            fq = [x for x in self.full_queue if not isinstance(x, str)]
-            q = [x for x in self.queue if not isinstance(x, str)]
-            self.queue += [fq[-(len(q)+1)]]
+            fq = [x for x in state.full_queue if not isinstance(x, str)]
+            q = [x for x in state.queue if not isinstance(x, str)]
+            state.queue += [fq[-(len(q)+1)]]
             if not voice.is_playing():
 
-                if len(self.queue) == 1:
+                if len(state.queue) == 1:
                     await self.player(ctx, voice)
                 elif voice.is_paused():
                     voice.resume()
@@ -1748,25 +1799,26 @@ class Music(commands.Cog):
     @vc_check()
     async def leave(self, ctx):
         '''Leaves the voice channel.'''
-
+        state = GuildState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         if voice and voice.is_connected():
             await voice.disconnect()
-            self.clock.cancel()
+            if ctx.author.guild in self.time_l:
+                self.time_l.remove(ctx.author.guild)
             self.jbl_update.cancel()
-            self.time = 0
-            self.shuffle_lim = None
+            state.time = 0
+            state.shuffle_lim = None
             await ctx.send(f">>> Left ```{voice.channel.name}```")
-            self.queue.clear()
-            self.full_queue.clear()
-            self.queue_ct.clear()
-            self.full_queue_ct.clear()
+            state.queue.clear()
+            state.full_queue.clear()
+            state.queue_ct.clear()
+            state.full_queue_ct.clear()
         else:
             await ctx.send(">>> I cannot leave a voice channel I have not joined, thought wouldn't need to explain basic shit like this.")
 
         try:
-            self.queue_delete()
+            self.queue_delete() #? WOT
         except:
             pass
     # ? VOLUME
@@ -1792,7 +1844,8 @@ class Music(commands.Cog):
             await ctx.send(">>> We are numericons' people not Texticons, you traitor.")
 
     async def duration_check(self, ctx, time):
-        queue = [x for x in self.queue if type(x) != str]
+        state = GuildState(ctx.author.guild)
+        queue = [x for x in state.queue if type(x) != str]
         try:
             if ":" in time:
                 tl = list(map(int, time.split(":")))
@@ -1847,15 +1900,16 @@ class Music(commands.Cog):
     @vc_check()
     async def back(self, ctx):
         '''Plays previous song.'''
+        state = GuildState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         if voice:
-            fq = [x for x in self.full_queue if not isinstance(x, str)]
-            q = [x for x in self.queue if not isinstance(x, str)]
-            self.queue += [fq[-(len(q)+1)]]
+            fq = [x for x in state.full_queue if not isinstance(x, str)]
+            q = [x for x in state.queue if not isinstance(x, str)]
+            state.queue += [fq[-(len(q)+1)]]
             if not voice.is_playing():
 
-                if len(self.queue) == 1:
+                if len(state.queue) == 1:
                     await self.player(ctx, voice)
                 elif voice.is_paused():
                     voice.resume()
@@ -1870,8 +1924,9 @@ class Music(commands.Cog):
     @vc_check()
     async def seek(self, ctx, time):
         """Skip ahead to a timestamp in the current song"""
+        state = GuildState(ctx.author.guild)
         
-        queue = [x for x in self.queue if type(x) != str]
+        queue = [x for x in state.queue if type(x) != str]
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         time = await self.int_time(ctx, time)
@@ -1879,7 +1934,7 @@ class Music(commands.Cog):
         if time:
             voice.source = discord.FFmpegPCMAudio(
                 queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
-            self.time = time
+            state.time = time
         else:
             return
     # ?FORWARD
@@ -1889,17 +1944,17 @@ class Music(commands.Cog):
     @vc_check()
     async def forward(self, ctx, time):
         """Go forward by given seconds in the current song"""
-        
-        queue = [x for x in self.queue if type(x) != str]
+        state = GuildState(ctx.author.guild)
+        queue = [x for x in state.queue if type(x) != str]
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
         time = await self.int_time(ctx, time)
 
         if time:
-            if time <= queue[0].seconds - self.time:
+            if time <= queue[0].seconds - state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + self.time}")
-                self.time += time
+                    queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
+                state.time += time
             else:
                 await ctx.send("The seek is greater than the song limit.")
         else:
@@ -1911,17 +1966,17 @@ class Music(commands.Cog):
     @vc_check()
     async def rewind(self, ctx, time):
         """Go back by given seconds in the current song"""
-        
-        queue = [x for x in self.queue if type(x) != str]
+        state = GuildState(ctx.author.guild)
+        queue = [x for x in state.queue if type(x) != str]
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
         time = await self.int_time(ctx, time)
 
         if time:
-            if time <= self.time:
+            if time <= state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {self.time - time}")
-                self.time -= time
+                    queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
+                state.time -= time
             else:
                 await ctx.send("The seek is greater than the song limit.")
         else:
@@ -1932,14 +1987,15 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @vc_check()
     async def shuffle(self, ctx, amount: int = None):
+        state = GuildState(ctx.author.guild)
         """Shuffle the current queue"""
-        self.queue = [x for x in self.queue if type(x) != str]
-        self.queue_ct = self.queue[:]
-        next_queue = self.queue[1:]
+        state.queue = [x for x in state.queue if type(x) != str]
+        state.queue_ct = state.queue[:]
+        next_queue = state.queue[1:]
         random.shuffle(next_queue)
-        self.queue = [self.queue[0]] + next_queue
+        state.queue = [state.queue[0]] + next_queue
         if amount and amount > 0:
-            self.shuffle_lim = amount
+            state.shuffle_lim = amount
 
    # * ----------------------------------------------------------PLAYLIST------------------------------------------------------------------------------------------------------------------------
 
@@ -2232,17 +2288,17 @@ class Music(commands.Cog):
                     else:
                         playlist[i] = YoutubeVideo(playlist[i]["id"])
 
-                self.queue += [f"----{pname}----"]
+                GuildState(ctx.author.guild).queue += [f"----{pname}----"]
                 self.full_queue += [f"----{pname}----"]
 
                 temp = []
                 for i in playlist:
                     self.full_queue_ct += [i]
-                    self.queue_ct += [i]
+                    GuildState(ctx.author.guild).queue_ct += [i]
 
                     if isinstance(i, YoutubeVideo):
-                        old_queue = [x for x in self.queue if type(x) != str]
-                        self.queue += [i]
+                        old_queue = [x for x in GuildState(ctx.author.guild).queue if type(x) != str]
+                        GuildState(ctx.author.guild).queue += [i]
                         self.full_queue += [i]
 
                         if len(old_queue) == 0:
@@ -2251,7 +2307,7 @@ class Music(commands.Cog):
                             self.log("Song added to queue")
 
                     else:
-                        self.queue += [f"--{i.title}--"]
+                        GuildState(ctx.author.guild).queue += [f"--{i.title}--"]
                         self.full_queue += [f"--{i.title}--"]
                         for j in range(len(i.entries)):
 
@@ -2259,8 +2315,8 @@ class Music(commands.Cog):
 
                             temp += [_vid]
 
-                        old_queue = [x for x in self.queue if type(x) != str]
-                        self.queue += temp
+                        old_queue = [x for x in GuildState(ctx.author.guild).queue if type(x) != str]
+                        GuildState(ctx.author.guild).queue += temp
                         self.full_queue += temp
                         vid._info["entries"] = temp
                         if len(old_queue) == 0:
@@ -2268,10 +2324,10 @@ class Music(commands.Cog):
                         else:
                             self.log("Song added to queue")
 
-                        self.queue += [f"--{i.title}--"]
+                        GuildState(ctx.author.guild).queue += [f"--{i.title}--"]
                         self.full_queue += [f"--{i.title}--"]
 
-                self.queue += [f"----{pname}----"]
+                GuildState(ctx.author.guild).queue += [f"----{pname}----"]
 
                 self.full_queue += [f"----{pname}----"]
 
@@ -2358,7 +2414,7 @@ class Music(commands.Cog):
         if isFull.lower() == "full":
             queue = [x for x in self.full_queue if type(x) != str]
         else:
-            queue = [x for x in self.queue if type(x) != str]
+            queue = [x for x in GuildState(ctx.author.guild).queue if type(x) != str]
 
         for i in range(len(queue)):
             queue[i] = {"url": queue[i].url, "title": queue[i].title}
@@ -2438,11 +2494,11 @@ class Music(commands.Cog):
                     if "watch?v" in split_list:
                         vid = YoutubeVideo(split_list[split_list.index(
                             "watch?v")+1], requested_by=ctx.author.name)
-                        if self.queue == []:
-                            self.queue.append(vid)
+                        if GuildState(ctx.author.guild).queue == []:
+                            GuildState(ctx.author.guild).queue.append(vid)
                             await self.player(ctx, voice)
                         else:
-                            self.queue.append(vid)
+                            GuildState(ctx.author.guild).queue.append(vid)
 
     @commands.command(name="generic-play", aliases=["gp", "genplay"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
@@ -2504,11 +2560,11 @@ class Music(commands.Cog):
                         value=f"{result.likes}/{result.dislikes}")
         await ctx.send(embed=embed)
 
-        if self.queue == []:
-            self.queue.append(result)
+        if GuildState(ctx.author.guild).queue == []:
+            GuildState(ctx.author.guild).queue.append(result)
             await self.player(ctx, voice)
         else:
-            self.queue.append(result)
+            GuildState(ctx.author.guild).queue.append(result)
 
 # *---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
