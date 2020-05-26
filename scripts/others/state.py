@@ -5,12 +5,16 @@ from typing import Union
 from discord.utils import get
 from discord.ext.commands import Context
 from general import db_receive, db_update, DBPATH
-import temp_db
+import imp
+import _pickle as pickle
+from itertools import repeat
 
 def make_db_if_not_exists(path: str):
     if not os.path.exists(path):
         with open(path, "w+b") as f:
             f.write(b"{}")
+            
+temp_data = {}
     
 class GuildState:
     """Stores state variables of a guild"""
@@ -36,9 +40,9 @@ class GuildState:
     
     @property
     def temp_data(self):
-        if not self in temp_db.temp_data:
-            temp_db.temp_data[self] = {}
-        return temp_db.temp_data[self] 
+        if not self in temp_data:
+            temp_data[self] = {}
+        return temp_data[self] 
     
     def set_property(self, property_name: str, property_val, temp=False):
         if not temp:
@@ -141,7 +145,10 @@ class GuildState:
     def dj_role(self) -> discord.Role:
         role = self.get_property("dj_role")
         
-        return self.get_role(id=role)
+        try:
+            return self.get_role(id=role)
+        except:
+            return None
     
     @property
     def extra_cooldown(self) -> str:
@@ -580,6 +587,64 @@ class UserState:
     def card_blend(self, new):
         return self.set_property(property_name="card_blend", property_val=new)
         
+class TempProperty:
+        
+    def __init__(self, name, default=None):
+        self.name = name
+        self.default = default
+        
+        self.db_name = "temp.pkl"
+        self.tempdb_path = os.path.join(os.getcwd(), self.db_name)
+    
+    def __get__(self, instance, owner):
+        return self.get_data[instance.guild][self.name] if self.name in self.get_data[instance.guild] else self.default   
+    
+    def __set__(self, instance, value):
+        new = self.get_data
+        
+        if instance.guild not in new:
+            self.new_entry(entry=instance.guild)
+            
+        new = self.get_data
+        
+        new[instance.guild][self.name] = value
+        self.set_data(new_db=new) 
+    
+    @property
+    def get_data(self):
+        with open(self.tempdb_path, "rb") as output:
+            try:
+                return pickle.load(output)
+            except EOFError:
+                return {}
+    
+    def set_data(self, new_db):
+        with open(self.tempdb_path, "wb") as input:
+            return pickle.dump(new_db, input, -1)
+
+    def new_entry(self, entry):
+        new_db = self.get_data
+        new_db[entry] = {}
+        
+        with open(self.tempdb_path, "wb") as input:
+            return pickle.dump(new_db, input, -1)
+
+class TempState:
+    queue = TempProperty(name="queue")
+    full_queue = TempProperty(name="full_queue")
+    queue_ct = TempProperty(name="queue_ct")
+    full_queue_ct = TempProperty(name="full_queue_ct")
+    cooldown = TempProperty(name="cooldown")
+    loop_song = TempProperty(name="loop_song")
+    loop_q = TempProperty(name="loop_q")
+    skip_song = TempProperty(name="skip_song")
+    time_for_disconnect = TempProperty(name="time_for_disconnect")
+    shuffle_lim = TempProperty(name="shuffle_lim")                                                                                                                    
+    shuffle_var = TempProperty(name="shuffle_var")
+    juke_box_embed_msg = TempProperty(name="juke_box_embed_msg")
+    
+    def __init__(self, guild):
+        self.guild = guild.id    
         
 class State:
     """Stores all the state objects"""
@@ -593,6 +658,8 @@ class State:
         self.User = UserState(member)
         self.Member = MemberState(member)
         self.Guild = GuildState(guild)
+        self.Temp = TempState(guild)
+ 
         
         
 class CustomContext(Context):

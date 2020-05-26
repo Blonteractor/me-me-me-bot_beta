@@ -129,7 +129,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
 
 def is_dj():
     def predicate(ctx):
-        dj_role = ctx.States.Guild.dj_role
+        dj_role = GuildState(ctx.author.guild).dj_role
         
         if dj_role is None:
             return True
@@ -171,7 +171,7 @@ genius.verbose = False
 class Music(commands.Cog):
     ''':musical_note: The title says it all, commands related to music and stuff.'''
     
-    properties = ["queue", "full_queue", "queue_ct", "full_queue_ct", "cooldown", "loop_song", "loop_q", "skip_song", "time_for_disconnect", "shuffle_lim", "shuffle_var"]
+    properties = ["queue", "full_queue", "queue_ct", "full_queue_ct", "cooldown", "loop_song", "loop_q", "skip_song", "time_for_disconnect", "shuffle_lim", "shuffle_var", "juke_box_embed_msg"]
     
     queue: List[Any] = [
     ]                                      # queue of the format [items,"playlist name",playlist items,"/playlist name",items]
@@ -220,15 +220,6 @@ class Music(commands.Cog):
         self.guild_dis = []
         self.guild_res_cancel = []
         self.time_l = []
-    
-        for prop in self.properties:
-            setattr(GuildState, prop, property(lambda self: self.get_property(property_name=prop, temp=True),
-                                                lambda self,new: self.set_property(property_name=prop, property_val=new, temp=True)))
-        
-        if gen.dj_role is not None:
-            self.dj_role_id = gen.dj_role.id
-        else:
-            self.dj_role_id = None
 
         self.client: discord.Client
         
@@ -521,7 +512,7 @@ class Music(commands.Cog):
         except:
             pass
         else:
-            if user != GuildState(user.guild).client.user and reaction.message.id == GuildState(user.guild).juke_box_embed_msg.id:
+            if user != self.client.user and reaction.message.id == GuildState(user.guild).juke_box_embed_msg.id:
                 reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
                              "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
                 voice = get(self.client.voice_clients,
@@ -1002,7 +993,7 @@ class Music(commands.Cog):
         if vid.duration.count(":") == 1:
             ntime = f"{state.time//60}:{two_dig(state.time%60)}"
         else:
-            ntime = f"state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
+            ntime = f"{state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
         embed.add_field(name=f"{vid.title}", value="**  **", inline=False)
         amt = int(state.time/vid.seconds*10)
         embed.add_field(
