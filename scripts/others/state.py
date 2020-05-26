@@ -594,24 +594,27 @@ class TempProperty:
         self.default = default
         
         self.db_name = "temp.pkl"
-        self.tempdb_path = os.path.join(os.getcwd(), self.db_name)
+        self.tempdb_path = os.path.join(DBPATH, self.db_name)
     
     def __get__(self, instance, owner):
-        return self.get_data[instance.guild][self.name] if self.name in self.get_data[instance.guild] else self.default   
+        d = self.data
+        if instance.guild not in self.data:
+            self.new_entry(entry=instance.guild)
+            d = self.data
+        return d[instance.guild][self.name] if self.name in d[instance.guild] else self.default   
     
     def __set__(self, instance, value):
-        new = self.get_data
-        
+        new = self.data
         if instance.guild not in new:
             self.new_entry(entry=instance.guild)
             
-        new = self.get_data
+        new = self.data
         
         new[instance.guild][self.name] = value
         self.set_data(new_db=new) 
     
     @property
-    def get_data(self):
+    def data(self):
         with open(self.tempdb_path, "rb") as output:
             try:
                 return pickle.load(output)
@@ -623,25 +626,32 @@ class TempProperty:
             return pickle.dump(new_db, input, -1)
 
     def new_entry(self, entry):
-        new_db = self.get_data
+        new_db = self.data
         new_db[entry] = {}
         
         with open(self.tempdb_path, "wb") as input:
             return pickle.dump(new_db, input, -1)
 
 class TempState:
-    queue = TempProperty(name="queue")
-    full_queue = TempProperty(name="full_queue")
-    queue_ct = TempProperty(name="queue_ct")
-    full_queue_ct = TempProperty(name="full_queue_ct")
-    cooldown = TempProperty(name="cooldown")
-    loop_song = TempProperty(name="loop_song")
-    loop_q = TempProperty(name="loop_q")
-    skip_song = TempProperty(name="skip_song")
-    time_for_disconnect = TempProperty(name="time_for_disconnect")
+    time = TempProperty(name="time", default=0)
+    cooldown = TempProperty(name="cooldown", default=0)
+    
+    queue = TempProperty(name="queue", default=[])
+    full_queue = TempProperty(name="full_queue", default=[])
+    queue_ct = TempProperty(name="queue_ct", default=[])
+    full_queue_ct = TempProperty(name="full_queue_ct", default=[])
+    
+    loop_song = TempProperty(name="loop_song", default=False)
+    loop_q = TempProperty(name="loop_q", default=False)
+    skip_song = TempProperty(name="skip_song", default=False)
+    
+    time_for_disconnect = TempProperty(name="time_for_disconnect", default=0)
+    
     shuffle_lim = TempProperty(name="shuffle_lim")                                                                                                                    
     shuffle_var = TempProperty(name="shuffle_var")
+    
     juke_box_embed_msg = TempProperty(name="juke_box_embed_msg")
+    juke_box_loading = TempProperty(name="juke_box_loading")
     
     def __init__(self, guild):
         self.guild = guild.id    
