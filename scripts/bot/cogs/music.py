@@ -501,6 +501,8 @@ class Music(commands.Cog):
     async def on_message(self, message):
         juke_box_channel = GuildState(message.author.guild).juke_box_channel
         
+        if juke_box_channel is None:
+            return
         if message.channel == juke_box_channel:
             if message.author != self.client.user:
 
@@ -550,7 +552,6 @@ class Music(commands.Cog):
      
     async def player(self, ctx, voice):  # checks queue and plays the song accordingly
         state = TempState(ctx.author.guild)
-        
         def check_queue():
             state = TempState(ctx.author.guild)
             if (not state.loop_song) or (state.skip_song):
@@ -640,6 +641,7 @@ class Music(commands.Cog):
 
         flag = True
         while flag:
+            
             queue = [x for x in state.queue if not type(x) == str]
             if queue != []:
                 try:
@@ -648,7 +650,7 @@ class Music(commands.Cog):
                    
                     voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options=" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
                                after=lambda e: check_queue())
-                    
+
                     TempState(ctx.author.guild).time = 0
                     
                     # if (self.clock.current_loop == 0): #! WOT
@@ -657,7 +659,7 @@ class Music(commands.Cog):
                     await self.jbe_update(queue[0], ctx.author.guild)
                     
                     await self.jbq_update(queue[0], ctx.author.guild)
-                   
+                
                     # if (self.jbl_update.current_loop == 0):
                     #     self.jbl_update.start()
 
@@ -696,6 +698,7 @@ class Music(commands.Cog):
                     flag = False
 
             else:
+                
                 await ctx.send(">>> All songs played. No more songs to play.")
                 self.log("Ending the queue")
                 if ctx.author.guild not in self.time_l:
@@ -890,9 +893,9 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def play(self, ctx, *, query):
         '''Plays the audio of the video in the provided VTUBE url.'''
-        
+       
         state = TempState(ctx.author.guild)
-
+        
         if not (await ctx.invoke(self.client.get_command("join"))):
             return
 
@@ -916,15 +919,18 @@ class Music(commands.Cog):
         else:
             vid = YoutubeVideo(YoutubeVideo.from_query(query=query)[
                                0][0], requested_by=ctx.author.name)
-
+        
+       
         #! Queueing starts here
         voice = get(self.client.voice_clients, guild=ctx.guild)
+       
         old_queue = [x for x in state.queue if type(x) != str]
+    
         q_num = len(old_queue) + 1
 
         self.loading_emoji = str(discord.utils.get(
             ctx.guild.emojis, name="loading"))
-
+        
         message = await ctx.send(f"Searching song `{vid.title}`.... {self.loading_emoji}")
         message: discord.Message
 
@@ -949,7 +955,7 @@ class Music(commands.Cog):
             old_queue = [x for x in state.queue if type(x) != str]
             state.queue += [vid]
             state.full_queue += [vid]
-
+         
             if len(old_queue) == 0:
                 await self.player(ctx, voice)
             else:
@@ -959,7 +965,7 @@ class Music(commands.Cog):
             state.full_queue += [f"--{vid.title}--"]
             temp = []
             old_queue = [x for x in TempState(ctx.author.guild).queue if type(x) != str]
-        
+           
             for i in range(len(vid.entries)):
                 _vid = YoutubeVideo(vid.entries[i][0])
                                     

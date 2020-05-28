@@ -600,13 +600,12 @@ class TempProperty:
     
     def __get__(self, instance, owner):
         d = self.data
-        
         if instance.guild not in self.data:
             self.new_entry(entry=instance.guild)
             d = self.data
-        
+      
         return d[instance.guild][self.name] if self.name in d[instance.guild] else self.default   
-    
+      
     def __set__(self, instance, value):
         new = self.data
         if instance.guild not in new:
@@ -631,6 +630,7 @@ class TempProperty:
 
     def new_entry(self, entry):
         new_db = self.data
+
         new_db[entry] = {}
         
         with open(self.tempdb_path, "wb") as input:
@@ -658,16 +658,16 @@ class TempState:
     juke_box_loading = TempProperty(name="juke_box_loading")
     
     def __init__(self, guild):
-        self.guild = guild
-        self._finalizer = weakref.finalize(self, self.reset)
+        self.guild = guild.id
+    #     self._finalizer = weakref.finalize(self, self.reset)
     
-    @staticmethod
-    def reset():
-        with open(TempProperty.tempdb_path, "wb") as f:
-            f.write(b"")
+    # @staticmethod
+    # def reset():
+    #     with open(TempProperty.tempdb_path, "wb") as f:
+    #         f.write(b"")
             
-    def remove(self):
-        self._finalizer   
+    # def remove(self):
+    #     self._finalizer   
         
 class State:
     """Stores all the state objects"""

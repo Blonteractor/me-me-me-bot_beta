@@ -16,6 +16,8 @@ from itertools import cycle
 import asyncio
 from selenium.webdriver import Chrome as webdriver
 
+import traceback
+
 #? FILES
 import Help
 
@@ -237,7 +239,7 @@ async def on_guild_join(guild: discord.Guild):
                                         )
 # * COMMAND NOT FOUND
 @client.event
-async def on_command_error(ctx, error):
+async def on_command_error(ctx, error: discord.DiscordException):
     if isinstance(error, commands.CommandNotFound):
         message = await ctx.send(">>> That isn't even a command, you have again proven to be a ME!stake.")
         try:
@@ -251,6 +253,7 @@ async def on_command_error(ctx, error):
             await ctx.send(embed=embed)
     else:
         if not isinstance(error,commands.MissingRequiredArgument):
-            gen.error_message(error)    
+            str(traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr))
+            gen.error_message(error)   
 
 client.run(TOKEN)
