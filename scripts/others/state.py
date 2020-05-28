@@ -8,6 +8,7 @@ from general import db_receive, db_update, DBPATH
 import imp
 import _pickle as pickle
 from itertools import repeat
+import weakref
 
 def make_db_if_not_exists(path: str):
     if not os.path.exists(path):
@@ -588,19 +589,22 @@ class UserState:
         return self.set_property(property_name="card_blend", property_val=new)
         
 class TempProperty:
+    
+    db_name = "temp.pkl"
+    tempdb_path = os.path.join(DBPATH, db_name)
         
     def __init__(self, name, default=None):
         self.name = name
         self.default = default
         
-        self.db_name = "temp.pkl"
-        self.tempdb_path = os.path.join(DBPATH, self.db_name)
     
     def __get__(self, instance, owner):
         d = self.data
+        
         if instance.guild not in self.data:
             self.new_entry(entry=instance.guild)
             d = self.data
+        
         return d[instance.guild][self.name] if self.name in d[instance.guild] else self.default   
     
     def __set__(self, instance, value):
@@ -619,7 +623,7 @@ class TempProperty:
             try:
                 return pickle.load(output)
             except EOFError:
-                return {}
+                return {} 
     
     def set_data(self, new_db):
         with open(self.tempdb_path, "wb") as input:
@@ -654,7 +658,16 @@ class TempState:
     juke_box_loading = TempProperty(name="juke_box_loading")
     
     def __init__(self, guild):
-        self.guild = guild.id    
+        self.guild = guild
+        self._finalizer = weakref.finalize(self, self.reset)
+    
+    @staticmethod
+    def reset():
+        with open(TempProperty.tempdb_path, "wb") as f:
+            f.write(b"")
+            
+    def remove(self):
+        self._finalizer   
         
 class State:
     """Stores all the state objects"""

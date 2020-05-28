@@ -517,6 +517,8 @@ class Music(commands.Cog):
         except:
             pass
         else:
+            if TempState(user.guild).juke_box_embed_msg is None:
+                return
             if user != self.client.user and reaction.message.id == TempState(user.guild).juke_box_embed_msg.id:
                 reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
                              "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
@@ -545,7 +547,7 @@ class Music(commands.Cog):
     # * MAIN
 
     # ? PLAYER
-
+     
     async def player(self, ctx, voice):  # checks queue and plays the song accordingly
         state = TempState(ctx.author.guild)
         
@@ -555,22 +557,33 @@ class Music(commands.Cog):
                 try:
                     queue = [x for x in state.queue if not type(x) == str]
                     temp = queue[0]
-
-                    state.queue.remove(temp)
-
+                    queue2 = state.queue[:]
+                    queue2.remove(temp)
+                    state.queue = queue2
                     if state.loop_q:
                         state.queue += [temp]
                         state.queue_ct += [temp]
                         state.full_queue += [temp]
                         state.full_queue_ct += [temp]
                         state.full_queue.remove(temp)
+                        
+                        queue2 = state.full_queue[:]
+                        queue2.remove(temp)
+                        state.full_queue = queue2
                         try:
                             state.full_queue_ct.remove(temp)
+                            queue2 = state.full_queue_ct[:]
+                            queue2.remove(temp)
+                            state.full_queue_ct = queue2
                         except:
                             pass
 
                     try:
                         state.queue_ct.remove(temp)
+                        
+                        queue2 = state.queue_ct[:]
+                        queue2.remove(temp)
+                        state.queue_ct = queue2
                         if state.loop_q:
                             state.queue_ct += [temp]
                     except:
@@ -584,16 +597,34 @@ class Music(commands.Cog):
                                         temp = state.queue[i]
                                         state.queue.remove(temp)
                                         state.queue.remove(temp)
+                                        
+                                        queue2 = state.queue[:]
+                                        queue2.remove(temp)
+                                        state.queue = queue2
+                                        
+                                        queue2 = state.queue[:]
+                                        queue2.remove(temp)
+                                        state.queue = queue2
                                         clear_pl()
                                     else:
                                         temp = state.queue[i]
                                         state.queue.remove(temp)
                                         state.queue.remove(temp)
+                                        
+                                        queue2 = state.queue[:]
+                                        queue2.remove(temp)
+                                        state.queue = queue2
+                                        queue2 = state.queue[:]
+                                        queue2.remove(temp)
+                                        state.queue = queue2
                                         temp = temp[2:][:-2]
                                         for j in range(len(state.queue_ct)):
 
                                             if state.queue_ct[j].title == temp:
                                                 state.queue_ct.pop(j)
+                                                queue2 = state.queue_ct[:]
+                                                queue2.pop(j)
+                                                state.queue_ct = queue2
                                         clear_pl()
 
                     clear_pl()
@@ -647,8 +678,16 @@ class Music(commands.Cog):
                     await ctx.send(f"{queue[0].title} cannot be played.")
 
                     state.queue.remove(queue[0])
+                    
+                    queue2 = state.queue[:]
+                    queue2.remove(queue[0])
+                    state.queue = queue2
                     try:
                         state.queue_ct.remove(queue[0])
+                        
+                        queue2 = state.queue_ct[:]
+                        queue2.remove(queue[0])
+                        state.queue_ct = queue2
                     except:
                         pass
                     queue.pop(0)
@@ -1246,6 +1285,10 @@ class Music(commands.Cog):
         if remove > 1 and remove <= len(queue):
             await ctx.send(f">>> Removed **{(queue[remove - 1].title)}** from the queue.")
             state.queue.remove(queue[remove-1])
+            
+            queue2 = state.queue[:]
+            queue2.remove(queue[remove-1])
+            state.queue = queue2
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1265,7 +1308,15 @@ class Music(commands.Cog):
         if change > 1 and change <= len(queue):
             temp = queue[change-1]
             state.queue.pop(state.queue.index(queue[change-1]))
+            queue2 = state.queue[:]
+            queue2.pop(state.queue.index(queue[change-1]))
+            state.queue = queue2
+            
             state.queue.insert(state.queue.index(queue[0]) + 1, temp)
+            
+            queue2 = state.queue[:]
+            queue2.insert(state.queue.index(queue[0]) + 1, temp)
+            state.queue = queue2
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
@@ -1309,9 +1360,16 @@ class Music(commands.Cog):
         if remove > 1 and remove <= len(queue):
             temp = queue[remove-1]
             state.queue_ct.remove(temp)
+            
+            queue2 = state.queue_ct[:]
+            queue2.remove(temp)
+            state.queue_ct = queue2
             if isinstance(temp, YoutubeVideo):
 
                 state.queue.remove(temp)
+                queue2 = state.queue[:]
+                queue2.remove(temp)
+                state.queue = queue2
                 await ctx.send(f">>> Removed **{(temp.title)}** from the queue.")
             else:
 
@@ -1378,8 +1436,20 @@ class Music(commands.Cog):
             temp1 = queue[change-1]
             temp2 = queue[0]
             state.queue_ct.pop(state.queue.index(temp1))
+            
+            queue2 = state.queue_ct[:]
+            queue2.pop(state.queue.index(temp1))
+            state.queue_ct = queue2
+            
             state.queue_ct.insert(1, temp1)
+            queue2 = state.queue_ct[:]
+            queue2.insert(1, temp1)
+            state.queue_ct = queue2
+            
             state.queue_ct.pop(0)
+            queue2 = state.queue_ct[:]
+            queue2.pop(0)
+            state.queue_ct = queue2
 
             if isinstance(temp1, YoutubeVideo):
                 i11 = state.queue.index(temp1)
@@ -1750,7 +1820,8 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         '''Skips the current song and plays the next song in the queue.
         Requires atleast 50% of people to vote yes
         '''
-
+        
+        state = TempState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         if voice and voice.is_playing():
