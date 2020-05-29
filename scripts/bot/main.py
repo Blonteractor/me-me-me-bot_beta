@@ -16,7 +16,7 @@ from itertools import cycle
 import asyncio
 from selenium.webdriver import Chrome as webdriver
 
-import traceback
+import traceback    
 
 #? FILES
 import Help
@@ -253,7 +253,7 @@ async def on_command_error(ctx, error: discord.DiscordException):
             await ctx.send(embed=embed)
     else:
         if not isinstance(error,commands.MissingRequiredArgument):
-            str(traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr))
+            traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
             gen.error_message(error)   
 
 client.run(TOKEN)

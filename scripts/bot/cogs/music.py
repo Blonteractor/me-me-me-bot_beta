@@ -555,6 +555,8 @@ class Music(commands.Cog):
         def check_queue():
             state = TempState(ctx.author.guild)
             if (not state.loop_song) or (state.skip_song):
+                if state.skip_song:
+                    state.skip_song = False
                 try:
                     queue = [x for x in state.queue if not type(x) == str]
                     temp = queue[0]
@@ -1650,7 +1652,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
     async def loop(self, ctx, toggle=""):
         state = TempState(ctx.author.guild)
         '''Loops the current song, doesn't affect the skip command tho. If on/off not passed it will toggle it.'''
-
+    
         if toggle.lower() == "on":
             state.loop_song = True
             await ctx.send(">>> **Looping current song now**")
@@ -1668,6 +1670,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             else:
                 state.loop_song = True
                 await ctx.send(">>> **Looping current song now**")
+        
 
     # ? LOOP_QUEUE
 
@@ -2004,7 +2007,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         if time:
             voice.source = discord.FFmpegPCMAudio(
                 queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
+            print(state.time)
             state.time = time
+            print(state.time)
         else:
             return
     # ?FORWARD
