@@ -14,6 +14,7 @@ imp.load_source("command", os.path.join(
 
 TESTING_GUILD_ID = 623891519723667467
 
+
 def multi(func):
     def wrapper(*args, **kwargs):
         if __name__ == "cogs.testing":
