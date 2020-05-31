@@ -26,6 +26,7 @@ import random
 import concurrent.futures
 import ast
 from lyricsgenius.song import Song
+from datetime import timedelta
 
 import imp
 import os
@@ -220,6 +221,8 @@ class Music(commands.Cog):
         self.guild_dis = []
         self.guild_res_cancel = []
         self.time_l = []
+        
+        self.clock.start()
 
         self.client: discord.Client
         
@@ -311,6 +314,7 @@ class Music(commands.Cog):
     async def clock(self):
         for guild in self.time_l:
             TempState(guild).time += 1
+        
 
     @tasks.loop(seconds=2)
     # disconnect if player is idle for the disconnecting time provided
@@ -657,7 +661,8 @@ class Music(commands.Cog):
                     
                     # if (self.clock.current_loop == 0): #! WOT
                     #     self.clock.start()
-                                      
+                    if ctx.author.guild not in self.time_l:
+                        self.time_l.append(ctx.author.guild)
                     await self.jbe_update(queue[0], ctx.author.guild)
                     
                     await self.jbq_update(queue[0], ctx.author.guild)
@@ -812,7 +817,7 @@ class Music(commands.Cog):
                          icon_url=ctx.message.author.avatar_url)
         embed.set_thumbnail(url=self.music_logo)
 
-        embed_msg = await ctx.send(embewd=embed)
+        embed_msg = await ctx.send(embed=embed)
 
         if isVideo:
             for index, result in enumerate(results):
@@ -919,8 +924,12 @@ class Music(commands.Cog):
                 await ctx.send("This command only works with youtube.")
                 return
         else:
-            vid = YoutubeVideo(YoutubeVideo.from_query(query=query)[
-                               0][0], requested_by=ctx.author.name)
+            try:
+                vid = YoutubeVideo(YoutubeVideo.from_query(query=query)[
+                                0][0], requested_by=ctx.author.name)
+            except:
+                await ctx.send("There was a problem in playing your song, sorry.")
+                
         
        
         #! Queueing starts here
@@ -1051,8 +1060,12 @@ class Music(commands.Cog):
             ntime = f"{state.time//60}:{two_dig(state.time%60)}"
         else:
             ntime = f"{state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
+        ntime = str(timedelta(seconds=state.time))
+        
         embed.add_field(name=f"{vid.title}", value="**  **", inline=False)
+        
         amt = int(state.time/vid.seconds*10)
+        
         embed.add_field(
             name=f"{ntime}/{vid.duration} {':black_square_button:'*amt +':black_large_square:'*(10-amt) }", value="**  **", inline=False)
 
@@ -2007,9 +2020,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         if time:
             voice.source = discord.FFmpegPCMAudio(
                 queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
-            print(state.time)
+
             state.time = time
-            print(state.time)
+          
         else:
             return
     # ?FORWARD
@@ -2077,73 +2090,85 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
    # * ----------------------------------------------------------PLAYLIST------------------------------------------------------------------------------------------------------------------------
 
     # ? PLAYLIST
-
+    
     @commands.group(aliases=["pl"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    async def playlist(self, ctx, name=None):
-        '''Shows your Playlist. Subcommands can alter your playlist'''
+    async def playlist(self, ctx):
         if ctx.invoked_subcommand is None:
-            playlist_db = gen.db_receive("playlist")
-            try:
-                if name:
-                    if name in playlist_db[str(ctx.author.id)]:
-                        playlist = playlist_db[str(ctx.author.id)][name]
-                        pname = name
-                    elif name.isnumeric():
-                        if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                            playlist = list(playlist_db[str(ctx.author.id)].values())[
-                                int(name)-1]
-                            pname = list(playlist_db[str(ctx.author.id)].keys())[
-                                int(name)-1]
-                        else:
-                            await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
-                            return
+            await ctx.send_help(self.playlist)
+
+    @playlist.command(aliases=["v"])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    async def view(self, ctx, name=None):
+        '''Shows your Playlist. Subcommands can alter your playlist'''
+        
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        
+        playlist_db = ctx.States.User.playlist
+        print(playlist_db)
+        try:
+            if name:
+                if name in playlist_db:
+                    playlist = playlist_db[name]
+                    pname = name
+                elif name.isnumeric():
+                    if int(name) > 0 and int(name) <= len(playlist_db):
+                        playlist = list(playlist_db.values())[
+                            int(name)-1]
+                        pname = list(playlist_db.keys())[
+                            int(name)-1]
                     else:
-                        playlist = list(
-                            playlist_db[str(ctx.author.id)].values())[0]
-                        pname = list(playlist_db[str(ctx.author.id)].keys())[0]
+                        await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
+                        return
                 else:
                     playlist = list(
-                        playlist_db[str(ctx.author.id)].values())[0]
-                    pname = list(playlist_db[str(ctx.author.id)].keys())[0]
-            except Exception as e:
-                self.log(e)
-                playlist_db[str(ctx.author.id)] = {
-                    f"{ctx.author.name}'s Playlist": []}
-                playlist = []
-                await ctx.send("Your playlist has been created.")
-                pname = f"{ctx.author.name}'s Playlist"
-                gen.db_update("playlist", playlist_db)
+                        playlist_db.values())[0]
+                    pname = list(playlist_db.keys())[0]
+            else:
+                playlist = list(
+                    playlist_db.values())[0]
+                pname = list(playlist_db.keys())[0]
+        except Exception as e:
+            self.log(e)
+            print(e)
+            playlist_db = {
+                f"{ctx.author.name}'s Playlist": []}
+            playlist = []
+            await ctx.send("Your playlist has been created.")
+            pname = f"{ctx.author.name}'s Playlist"
+            ctx.States.User.playlist = playlist_db
 
-            embed = discord.Embed(title=pname,
-                                  color=discord.Colour.dark_purple())
-            embed.set_author(name="Me!Me!Me!",
-                             icon_url=self.client.user.avatar_url)
-            embed.set_thumbnail(url=self.music_logo)
-            no = 1
-            for song in playlist:
-                title = song["title"]
-                embed.add_field(name=f"**{no}**", value=f"**{title}**")
-                no += 1
-            await ctx.send(embed=embed)
+        embed = discord.Embed(title=pname,
+                                color=discord.Colour.dark_purple())
+        embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+        embed.set_thumbnail(url=self.music_logo)
+        no = 1
+        for song in playlist:
+            title = song["title"]
+            embed.add_field(name=f"**{no}**", value=f"**{title}**")
+            no += 1
+        await ctx.send(embed=embed)
 
     # ? PLAYLIST ADD
     @playlist.command()
     async def add(self, ctx, name, *, query):
         '''Adds a song to your Playlist.'''
+        
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         vid = await self.searching(ctx, query)
 
         if vid:
 
-            playlist_db = gen.db_receive("playlist")
+            playlist_db = ctx.States.User.playlist
             try:
 
-                if name in playlist_db[str(ctx.author.id)]:
+                if name in playlist_db:
                     pname = name
                 elif name.isnumeric():
-                    if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                        pname = list(playlist_db[str(ctx.author.id)].keys())[
+                    if int(name) > 0 and int(name) <= len(playlist_db):
+                        pname = list(playlist_db.keys())[
                             int(name)-1]
                     else:
                         await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2152,36 +2177,38 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     await ctx.send("Could not find the playlist.")
                     return
             except:
-                playlist_db[str(ctx.author.id)] = {
+                playlist_db = {
                     f"{ctx.author.name}'s Playlist": []}
                 await ctx.send("Your playlist has been created.")
                 pname = f"{ctx.author.name}'s Playlist"
 
-            playlist_db[str(ctx.author.id)
-                        ][pname] += [{"id": vid.id, "title": vid.title}]
+            playlist_db[pname] += [{"id": vid.id, "title": vid.title}]
 
             await ctx.send(f"**{vid.title}** added to your Playlist")
 
             self.log(f"altered {pname}")
-            gen.db_update("playlist", playlist_db)
+            
+            ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST ADD_PLAYLIST
     @playlist.command(name="add-playlist", aliases=["addpl"])
     async def add_playlist(self, ctx, name, *, query):
         '''Adds a playlist to your Playlist.'''
+        
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         vid = await self.searching(ctx, query, False)
 
         if vid:
 
-            playlist_db = gen.db_receive("playlist")
+            playlist_db = ctx.States.User.playlist
             try:
 
-                if name in playlist_db[str(ctx.author.id)]:
+                if name in playlist_db:
                     pname = name
                 elif name.isnumeric():
-                    if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                        pname = list(playlist_db[str(ctx.author.id)].keys())[
+                    if int(name) > 0 and int(name) <= len(playlist_db):
+                        pname = list(playlist_db.keys())[
                             int(name)-1]
                     else:
                         await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2191,7 +2218,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     await ctx.send("Could not find the playlist.")
                     return
             except:
-                playlist_db[str(ctx.author.id)] = {
+                playlist_db = {
                     f"{ctx.author.name}'s Playlist": []}
                 await ctx.send("Your playlist has been created.")
                 pname = f"{ctx.author.name}'s Playlist"
@@ -2202,21 +2229,24 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             await ctx.send(f"**{vid.title}** added to your Playlist")
 
             self.log(f"altered {pname}")
-            gen.db_update("playlist", playlist_db)
+            ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST REARRANGE
     @playlist.command(aliases=["rng"])
     async def rearrange(self, ctx, name, P1: int, P2: int):
         '''Rearranges 2 songs/playlist places of your playlist.'''
-        playlist_db = gen.db_receive("playlist")
+        
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        
+        playlist_db = ctx.States.User.playlist
 
         try:
 
-            if name in playlist_db[str(ctx.author.id)]:
+            if name in playlist_db:
                 pname = name
             elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                    pname = list(playlist_db[str(ctx.author.id)].keys())[
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
                         int(name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2231,30 +2261,32 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             await ctx.send("Your playlist too smol for rearrangement.")
             return
 
-            if P1 < 1 or P1 > len(playlist_db[str(ctx.author.id)][pname]) or P2 < 1 or P2 > len(playlist_db[str(ctx.author.id)][pname]):
+            if P1 < 1 or P1 > len(playlist_db[pname]) or P2 < 1 or P2 > len(playlist_db[pname]):
                 return
 
-            playlist_db[str(ctx.author.id)][pname][P1-1], playlist_db[str(ctx.author.id)][pname][P2 -
-                                                                                                 1] = playlist_db[str(ctx.author.id)][pname][P2-1], playlist_db[str(ctx.author.id)][pname][P1-1]
+            playlist_db[pname][P1-1], playlist_db[pname][P2 - 1] = playlist_db[pname][P2-1], playlist_db[pname][P1-1]
+                                                                                                 
             await ctx.send(f"Number {P1} and {P2} have been rearranged.")
             self.log(f"altered {pname}")
 
-        gen.db_update("playlist", playlist_db)
+        ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST REMOVE
     @commands.command(name="plremove") #! experimentation
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def plremove(self, ctx, name, R: int):
         '''Removes a song/playlist from your playlist.'''
-        playlist_db = gen.db_receive("playlist")
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        
+        playlist_db = ctx.States.User.playlist
 
         try:
 
-            if name in playlist_db[str(ctx.author.id)]:
+            if name in playlist_db:
                 pname = name
             elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                    pname = list(playlist_db[str(ctx.author.id)].keys())[
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
                         int(name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2264,37 +2296,39 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 await ctx.send("Could not find the playlist.")
                 return
         except:
-            playlist_db[str(ctx.author.id)] = {
-                f"{ctx.author.name}'s Playlist": []}
+            playlist_db = {
+                f"{ctx.author.name}Playlist": []}
             await ctx.send("Your playlist has been created.")
             pname = f"{ctx.author.name}'s Playlist"
 
         else:
-            if len(playlist_db[str(ctx.author.id)][pname]) < 1:
+            if len(playlist_db[pname]) < 1:
                 await ctx.send("Your playlist too smol for alteration.")
                 return
 
-            if R < 1 or R > len(playlist_db[str(ctx.author.id)][pname]):
+            if R < 1 or R > len(playlist_db[pname]):
                 return
 
-            playlist_db[str(ctx.author.id)][pname].pop(R-1)
+            playlist_db[pname].pop(R-1)
             await ctx.send(f"Number {R} has been removed.")
             self.log(f"altered {pname}")
 
-        gen.db_update("playlist", playlist_db)
+        ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST NAME
     @playlist.command()
     async def name(self, ctx, name, new_name):
         """Give a name to your playlist"""
         
-        playlist_db = gen.db_receive("playlist")
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        
+        playlist_db = ctx.States.User.playlist
         try:
-            if name in playlist_db[str(ctx.author.id)]:
+            if name in playlist_db:
                 pname = name
             elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                    pname = list(playlist_db[str(ctx.author.id)].keys())[
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
                         int(name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2304,33 +2338,35 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 await ctx.send("Could not find the playlist.")
                 return
         except:
-            playlist_db[str(ctx.author.id)] = {
+            playlist_db = {
                 f"{ctx.author.name}'s Playlist": []}
             await ctx.send("Your playlist has been created.")
             pname = f"{ctx.author.name}'s Playlist"
 
         else:
 
-            playlist_db[str(ctx.author.id)][new_name] = playlist_db[str(
-                ctx.author.id)].pop(pname)
-            gen.db_update("playlist", playlist_db)
+            playlist_db[new_name] = playlist_db.pop(pname)
+            
+            ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST PLAY
     @playlist.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def plplay(self, ctx, name):
         '''Plays your playlist.'''
+        
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
-        playlist_db = gen.db_receive("playlist")
+        playlist_db = ctx.States.User.playlist
 
         try:
-            if name in playlist_db[str(ctx.author.id)]:
+            if name in playlist_db:
                 pname = name
             elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                    pname = list(playlist_db[str(ctx.author.id)].keys())[
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
                         int(name)-1]
-                else:
+                else:   
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
 
@@ -2338,13 +2374,13 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 await ctx.send("Could not find the playlist.")
                 return
         except:
-            playlist_db[str(ctx.author.id)] = {
+            playlist_db = {
                 f"{ctx.author.name}'s Playlist": []}
             await ctx.send("Your playlist has been created.")
             pname = f"{ctx.author.name}'s Playlist"
 
         else:
-            if len(playlist_db[str(ctx.author.id)][pname]) < 1:
+            if len(playlist_db[pname]) < 1:
                 await ctx.send("Your playlist doesn't have any songs to play")
                 return
 
@@ -2353,7 +2389,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     return
 
                 voice = get(self.client.voice_clients, guild=ctx.guild)
-                playlist = playlist_db[str(ctx.author.id)][pname]
+                playlist = playlist_db[pname]
                 for i in range(len(playlist)):
                     if len(playlist[i]["id"]) > 11:
                         playlist[i] = YoutubePlaylist(playlist[i]["id"])
@@ -2409,14 +2445,16 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
     # ? PLAYLIST EXPAND
     @playlist.command(name="expand")
     async def expandd(self, ctx, name):
-        playlist_db = gen.db_receive("playlist")
+        playlist_db = ctx.States.User.playlist
+        
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         try:
-            if name in playlist_db[str(ctx.author.id)]:
+            if name in playlist_db:
                 pname = name
             elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db[str(ctx.author.id)]):
-                    pname = list(playlist_db[str(ctx.author.id)].keys())[
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
                         int(name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
@@ -2426,13 +2464,13 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 await ctx.send("Could not find the playlist.")
                 return
         except:
-            playlist_db[str(ctx.author.id)] = {
+            playlist_db = {
                 f"{ctx.author.name}'s Playlist": []}
             await ctx.send("Your playlist has been created.")
             pname = f"{ctx.author.name}'s Playlist"
 
         else:
-            playlist = playlist_db[str(ctx.author.id)][pname]
+            playlist = playlist_db[pname]
             npl = []
             for i in range(len(playlist)):
                 if len(playlist[i]["id"]) > 11:
@@ -2441,8 +2479,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                         npl += [{"id": vid[0], "title":vid[2]}]
                 else:
                     npl += [playlist[i]]
-            playlist_db[str(ctx.author.id)][pname] = npl
-            gen.db_update("playlist", playlist_db)
+            playlist_db[pname] = npl
+            
+            ctx.States.User.playlist = playlist_db
 
 # *------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 

@@ -496,7 +496,7 @@ class UserState:
         
         db_update(self.db_name, states)
         
-    def get_property(self, property_name: str, rtr=False):
+    def get_property(self, property_name: str, rtr=False, default=None):
         state_variables = self.state_variables
         exists = property_name in state_variables
         
@@ -506,7 +506,7 @@ class UserState:
             elif rtr:
                 return None
    
-        return state_variables[property_name]
+        return state_variables[property_name] if state_variables[property_name] is not None else default
         
     def new_property(self, property_name, property_val=None):
         state_variables = self.state_variables
@@ -553,7 +553,7 @@ class UserState:
     
     @property
     def playlist(self):
-        return self.get_property(property_name="playlist")
+        return self.get_property(property_name="playlist", default={})
     
     @property
     def card_blend(self) -> bool:
