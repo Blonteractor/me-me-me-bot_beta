@@ -9,6 +9,8 @@ import imp
 import _pickle as pickle
 from itertools import repeat
 import weakref
+import asyncio 
+from inspect import iscoroutinefunction
 
 def make_db_if_not_exists(path: str):
     if not os.path.exists(path):
@@ -30,8 +32,15 @@ class GuildState:
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
         
-    def get_channel(self, name) -> discord.TextChannel:
-        return get(self.guild.channels, name=name)
+    @classmethod
+    def from_id(cls, id):
+        pass
+        
+    def get_channel(self, name, _id=None) -> discord.TextChannel:
+        if _id is None:
+            return get(self.guild.channels, name=name)
+        else:
+            return get(self.guild.channels, id=int(_id))
     
     def get_role(self, **kwargs) -> discord.Role:
         return get(self.guild.roles, name=kwargs.get("name")) if "name" in kwargs else get(self.guild.roles, id=int(kwargs.get("id")))
@@ -120,9 +129,8 @@ class GuildState:
     
     @property
     def juke_box_channel(self) -> discord.TextChannel:
-        name = self.get_property("juke_box")
-    
-        return self.get_channel(name)
+        _id = self.get_property("juke_box")
+        return self.get_channel(name=None, _id=_id)
        
     @property
     def auto_meme_channel(self) -> discord.TextChannel:
@@ -159,12 +167,12 @@ class GuildState:
     @property
     def auto_pause_time(self) -> str:
         res = self.get_property("auto_pause")
-        return res if res is not None else "0"
+        return int(res) if res is not None else 0
     
     @property
     def auto_disconnect_time(self) -> str:
         res = self.get_property("auto_disconnect")
-        return res if res is not None else "0"
+        return int(res) if res is not None else 0
     
     @property
     def doujin_category(self) -> str:
@@ -593,27 +601,106 @@ class TempProperty:
     db_name = "temp.pkl"
     tempdb_path = os.path.join(DBPATH, db_name)
         
-    def __init__(self, name, default=None):
+    def __init__(self, name, default=None, processor=None, simplifier=None):
         self.name = name
         self.default = default
+        
+        self.processor = processor
+        self.simplifier = simplifier
         
     
     def __get__(self, instance, owner):
         d = self.data
-        if instance.guild not in self.data:
-            self.new_entry(entry=instance.guild)
+        if instance.guild.id not in self.data:
+            self.new_entry(entry=instance.guild.id)
             d = self.data
-      
-        return d[instance.guild][self.name] if self.name in d[instance.guild] else self.default   
+            
+        found = d[instance.guild.id][self.name] if self.name in d[instance.guild.id] else self.default
+
+        if self.processor is not None:
+                return self.processor(self=instance, id=found)
+                    
+        else:
+            return found      
       
     def __set__(self, instance, value):
         new = self.data
-        if instance.guild not in new:
-            self.new_entry(entry=instance.guild)
+        if instance.guild.id not in new:
+            self.new_entry(entry=instance.guild.id)
             
         new = self.data
         
-        new[instance.guild][self.name] = value
+        if self.simplifier is None:
+            new[instance.guild.id][self.name] = value
+        else:
+            new[instance.guild.id][self.name] = self.simplifier(value)
+            print(f"{self.name} id setted to {new[instance.guild.id][self.name]}")
+        
+        self.set_data(new_db=new) 
+    
+    @property
+    def data(self):
+        with open(self.tempdb_path, "rb") as output:
+            try:
+                return pickle.load(output)
+            except EOFError:
+                return {} 
+    
+    def set_data(self, new_db):
+        with open(self.tempdb_path, "wb") as input:
+            return pickle.dump(new_db, input, -1)
+
+    def new_entry(self, entry):
+        new_db = self.data
+
+        new_db[entry] = {}
+        
+        with open(self.tempdb_path, "wb") as input:
+            return pickle.dump(new_db, input, -1)
+        
+class TempPropertyAsync:
+    
+    db_name = "temp.pkl"
+    tempdb_path = os.path.join(DBPATH, db_name)
+        
+    def __init__(self, name, default=None, processor=None, simplifier=None):
+        self.name = name
+        self.default = default
+        
+        self.processor = processor
+        self.simplifier = simplifier
+        
+    
+    async def __get__(self, instance, owner):
+        d = self.data
+        if instance.guild.id not in self.data:
+            self.new_entry(entry=instance.guild.id)
+            d = self.data
+            
+        found = d[instance.guild.id][self.name] if self.name in d[instance.guild.id] else self.default
+
+        if self.processor is not None:
+            if iscoroutinefunction(self.processor):
+                return await self.processor(self=instance, id=found)
+            else:
+                return self.processor(self=instance, id=found)
+                    
+        else:
+            return found      
+      
+    def __set__(self, instance, value):
+        new = self.data
+        if instance.guild.id not in new:
+            self.new_entry(entry=instance.guild.id)
+            
+        new = self.data
+        
+        if self.simplifier is None:
+            new[instance.guild.id][self.name] = value
+        else:
+            new[instance.guild.id][self.name] = self.simplifier(value)
+            print(f"{self.name} id setted to {new[instance.guild.id][self.name]}")
+        
         self.set_data(new_db=new) 
     
     @property
@@ -637,6 +724,14 @@ class TempProperty:
             return pickle.dump(new_db, input, -1)
 
 class TempState:
+    
+    async def get_message(self, id):
+        channel = GuildState(self.guild).juke_box_channel
+        # asyncio.ProactorEventLoop.run_until_complete
+        r = await channel.fetch_message(id=id)
+        print(f"Proccess DOne! -> {r}")
+        return r
+    
     time = TempProperty(name="time", default=0)
     cooldown = TempProperty(name="cooldown", default=0)
     
@@ -648,26 +743,23 @@ class TempState:
     loop_song = TempProperty(name="loop_song", default=False)
     loop_q = TempProperty(name="loop_q", default=False)
     skip_song = TempProperty(name="skip_song", default=False)
+    on_msg = TempProperty(name="on_msg", default=True)
     
     time_for_disconnect = TempProperty(name="time_for_disconnect", default=0)
     
     shuffle_lim = TempProperty(name="shuffle_lim")                                                                                                                    
     shuffle_var = TempProperty(name="shuffle_var")
     
-    juke_box_embed_msg = TempProperty(name="juke_box_embed_msg")
-    juke_box_loading = TempProperty(name="juke_box_loading")
+    juke_box_embed = TempProperty(name="juke_box_embed")
+    juke_box_embed_msg = TempPropertyAsync(name="juke_box_embed_msg", processor=get_message, simplifier=lambda msg: msg.id)
+    juke_box_loading = TempPropertyAsync(name="juke_box_loading", processor=get_message, simplifier=lambda msg: msg.id)
+    juke_box_queue = TempPropertyAsync(name="juke_box_queue", processor=get_message, simplifier=lambda msg: msg.id)
     
     def __init__(self, guild):
-        self.guild = guild.id
-    #     self._finalizer = weakref.finalize(self, self.reset)
+        self.guild = guild
+        
     
-    # @staticmethod
-    # def reset():
-    #     with open(TempProperty.tempdb_path, "wb") as f:
-    #         f.write(b"")
-            
-    # def remove(self):
-    #     self._finalizer   
+   
         
 class State:
     """Stores all the state objects"""
