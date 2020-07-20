@@ -218,16 +218,11 @@ class Music(commands.Cog):
         self.client = client
         self.auto_pause.start()             # starting loops for auto pause and disconnect
         self.auto_disconnector.start()
-        self.juke_box.start()
         self.guild_dis = []
         self.guild_res_cancel = []
         self.time_l = []
         
         self.clock.start()
-        self.juke_box.start()
-        self.auto_pause.start()             # starting loops for auto pause and disconnect
-        self.auto_disconnector.start()
-        self.jbl_update.start()
 
         self.client: discord.Client
         
@@ -383,194 +378,6 @@ class Music(commands.Cog):
                 continue
             await awoo_channel.send(f"Nothing much to do in the vc so left `{voice.channel.name}`")
 
-    @tasks.loop(seconds=1)
-    async def juke_box(self):
-
-        async def set_jb(guild):
-            state.on_msg = False
-            channel = GuildState(guild).juke_box_channel
-            if channel is None:
-                return
-
-            else:
-                async for msg in self.client.logs_from(channel):
-                    await client.delete_message(msg)
-
-            file = os.path.join(os.path.dirname(__file__), '../../../assets/icons/we_tube_logo.png')
-            print(file)
-            file = os.path.abspath(file)
-            file = discord.File(file)
-            
-            print("Got we tube logo")
-            
-
-            await channel.send(file=file)
-
-            reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
-                         "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
-
-            embed = discord.Embed(title="Not Playing Anything right now.",
-                                  color=discord.Colour.from_rgb(0, 255, 255))
-
-            embed.set_image(url=self.juke_box_url)
-            embed_msg = await channel.send(embed=embed)
-            embed_msg: discord.Message
-            print("setting vars")
-            state.juke_box_embed = embed
-            print("embed var set")
-            state.juke_box_embed_msg = embed_msg #!problem found: u cant pickle message objects
-            print("all vars set")
-            def check(reaction: discord.Reaction, user):
-                return reaction.message.id == embed_msg.id
-
-            async def reactions_add(message, reactions):
-                for reaction in reactions:
-                    await message.add_reaction(reaction)
-            print("task created")
-            self.client.loop.create_task(
-                reactions_add(embed_msg, reactions.keys()))
-            print("reactions added")
-            loading_bar = await channel.send(f"0:00/0:00 - {':black_large_square:'*10}")
-            loading_bar: discord.Message
-
-            TempState(guild).juke_box_loading = loading_bar
-
-            queue_msg = await channel.send("__QUEUE LIST__")
-            queue_msg: discord.Message
-
-            TempState(guild).juke_box_queue = queue_msg
-
-            GuildState(guild).juke_box_channel = channel
-
-            # self.juke_box.cancel()
-            
-        coros = [set_jb(guild) for guild in self.client.guilds]
-        
-        await asyncio.gather(*coros)
-
-    async def jbe_update(self, vid, guild):
-        try:
-            TempState(guild).juke_box_embed_msg
-        except:
-            return
-        if TempState(guild).juke_box_embed_msg is None:
-            return
-        embed = discord.Embed(title=vid.title,
-                            color=discord.Colour.from_rgb(0, 255, 255))
-
-        embed.set_image(url=vid.thumbnail)
-        await TempState(guild).juke_box_embed_msg.edit(embed=embed)
-            
-
-    async def jbq_update(self, vid, guild):
-        try:
-            TempState(guild).juke_box_queue
-        except:
-            return
-        
-        if TempState(guild).juke_box_queue is None:
-            return
-
-        string = "__QUEUE__\n"
-        for index in range(len(TempState(guild).queue_ct)):
-            i = TempState(guild).queue_ct[index]
-
-            string += f"{index+1}. {i.title} ({i.duration}) \n"
-
-        msg = await TempState(guild).juke_box_queue
-        await msg.edit(content=string)
-
-
-    @tasks.loop(seconds=1)
-    async def jbl_update(self):
-        async def up(guild):
-            state = TempState(guild)
-            try:
-                TempState(guild).juke_box_loading
-            except:
-                return
-            queue = [x for x in state.queue if type(x) != str]
-            if queue == []:
-                jbl_update.cancel()
-            vid = queue[0]
-
-            def two_dig(number):
-                if number < 10:
-                    return f"0{number}"
-                else:
-                    return str(number)
-
-            if vid.duration.count(":") == 1:
-                ntime = f"{state.time//60}:{two_dig(state.time%60)}"
-            else:
-                ntime = f"{state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
-
-            amt = int(state.time/vid.seconds*10)
-
-            await state.juke_box_loading.edit(content=f"{ntime}/{vid.duration}-{':black_square_button:'*amt +':black_large_square:'*(10-amt) }")
-            
-        coros = [up(guild) for guild in self.client.guilds]
-        
-        coros = [up(guild) for guild in self.juke_update_l]
-        
-        await asyncio.gather(*coros)
-        
-    @jbl_update.after_loop
-    async def after_my_task(self):
-        if self.jbl_update.failed():
-            traceback.print_exc()
-        
-    #* EVENTS
-    
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        juke_box_channel = GuildState(message.author.guild).juke_box_channel
-        
-        if juke_box_channel is None:
-            return
-        if message.channel == juke_box_channel:
-            if message.author != self.client.user:
-
-                await message.delete()
-            else:
-                if message.id != TempState(message.author.guild).juke_box_loading.id and message.id != TempState(message.author.guild).juke_box_queue.id:
-                    await message.delete()
-
-    @commands.Cog.listener()
-    async def on_reaction_add(self, reaction, user):
-
-        try:
-            GuildState(user.guild).juke_box_channel
-        except:
-            pass
-        else:
-            if TempState(user.guild).juke_box_embed_msg is None:
-                return
-            if user != self.client.user and reaction.message.id == TempState(user.guild).juke_box_embed_msg.id:
-                reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
-                             "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
-                voice = get(self.client.voice_clients,
-                            guild=reaction.message.guild)
-                if voice:
-                    if str(reaction.emoji) in reactions:
-                        ctx = await self.client.get_context(reaction.message)
-                        if reactions[str(reaction.emoji)] == "play/pause":
-                            if voice.is_playing():
-                                await ctx.invoke(self.client.get_command("pause"))
-                            elif voice.is_paused():
-                                await ctx.invoke(self.client.get_command("resume"))
-
-                        elif reactions[str(reaction.emoji)] == "stop":
-                            await ctx.invoke(self.client.get_command("stop"))
-
-                        elif reactions[str(reaction.emoji)] == "forward":
-                            await ctx.invoke(self.client.get_command("skip"))
-
-                        elif reactions[str(reaction.emoji)] == "loop":
-                            await ctx.invoke(self.client.get_command("loop"))
-
-                await reaction.remove(user)
-
     # * MAIN
 
     # ? PLAYER
@@ -684,13 +491,7 @@ class Music(commands.Cog):
                     #     self.clock.start()
                     if ctx.author.guild not in self.time_l:
                         self.time_l.append(ctx.author.guild)
-                    await self.jbe_update(queue[0], ctx.author.guild)
-                    
-                    await self.jbq_update(queue[0], ctx.author.guild)
-                
-                    # if (self.jbl_update.current_loop == 0):
-                    #     self.jbl_update.start()
-
+            
                     if self.shuffle_lim:
                         
                         state.shuffle_var += 1
@@ -731,10 +532,6 @@ class Music(commands.Cog):
                 self.log("Ending the queue")
                 if ctx.author.guild not in self.time_l:
                     self.time_l.append(ctx.author.guild)
-                self.jbl_update.cancel()
-                await state.juke_box_embed_msg.edit(embed=state.juke_box_embed)
-                await state.juke_box_queue.edit(content="__QUEUE__")
-                await state.juke_box_loading.edit(content=f"00:00/00:00 - {':black_large_square:'*10}")
                 break
 
     async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
@@ -981,7 +778,6 @@ class Music(commands.Cog):
 
         state.queue_ct += [vid]
         state.full_queue_ct += [vid]
-        await self.jbq_update(vid, ctx.author.guild)
 
         if isinstance(vid, YoutubeVideo):
             old_queue = [x for x in state.queue if type(x) != str]
@@ -1017,10 +813,6 @@ class Music(commands.Cog):
             state.full_queue += temp
             vid._info["entries"] = temp
             
-            if ctx.author.guild not in self.juke_update_l:
-                self.jbl_update_l.append(ctx.author.guild)
-            
-
             state.queue += [f"--{vid.title}--"]
             state.full_queue += [f"--{vid.title}--"]
 
@@ -1771,7 +1563,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             voice.pause()
             if ctx.author.guild in self.time_l:
                 self.time_l.remove(ctx.author.guild)
-            self.jbl_update.cancel()
             await ctx.send(">>> Music Paused")
         else:
             self.log("Pause failed")
@@ -1792,7 +1583,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             voice.resume()
             if ctx.author.guild not in self.time_l:
                 self.time_l.append(ctx.author.guild)
-            self.jbl_update.start()
             await ctx.send(">>> Resumed Music")
         else:
             self.log("Resume failed")
@@ -1814,7 +1604,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             voice.stop()
             if ctx.author.guild in self.time_l:
                 self.time_l.remove(ctx.author.guild)
-            self.jbl_update.cancel()
             state.time = 0
             state.shuffle_lim = None
             await ctx.send(">>> Music stopped")
@@ -1841,7 +1630,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             voice.stop()
             if ctx.author.guild in self.time_l:
                 self.time_l.remove(ctx.author.guild)
-            self.jbl_update.cancel()
             state.time = 0
             state.shuffle_lim = None
             await ctx.send(">>> Music stopped")
@@ -1918,7 +1706,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             await voice.disconnect()
             if ctx.author.guild in self.time_l:
                 self.time_l.remove(ctx.author.guild)
-            self.jbl_update.cancel()
             state.time = 0
             state.shuffle_lim = None
             await ctx.send(f">>> Left ```{voice.channel.name}```")
