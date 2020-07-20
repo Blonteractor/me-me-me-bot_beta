@@ -27,6 +27,7 @@ import concurrent.futures
 import ast
 from lyricsgenius.song import Song
 from datetime import timedelta
+import traceback
 
 import imp
 import os
@@ -223,6 +224,10 @@ class Music(commands.Cog):
         self.time_l = []
         
         self.clock.start()
+        self.juke_box.start()
+        self.auto_pause.start()             # starting loops for auto pause and disconnect
+        self.auto_disconnector.start()
+        self.jbl_update.start()
 
         self.client: discord.Client
         
@@ -232,6 +237,10 @@ class Music(commands.Cog):
             self.cooldown = gen.cog_cooldown["default"]
             
         self.cooldown += gen.extra_cooldown
+        
+    def exception_catching_callback(self, task):
+        if task.exception():
+            task.print_stack()
 
     def cog_unload(self):
         driver.quit()
@@ -378,8 +387,8 @@ class Music(commands.Cog):
     async def juke_box(self):
 
         async def set_jb(guild):
+            state.on_msg = False
             channel = GuildState(guild).juke_box_channel
-
             if channel is None:
                 return
 
@@ -387,10 +396,13 @@ class Music(commands.Cog):
                 async for msg in self.client.logs_from(channel):
                     await client.delete_message(msg)
 
-            file = os.path.join(os.path.dirname(
-                __file__), '../../../assets/icons/we_tube_logo.png')
+            file = os.path.join(os.path.dirname(__file__), '../../../assets/icons/we_tube_logo.png')
+            print(file)
             file = os.path.abspath(file)
             file = discord.File(file)
+            
+            print("Got we tube logo")
+            
 
             await channel.send(file=file)
 
@@ -403,20 +415,21 @@ class Music(commands.Cog):
             embed.set_image(url=self.juke_box_url)
             embed_msg = await channel.send(embed=embed)
             embed_msg: discord.Message
-
-            TempState(guild).juke_box_embed = embed
-            TempState(guild).juke_box_embed_msg = embed_msg
-
+            print("setting vars")
+            state.juke_box_embed = embed
+            print("embed var set")
+            state.juke_box_embed_msg = embed_msg #!problem found: u cant pickle message objects
+            print("all vars set")
             def check(reaction: discord.Reaction, user):
                 return reaction.message.id == embed_msg.id
 
             async def reactions_add(message, reactions):
                 for reaction in reactions:
                     await message.add_reaction(reaction)
-
+            print("task created")
             self.client.loop.create_task(
                 reactions_add(embed_msg, reactions.keys()))
-
+            print("reactions added")
             loading_bar = await channel.send(f"0:00/0:00 - {':black_large_square:'*10}")
             loading_bar: discord.Message
 
@@ -464,7 +477,8 @@ class Music(commands.Cog):
 
             string += f"{index+1}. {i.title} ({i.duration}) \n"
 
-        await TempState(guild).juke_box_queue.edit(content=string)
+        msg = await TempState(guild).juke_box_queue
+        await msg.edit(content=string)
 
 
     @tasks.loop(seconds=1)
@@ -497,7 +511,14 @@ class Music(commands.Cog):
             
         coros = [up(guild) for guild in self.client.guilds]
         
+        coros = [up(guild) for guild in self.juke_update_l]
+        
         await asyncio.gather(*coros)
+        
+    @jbl_update.after_loop
+    async def after_my_task(self):
+        if self.jbl_update.failed():
+            traceback.print_exc()
         
     #* EVENTS
     
@@ -969,6 +990,7 @@ class Music(commands.Cog):
          
             if len(old_queue) == 0:
                 await self.player(ctx, voice)
+            
             else:
                 self.log("Song added to queue")
         else:
@@ -994,6 +1016,9 @@ class Music(commands.Cog):
             state.queue += temp
             state.full_queue += temp
             vid._info["entries"] = temp
+            
+            if ctx.author.guild not in self.juke_update_l:
+                self.jbl_update_l.append(ctx.author.guild)
             
 
             state.queue += [f"--{vid.title}--"]
@@ -2105,7 +2130,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         
         playlist_db = ctx.States.User.playlist
-        print(playlist_db)
         try:
             if name:
                 if name in playlist_db:
@@ -2130,7 +2154,6 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 pname = list(playlist_db.keys())[0]
         except Exception as e:
             self.log(e)
-            print(e)
             playlist_db = {
                 f"{ctx.author.name}'s Playlist": []}
             playlist = []
