@@ -15,6 +15,6 @@ cache.bot
 cache.nhentai.net
 Bin
 Fonts
-venv
+menv
 scripts/bot/cogs/testing.py
 scripts/bot/cogs/testing.py
