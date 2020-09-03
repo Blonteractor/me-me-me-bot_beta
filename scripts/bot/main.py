@@ -53,7 +53,8 @@ WELCOME_MSG = """
 asasas
 """
 EMOJIS_PATH = os.path.abspath("./assets/emojis")
-# * CLIENT SETUP
+DB_PATH = os.path.abspath("./Database")
+
 prefix = gen.permu("me! ") + gen.permu("epic ")
 async def determine_prefix(bot, message):
     if message.guild:
@@ -210,13 +211,17 @@ async def auto_backup():
 # * ON READY
 @client.event
 async def on_ready():
-    [os.sys.path.append(os.path.abspath(path)) for path in PATHS]
+  
     client.help_command = Help.MyHelpCommand()
-    change_status.start()
+    #change_status.start()
     #auto_backup.start() 
+   
     cog_load_startup()
-    
+   
     #gen.reset()
+    
+    with open(os.path.join(DB_PATH, "temp.pkl"), "wb") as f:
+        f.write(b"")
 
     print('Bot is ready as sef!')
     

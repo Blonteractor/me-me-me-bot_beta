@@ -10,7 +10,7 @@ from typing import List,Any
 from selenium.webdriver.chrome.options import Options
 import youtube_dl
 import os.path 
-
+import math
 import tracemalloc
 tracemalloc.start()
 
@@ -20,9 +20,19 @@ chrome_options.add_argument("disable-gpu")
 chrome_options.add_argument("headless")
 chrome_options.add_argument("log-level=3")
 
-driver = webdriver.Chrome(options = chrome_options, executable_path=os.path.abspath("./Bin/chromedriver.exe")) 
+driver = webdriver.Chrome( options = chrome_options,executable_path=os.path.abspath("./Bin/chromedriver.exe")) 
 
 driver.get("http://www.youtube.com")
+
+millnames = ['','K','M','B']
+
+def millify(n):
+    n = float(n)
+    millidx = max(0,min(len(millnames)-1,
+                        int(math.floor(0 if n == 0 else math.log10(abs(n))/3))))
+
+    return f'{round(n / 10**(3 * millidx),2)} {millnames[millidx]}'
+
 
 class YoutubeVideo:
     def __init__(self, id: str,info:dict = None,requested_by:str = None):
@@ -117,7 +127,9 @@ class YoutubeVideo:
                 "url",
                 "ext"
                 ]
+        
         info = youtube_dl.YoutubeDL(ydl_opts).extract_info(self.id,download = False)
+    
         info2 = {}
         for i in need:
             info2[i] = info[i]
@@ -129,19 +141,33 @@ class YoutubeVideo:
 
     @property
     def likes(self) -> str:
-        return self._info["like_count"]
+        if self._info["like_count"]:
+            return millify(self._info["like_count"])
+        else:
+            return None
     
     @property
     def dislikes(self) -> str:
-        return self._info["dislike_count"]
+        if self._info["dislike_count"]:
+            return millify(self._info["dislike_count"])
+        else:
+            return None
     
     @property
     def views(self) -> str:
-        return self._info["view_count"]
+        if self._info["view_count"]:
+            return millify(self._info["view_count"])
+        else:
+            return None
     
     @property
     def date(self) -> str:
-        return self._info["upload_date"]
+        _date=self._info["upload_date"]
+        if _date:
+            return "-".join([_date[:4],_date[4:6],_date[6:]])
+        else:
+            return None
+
     @property
     def ext(self) -> str:
         return self._info["ext"]
@@ -201,7 +227,12 @@ class YoutubeVideo:
             if x != "H":
                 time[x] = two_dig(time[x])
         
-        return ":".join(list(time.values()))
+               
+        if time["H"] == "0":
+            return ":".join(list(time.values())[1:])
+        else:
+            return ":".join(list(time.values()))
+
 
     
 
@@ -226,20 +257,28 @@ class YoutubePlaylist:
 
     @classmethod
     def from_query(cls, query: str , amount:int = 1,requested_by:str = None):
-        
-        query_string = urllib.parse.urlencode({"search_query": query})
-        html_content = urllib.request.urlopen(
-            "http://www.youtube.com/results?" + query_string)
-        search_results = re.findall(
-    r'href=\"\/playlist\?list=(.*)\" class=', html_content.read().decode())
-        
-        search_results = search_results[:amount]
 
-        yl = search_results
+        yl = []
+        
+        wait = WebDriverWait(driver, 10)
+
+        query_string = urllib.parse.urlencode({"search_query": query})
+                
+        driver.get("http://www.youtube.com/results?" + query_string)
+        search_results = wait.until(EC.presence_of_all_elements_located(
+                                        (By.CSS_SELECTOR,"ytd-playlist-thumbnail a")))[:amount]
+        
+        for link in search_results:
+            driver.execute_script("arguments[0].scrollIntoView();", link)
+
+            split_list = re.split("/|=|&",link.get_attribute("href"))
+            yl += [split_list[split_list.index("list")+1]]    
+       
         if requested_by:
             return [cls(x,requested_by=requested_by) for x in yl]
         else:
             return [cls(x) for x in yl]
+
     def __len__(self) -> int:
         return self.seconds
 

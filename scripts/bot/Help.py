@@ -15,11 +15,13 @@ class MyHelpCommand(commands.HelpCommand):
     def get_command_signature(self, command):
         """Method to return a commands name and signature"""
 
+        ctx=self.context
+
         if not command.signature and isinstance(command,commands.Group) and not command.parent:
-            return f'`ME!` `{command.name}` `[subcommands]`'
+            return f'`{ctx.prefix}{command.name}` `[subcommands]`'
 
         elif command.signature and isinstance(command,commands.Group) and not command.parent:
-            return f'`ME!` `{command.name}` `{command.signature}` `[subcommands]`'
+            return f'`{ctx.prefix}{command.name}` `{command.signature}` `[subcommands]`'
 
         elif not command.signature and command.parent and isinstance(command,commands.Group):
             return f' {self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}` `[subcommands]`'
@@ -28,10 +30,10 @@ class MyHelpCommand(commands.HelpCommand):
             return f' {self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}` `{command.signature}` `[subcommands]`'
 
         elif not command.signature and not command.parent:  # checking if it has no args and isn't a subcommand
-            return f'`ME!` `{command.name}`'
+            return f'`{ctx.prefix}{command.name}`'
 
         elif command.signature and not command.parent:  # checking if it has args and isn't a subcommand
-            return f'`ME!` `{command.name}` `{command.signature}`'
+            return f'`{ctx.prefix}{command.name}` `{command.signature}`'
 
         elif not command.signature and command.parent:  # checking if it has no args and is a subcommand
             return f' {self.get_command_signature(command.parent).replace("`[subcommands]`","")} `{command.name}`'
@@ -71,25 +73,35 @@ class MyHelpCommand(commands.HelpCommand):
         cogs_list = []
 
         for cog in mapping:
-            if cog:
+            if cog: 
                 cog_name = cog.qualified_name.capitalize()
-
                 try:
                     emoji,desc = cog.description.split(maxsplit = 1)
                 except:
                     emoji = ":construction_worker:"
                     desc = "This is under construction, Now Skiddadle Skidoodle."
 
-                embeds += [discord.Embed(title = f"{emoji} **{cog_name}** ", description = desc, color=discord.Colour.magenta())]
+                commands = cog.get_commands()
+                cog_split = [commands[i:i + 25] for i in range(0, len(commands), 25)]
+                n  = len(cog_split)
+                if n ==1:
+                    embed = discord.Embed(title = f"{emoji} **{cog_name}** ", description = desc, color=discord.Colour.magenta())
+                    for command in commands:
+                        embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                    embeds += [embed]
+                    cogs_list+=[cog_name]
+                else:
+                    for i in range(1,n+1):
+                        embed = discord.Embed(title = f"{emoji} **{cog_name} {i}/{n}** ", description = desc, color=discord.Colour.magenta())
+                        for command in cog_split[i-1]:
+                            embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                        embeds += [embed]
+                        cogs_list+=[cog_name+f' {i}/{n}']
 
-                for command in mapping[cog]:
-                    
-                    embeds[len(cogs_list)].add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
-
-                 
-                cogs_list+=[cog_name]
-        embed = discord.Embed(title = "ME! HELP",
-                                description = "All the types of command ME! has to offer \n\nPREFIX ->  `me!` or `epic`\n",
+    
+                
+        embed = discord.Embed(title = f"{ctx.prefix}HELP",
+                                description = f"All the types of command ME! has to offer \n\nPREFIX ->  `{ctx.prefix}`\n",
                                 color=discord.Colour.magenta())
                 
         for cog in mapping:
@@ -100,7 +112,7 @@ class MyHelpCommand(commands.HelpCommand):
                 desc = "This is under construction, Now Skiddadle Skidoodle."
             if cog:
                 cog_name = cog.qualified_name.capitalize()
-                embed.add_field(name = f"{emoji} **{cog_name}**", value= f">>> `ME! HELP {cog_name}`")
+                embed.add_field(name = f"{emoji} **{cog_name}**", value= f">>> `{ctx.prefix}HELP {cog_name}`")
 
         embeds.insert(0,embed)
         
@@ -154,7 +166,10 @@ class MyHelpCommand(commands.HelpCommand):
                         await embed_msg.edit(embed=embeds[page])
 
                     elif str(reaction.emoji) == reactions["nsfw"]: 
-                        page = cogs_list.index(self.nsfw_cog_name)+1
+                        for i in cogs_list:
+                            if self.nsfw_cog_name in i:
+                                page = cogs_list.index(i)+1
+                                break
                      
                         await embed_msg.edit(embed=embeds[page])
 
@@ -173,27 +188,50 @@ class MyHelpCommand(commands.HelpCommand):
 
     async def send_cog_help(self, cog):
         ctx=self.context
+
+        cog_name = cog.qualified_name.capitalize()
         try:
             emoji,desc = cog.description.split(maxsplit = 1)
         except:
             emoji = ":construction_worker:"
             desc = "This is under construction, Now Skiddadle Skidoodle."
 
-        embed = discord.Embed(title = f"{cog.qualified_name} {emoji}", description = desc, color=discord.Colour.magenta())
+        commands = cog.get_commands()
+        cog_split = [commands[i:i + 25] for i in range(0, len(commands), 25)]
+        n  = len(cog_split)
+        if n ==1:
+            embed = discord.Embed(title = f"{emoji} **{cog_name}** ", description = desc, color=discord.Colour.magenta())
+            for command in commands:
+                embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+            await ctx.send(embed=embed)
 
-        for command in cog.get_commands():
-            embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
-        
-        await ctx.send(embed=embed)
+        else:
+            for i in range(1,n+1):
+                embed = discord.Embed(title = f"{emoji} **{cog_name} {i}/{n}** ", description = desc, color=discord.Colour.magenta())
+                for command in cog_split[i-1]:
+                    embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                await ctx.send(embed=embed)   
+
+
     
     async def send_group_help(self, group):
         ctx=self.context
 
         parent_command = list(group.commands)[0].parent
-        embed = discord.Embed(title =  f"{self.get_command_signature(parent_command)} {self.get_command_aliases(parent_command)}",description=self.get_command_help(parent_command), color=discord.Colour.magenta())
-        
-        for command in group.commands:
-            embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
-        
-        await ctx.send(embed=embed)
+
+        commands = list(group.commands)
+        com_split = [commands[i:i + 25] for i in range(0, len(commands), 25)]
+        n  = len(com_split)
+        if n ==1:
+            embed = discord.Embed(title =  f"{self.get_command_signature(parent_command)} {self.get_command_aliases(parent_command)}",description=self.get_command_help(parent_command), color=discord.Colour.magenta())
+            for command in commands:
+                embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+            await ctx.send(embed=embed)
+
+        else:
+            for i in range(1,n+1):
+                embed = discord.Embed(title =  f"{self.get_command_signature(parent_command)} {self.get_command_aliases(parent_command)} {i}/{n}",description=self.get_command_help(parent_command), color=discord.Colour.magenta())
+                for command in com_split[i-1]:
+                    embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                await ctx.send(embed=embed) 
     

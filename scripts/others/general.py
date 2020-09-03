@@ -3,8 +3,8 @@ import os
 import discord
 from colorama import init, Fore, Back, Style
 import json
-import git
-from git import Repo
+#import git
+#from git import Repo
 from datetime import datetime
 import concurrent.futures
 

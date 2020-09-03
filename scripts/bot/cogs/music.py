@@ -144,27 +144,6 @@ def is_dj():
         
     return commands.check(predicate=predicate)
 
-def multi(func):
-    def wrapper(*args, **kwargs):
-        if __name__ == "cogs.testing":
-            return func(*args, **kwargs)
-        else:
-            return "no"
-    return wrapper
-
-@multi
-def process(func, wargs):
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        p = executor.submit(func, wargs)
-
-    return "".join(p.result())
-
-@multi
-def thread(func, wargs):
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        t = executor.submit(func, wargs)
-        
-    return "".join(t.result())
 
 genius = lyricsgenius.Genius(os.environ.get("LYRICS_GENIUS_KEY"))
 genius.verbose = False
@@ -477,6 +456,7 @@ class Music(commands.Cog):
         while flag:
             
             queue = [x for x in state.queue if not type(x) == str]
+           
             if queue != []:
                 try:
                     await ctx.send(f"{queue[0].title} playing now.")
@@ -532,6 +512,7 @@ class Music(commands.Cog):
                 self.log("Ending the queue")
                 if ctx.author.guild not in self.time_l:
                     self.time_l.append(ctx.author.guild)
+               
                 break
 
     async def embed_pages(self, _content, ctx: commands.Context, embed_msg: discord.Message, check=None, wait_time=90):
@@ -550,6 +531,7 @@ class Music(commands.Cog):
         if check is None:
             check = lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id
 
+    
         if type(_content) == str:
             content_list = _content.split("\n")
             content = []
@@ -651,7 +633,7 @@ class Music(commands.Cog):
         await embed_msg.edit(content="", embed=embed)
 
         self.client.loop.create_task(
-            reactions_add(embed_msg, reactions.keys()))
+            reactions_add(embed_msg,list(reactions.keys())[:len(results)]))
 
         while True:
             try:
@@ -793,23 +775,28 @@ class Music(commands.Cog):
             state.queue += [f"--{vid.title}--"]
             state.full_queue += [f"--{vid.title}--"]
             temp = []
-            old_queue = [x for x in TempState(ctx.author.guild).queue if type(x) != str]
-           
+            
+            flog = False
             for i in range(len(vid.entries)):
+                old_queue = [x for x in TempState(ctx.author.guild).queue if type(x) != str]
                 _vid = YoutubeVideo(vid.entries[i][0])
-                                    
+                             
                 if len(old_queue) == 0:
-                    state.queue.append(_vid)
+                    print(_vid)
+                    state.queue += [_vid]
+                    flog = True
+                    print(state.queue)
                     await self.player(ctx, voice)
+                    
                 else:
                     self.log("Song added to queue")
                     
                 temp.append(_vid)
-                
-            if len(old_queue) == 0:
-                state.queue = []    
-            
-            state.queue += temp
+                 
+            if flog:
+                state.queue += temp[1:]
+            else:
+                state.queue += temp
             state.full_queue += temp
             vid._info["entries"] = temp
             
@@ -820,9 +807,17 @@ class Music(commands.Cog):
     @commands.command(name="play-playlist", aliases=["ppl"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def play_playlist(self, ctx, *, query):
-        vid = thread(YoutubePlaylist.from_query, [query]).result()[0]
         play_command = self.client.get_command("play")
-        await ctx.invoke(play_command, query=f"https://www.youtube.com/playlist?list={vid.id}")
+        if("https://www.youtube.com/playlist?list" in query):
+            await ctx.invoke(play_command, query=query)
+        else:
+            vid_list = YoutubePlaylist.from_query(query)
+            if vid_list == []:
+                await ctx.send(">>> Cant find playlist.")
+                return
+            else:
+                vid = vid_list[0]
+                await ctx.invoke(play_command, query=f"https://www.youtube.com/playlist?list={vid.id}")
 
     # ? SEARCH
 
@@ -877,11 +872,17 @@ class Music(commands.Cog):
             ntime = f"{state.time//60}:{two_dig(state.time%60)}"
         else:
             ntime = f"{state.time//3600}:{two_dig(state.time%3600//60)}:{two_dig(state.time//60)}"
+            
         ntime = str(timedelta(seconds=state.time))
         
         embed.add_field(name=f"{vid.title}", value="**  **", inline=False)
         
         amt = int(state.time/vid.seconds*10)
+        
+        ntime = ntime.split(":")
+        for i in range(3 - len(vid.duration.split(":"))):
+            ntime.pop(i)
+        ntime = ":".join(ntime)
         
         embed.add_field(
             name=f"{ntime}/{vid.duration} {':black_square_button:'*amt +':black_large_square:'*(10-amt) }", value="**  **", inline=False)
@@ -915,7 +916,7 @@ class Music(commands.Cog):
 
         embed_msg = await ctx.send(embed=embed)
 
-        await self.embed_pages(ctx=ctx, content_str=lyrics, embed_msg=embed_msg, wait_time=120)
+        await self.embed_pages(ctx=ctx, _content=lyrics, embed_msg=embed_msg, wait_time=120)
         
     @commands.command(name="choose-lyrics")
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
@@ -937,6 +938,7 @@ class Music(commands.Cog):
                 
         hits =[hit for section in sections for hit in section['hits'] if hit['type'] == "song"][0:5]
         
+       
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
@@ -958,8 +960,9 @@ class Music(commands.Cog):
 
         
         for index, result in enumerate(hits):
+            result = result["result"]
             embed.add_field(name=f"*{index + 1}.*",
-                            value=f"**{result['title']} - {result['artist']}**", inline=False)
+                            value=f"**{result['title_with_featured']} - {result['primary_artist']['name']}**", inline=False)
 
         await embed_msg.edit(content="", embed=embed)
 
@@ -998,7 +1001,7 @@ class Music(commands.Cog):
 
                     embed_msg = await ctx.send(embed=embed)
 
-                    await self.embed_pages(ctx=ctx, content_str=lyrics, embed_msg=embed_msg, wait_time=120)
+                    await self.embed_pages(ctx=ctx, _content=lyrics, embed_msg=embed_msg, wait_time=120)
 
     # ? SONG_INFO
 
