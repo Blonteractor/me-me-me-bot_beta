@@ -1599,8 +1599,8 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         '''Stops the current music AND clears the current queue.'''
         state = TempState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
-        state.queue.clear()
-        state.queue_ct.clear()
+        state.queue = []
+        state.queue_ct = []
 
         if voice and voice.is_playing:
             self.log("Player stopped")
@@ -1623,10 +1623,10 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         '''Stops the current music AND clears the current queue.'''
         state = TempState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
-        state.queue.clear()
-        state.full_queue.clear()
-        state.queue_ct.clear()
-        state.full_queue_ct.clear()
+        state.queue = [] 
+        state.full_queue = [] 
+        state.queue_ct = [] 
+        state.full_queue_ct = [] 
 
         if voice and voice.is_playing:
             self.log("Player stopped")
@@ -1678,13 +1678,24 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
     @vc_check()
     async def back(self, ctx):
         '''Plays previous song.'''
+        
+        def find_sub_list(sl,l):
+            results=[]
+            sll=len(sl)
+            for ind in (i for i,e in enumerate(l) if e==sl[0]):
+                if l[ind:ind+sll]==sl:
+                    results.append((ind,ind+sll-1))
+            return int(results[0][0])
+        
         state = TempState(ctx.author.guild)
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
         if voice:
             fq = [x for x in state.full_queue if not isinstance(x, str)]
             q = [x for x in state.queue if not isinstance(x, str)]
-            state.queue += [fq[-(len(q)+1)]]
+            
+            state.queue = [fq[find_sub_list(q, fq) - 1]] + state.queue
+            
             if not voice.is_playing():
 
                 if len(state.queue) == 1:
@@ -1795,29 +1806,29 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
 
         return time
 
-     # ? BACK
-    @commands.command()
-    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    @vc_check()
-    async def back(self, ctx):
-        '''Plays previous song.'''
-        state = TempState(ctx.author.guild)
-        voice = get(self.client.voice_clients, guild=ctx.guild)
+    #  # ? BACK
+    # @commands.command()
+    # @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    # @vc_check()
+    # async def back(self, ctx):
+    #     '''Plays previous song.'''
+    #     state = TempState(ctx.author.guild)
+    #     voice = get(self.client.voice_clients, guild=ctx.guild)
 
-        if voice:
-            fq = [x for x in state.full_queue if not isinstance(x, str)]
-            q = [x for x in state.queue if not isinstance(x, str)]
-            state.queue += [fq[-(len(q)+1)]]
-            if not voice.is_playing():
+    #     if voice:
+    #         fq = [x for x in state.full_queue if not isinstance(x, str)]
+    #         q = [x for x in state.queue if not isinstance(x, str)]
+    #         state.queue += [fq[-(len(q)+1)]]
+    #         if not voice.is_playing():
 
-                if len(state.queue) == 1:
-                    await self.player(ctx, voice)
-                elif voice.is_paused():
-                    voice.resume()
-                    await ctx.invoke(self.client.get_command("restart"))
+    #             if len(state.queue) == 1:
+    #                 await self.player(ctx, voice)
+    #             elif voice.is_paused():
+    #                 voice.resume()
+    #                 await ctx.invoke(self.client.get_command("restart"))
 
-            else:
-                await ctx.invoke(self.client.get_command("restart"))
+    #         else:
+    #             await ctx.invoke(self.client.get_command("restart"))
 
     # ?SEEK
     @commands.command()
