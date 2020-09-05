@@ -12,6 +12,23 @@ imp.load_source("state", os.path.join(
 import general as gen
 from state import CustomContext as cc
 
+from discord.utils import oauth_url
+CLIENT_ID = os.environ.get("DISCORD_CLIENT_ID")
+
+PERMISSIONS = discord.Permissions(administrator=True,
+                                  manage_channels=True,
+                                  add_reactions=True,
+                                  read_messages=True,
+                                  send_messages=True,
+                                  manage_messages=True,
+                                  embed_links=True,
+                                  attach_files=True,
+                                  external_emojis=True,
+                                  connect=True,
+                                  speak=True,
+                                  manage_roles=True,
+                                  manage_emojis=True
+                                  )
 #! RECALLING FUNCTIONS
 def check_command(ctx, member):
     roles = [role for role in member.roles]
@@ -165,7 +182,21 @@ class Utility(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             member =  ctx.author
             await ctx.send(embed=avatar_command(ctx,member))
-
+    
+    @commands.command()
+    async def invite(self,ctx: commands.Context):
+        url = oauth_url(CLIENT_ID, permissions=PERMISSIONS) 
+        embed = discord.Embed(color=discord.Color.dark_magenta(),
+                                url=url,
+                                timestamp=ctx.message.created_at,
+                                title= "Invite Me!",
+                                description="Invite Me! to your guild by clicking on the title.",
+                                )
+        embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar_url)
+        embed.set_thumbnail(url=self.client.user.avatar_url)
+        
+        await ctx.send(embed=embed)
+    
     @commands.group()
     async def setup(self, ctx):    
         if ctx.invoked_subcommand is None:

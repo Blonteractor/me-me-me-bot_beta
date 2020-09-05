@@ -9,7 +9,7 @@ import imp
 #? DISCORD
 import discord
 from discord.ext import commands, tasks
-from discord.utils import oauth_url
+
 
 #? ALL OTHERS
 from itertools import cycle
@@ -33,22 +33,9 @@ from state import GuildState
 
 PATHS = ["./Bin"]
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")
-CLIENT_ID = os.environ.get("DISCORD_CLIENT_ID")
+
 COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
-PERMISSIONS = discord.Permissions(administrator=True,
-                                  manage_channels=True,
-                                  add_reactions=True,
-                                  read_messages=True,
-                                  send_messages=True,
-                                  manage_messages=True,
-                                  embed_links=True,
-                                  attach_files=True,
-                                  external_emojis=True,
-                                  connect=True,
-                                  speak=True,
-                                  manage_roles=True,
-                                  manage_emojis=True
-                                  )
+
 WELCOME_MSG = """
 asasas
 """
@@ -182,19 +169,7 @@ async def develop(ctx , on_off, cog=""):
         
     gen.db_update("var",var)
 
-@client.command()
-async def invite(ctx: commands.Context):
-    url = oauth_url(CLIENT_ID, permissions=PERMISSIONS) 
-    embed = discord.Embed(color=discord.Color.dark_magenta(),
-                            url=url,
-                            timestamp=ctx.message.created_at,
-                            title= "Invite Me!",
-                            description="Invite Me! to your guild by clicking on the title.",
-                            )
-    embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar_url)
-    embed.set_thumbnail(url=client.user.avatar_url)
-    
-    await ctx.send(embed=embed)
+
 
 # ? EVENTS
 
