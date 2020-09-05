@@ -207,9 +207,10 @@ class YoutubeVideo:
 
         time = {"H":0, "M":0, "S":0}
 
-        time["S"] = duration%60
-        time["M"] = (duration%3600)//60
-        time["H"] = duration//3600
+        print(duration)
+        time["S"] = int(duration)%60
+        time["M"] = (int(duration)%3600)//60
+        time["H"] = int(duration)//3600
 
         return time
 

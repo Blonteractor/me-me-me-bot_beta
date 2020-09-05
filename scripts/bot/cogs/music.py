@@ -1956,10 +1956,10 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         except Exception as e:
             self.log(e)
             playlist_db = {
-                f"{ctx.author.name}'s Playlist": []}
+                f"{ctx.author.name}Playlist": []}
             playlist = []
             await ctx.send("Your playlist has been created.")
-            pname = f"{ctx.author.name}'s Playlist"
+            pname = f"{ctx.author.name}Playlist"
             ctx.States.User.playlist = playlist_db
 
         embed = discord.Embed(title=pname,
@@ -2002,9 +2002,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     return
             except:
                 playlist_db = {
-                    f"{ctx.author.name}'s Playlist": []}
+                    f"{ctx.author.name}Playlist": []}
                 await ctx.send("Your playlist has been created.")
-                pname = f"{ctx.author.name}'s Playlist"
+                pname = f"{ctx.author.name}Playlist"
 
             playlist_db[pname] += [{"id": vid.id, "title": vid.title}]
 
@@ -2043,9 +2043,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     return
             except:
                 playlist_db = {
-                    f"{ctx.author.name}'s Playlist": []}
+                    f"{ctx.author.name}Playlist": []}
                 await ctx.send("Your playlist has been created.")
-                pname = f"{ctx.author.name}'s Playlist"
+                pname = f"{ctx.author.name}Playlist"
 
             playlist_db[str(ctx.author.id)
                         ][pname] += [{"id": vid.id, "title": vid.title}]
@@ -2085,13 +2085,13 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             await ctx.send("Your playlist too smol for rearrangement.")
             return
 
-            if P1 < 1 or P1 > len(playlist_db[pname]) or P2 < 1 or P2 > len(playlist_db[pname]):
-                return
+        if P1 < 1 or P1 > len(playlist_db[pname]) or P2 < 1 or P2 > len(playlist_db[pname]):
+            return
 
-            playlist_db[pname][P1-1], playlist_db[pname][P2 - 1] = playlist_db[pname][P2-1], playlist_db[pname][P1-1]
-                                                                                                 
-            await ctx.send(f"Number {P1} and {P2} have been rearranged.")
-            self.log(f"altered {pname}")
+        playlist_db[pname][P1-1], playlist_db[pname][P2 - 1] = playlist_db[pname][P2-1], playlist_db[pname][P1-1]
+                                                                                                
+        await ctx.send(f"Number {P1} and {P2} have been rearranged.")
+        self.log(f"altered {pname}")
 
         ctx.States.User.playlist = playlist_db
 
@@ -2123,7 +2123,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             playlist_db = {
                 f"{ctx.author.name}Playlist": []}
             await ctx.send("Your playlist has been created.")
-            pname = f"{ctx.author.name}'s Playlist"
+            pname = f"{ctx.author.name}Playlist"
 
         else:
             if len(playlist_db[pname]) < 1:
@@ -2163,9 +2163,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 return
         except:
             playlist_db = {
-                f"{ctx.author.name}'s Playlist": []}
+                f"{ctx.author.name}Playlist": []}
             await ctx.send("Your playlist has been created.")
-            pname = f"{ctx.author.name}'s Playlist"
+            pname = f"{ctx.author.name}Playlist"
 
         else:
 
@@ -2182,6 +2182,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         playlist_db = ctx.States.User.playlist
+        state = TempState(ctx.author.guild)
 
         try:
             if name in playlist_db:
@@ -2199,9 +2200,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 return
         except:
             playlist_db = {
-                f"{ctx.author.name}'s Playlist": []}
+                f"{ctx.author.name}Playlist": []}
             await ctx.send("Your playlist has been created.")
-            pname = f"{ctx.author.name}'s Playlist"
+            pname = f"{ctx.author.name}Playlist"
 
         else:
             if len(playlist_db[pname]) < 1:
@@ -2221,18 +2222,18 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     else:
                         playlist[i] = YoutubeVideo(playlist[i]["id"])
 
-                TempState(ctx.author.guild).queue += [f"----{pname}----"]
-                self.full_queue += [f"----{pname}----"]
+                state.queue += [f"----{pname}----"]
+                state.full_queue += [f"----{pname}----"]
 
                 temp = []
                 for i in playlist:
-                    self.full_queue_ct += [i]
-                    TempState(ctx.author.guild).queue_ct += [i]
+                    state.full_queue_ct += [i]
+                    state.queue_ct += [i]
 
                     if isinstance(i, YoutubeVideo):
-                        old_queue = [x for x in TempState(ctx.author.guild).queue if type(x) != str]
-                        TempState(ctx.author.guild).queue += [i]
-                        self.full_queue += [i]
+                        old_queue = [x for x in state.queue if type(x) != str]
+                        state.queue += [i]
+                        state.full_queue += [i]
 
                         if len(old_queue) == 0:
                             await self.player(ctx, voice)
@@ -2240,29 +2241,29 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                             self.log("Song added to queue")
 
                     else:
-                        TempState(ctx.author.guild).queue += [f"--{i.title}--"]
-                        self.full_queue += [f"--{i.title}--"]
+                        state.queue += [f"--{i.title}--"]
+                        state.full_queue += [f"--{i.title}--"]
                         for j in range(len(i.entries)):
 
                             _vid = YoutubeVideo(i.entries[j][0])
 
                             temp += [_vid]
 
-                        old_queue = [x for x in TempState(ctx.author.guild).queue if type(x) != str]
-                        TempState(ctx.author.guild).queue += temp
-                        self.full_queue += temp
+                        old_queue = [x for x in state.queue if type(x) != str]
+                        state.queue += temp
+                        state.full_queue += temp
                         vid._info["entries"] = temp
                         if len(old_queue) == 0:
                             await self.player(ctx, voice)
                         else:
                             self.log("Song added to queue")
 
-                        TempState(ctx.author.guild).queue += [f"--{i.title}--"]
-                        self.full_queue += [f"--{i.title}--"]
+                        state.queue += [f"--{i.title}--"]
+                        state.full_queue += [f"--{i.title}--"]
 
-                TempState(ctx.author.guild).queue += [f"----{pname}----"]
+                state.queue += [f"----{pname}----"]
 
-                self.full_queue += [f"----{pname}----"]
+                state.full_queue += [f"----{pname}----"]
 
                 await ctx.send("Your Playlist has been added to the Queue.")
                 
@@ -2289,9 +2290,9 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                 return
         except:
             playlist_db = {
-                f"{ctx.author.name}'s Playlist": []}
+                f"{ctx.author.name}Playlist": []}
             await ctx.send("Your playlist has been created.")
-            pname = f"{ctx.author.name}'s Playlist"
+            pname = f"{ctx.author.name}Playlist"
 
         else:
             playlist = playlist_db[pname]
@@ -2327,13 +2328,18 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
 
                 data = await r.read()
                 filename = f"{self.DPATH}\\{vid.id}.{vid.ext}"
-                temp = open(filename, 'w+b')
-                temp.write(data)
+                
+                with open(filename, 'wb+') as temp:
+                    temp.write(b"")
+                    temp.write(data)
 
                 file = discord.File(filename, filename=f'{vid.title}.mp3')
 
-                await ctx.send(file=file)
-                temp.close()
+                try:
+                    await ctx.send(file=file)
+                except discord.Forbidden:
+                    await ctx.send("Song you requested was too mega, only files less than 8MB can be sent.")
+            
                 os.remove(filename)
 
     # ? EXPORT
