@@ -213,7 +213,7 @@ class MyHelpCommand(commands.HelpCommand):
                 await ctx.send(embed=embed)   
 
 
-    
+
     async def send_group_help(self, group):
         ctx=self.context
 
@@ -235,3 +235,11 @@ class MyHelpCommand(commands.HelpCommand):
                     embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
                 await ctx.send(embed=embed) 
     
+    async def command_not_found(self,string):
+
+        ctx = self.context
+        cog = ctx.bot.get_cog(string.capitalize())
+        if not cog:
+            await ctx.send(f"No command {string} found.")
+        else:
+            await self.send_cog_help(cog)
