@@ -179,9 +179,6 @@ class Music(commands.Cog):
     juke_box_url = "https://media.discordapp.net/attachments/623969275459141652/680480864316030996/juke_box.jpg"
 
     time = 0
-    QPATH = os.path.join(
-        os.path.dirname(__file__), '../../../cache.bot/Queue')
-    QPATH = os.path.abspath(QPATH)
 
     DPATH = os.path.join(
         os.path.dirname(__file__), '../../../cache.bot/Download')
@@ -249,13 +246,6 @@ class Music(commands.Cog):
 
     def join_list(self, ls) -> str:  # joins list
         return " ".join(ls)
-
-    def queue_delete(self):     # Deleting Queue folder
-
-        Queue_infile = os.listdir(self.QPATH)
-
-        if Queue_infile:
-            shutil.rmtree(self.QPATH)
 
     # * ERROR HANDLER
     @commands.Cog.listener()
@@ -902,7 +892,9 @@ class Music(commands.Cog):
         queue = [x for x in state.queue if type(x) != str]
         vid = queue[0]
         song = genius.search_song(vid.title)
-
+        if not song:
+            await ctx.send("Can't Find lyrics. Try using choose-lyrics command.")
+            return
         lyrics = song.lyrics
 
         embed = discord.Embed(title=f"LYRICS - {song.title}",  # TODO make a function
@@ -937,7 +929,9 @@ class Music(commands.Cog):
                 
                 
         hits =[hit for section in sections for hit in section['hits'] if hit['type'] == "song"][0:5]
-        
+        if hits ==[]:
+            await ctx.send("Can't Find lyrics. Use different name of the song.")
+            return
        
         async def reactions_add(message, reactions):
             for reaction in reactions:
@@ -966,7 +960,7 @@ class Music(commands.Cog):
 
         await embed_msg.edit(content="", embed=embed)
 
-        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()))
+        self.client.loop.create_task(reactions_add(embed_msg, reactions.keys()[:len(hits)]))
         
         while True:
             try:
@@ -1360,8 +1354,7 @@ class Music(commands.Cog):
         if change1 > 1 and change2 > 1 and change1 <= len(queue) and change2 <= len(queue) and change2 >= change1:
             temp = queue[change1:change2+1]
             queue = [x for x in state.queue if type(x) != str]
-            state.queue[state.queue.index(
-queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
+            state.queue[state.queue.index(queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
             self, queue_ct[1:1] = temp
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
@@ -1415,7 +1408,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
     @vc_check()
     async def cow(self, ctx, change1, change2):
         '''Plays a queue member NOW.'''
-
+        state = TempState(ctx.author.guild)
         try:
             change1, change2 = int(change1), int(change2)
         except:
@@ -2313,6 +2306,7 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
 
 # *------------------------------------DOWNLOAD----------------------------------------------------------------------------------------------------------------------------------------------------
 
+    
     # ? DOWNLOAD
 
 
@@ -2320,9 +2314,16 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def download(self, ctx, *, query):
         '''Downloads a song for you, so your pirated ass doesn't have to look for it online.'''
-
-        vid = await self.searching(ctx, query)
-
+        if "http" in query:
+            if "www.youtube.com" in query:
+                split_list = re.split("/|=|&", query)
+                if "watch?v" in split_list:
+                    vid = YoutubeVideo(split_list[split_list.index(
+                        "watch?v")+1], requested_by=ctx.author.name)
+        else:
+            vid = await self.searching(ctx, query)
+        if not os.path.exists(self.DPATH):
+            os.makedirs(self.DPATH)
         async with aiohttp.ClientSession() as cs:
             async with cs.get(vid.audio_url) as r:
 
@@ -2360,22 +2361,11 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
 
         for i in range(len(queue)):
             queue[i] = {"url": queue[i].url, "title": queue[i].title}
-        url = "http://pastebin.com/api/api_post.php"
-        values = {'api_option': 'paste',
-                  'api_dev_key': 'd46b0fe89434b31ed9348e080a1a5142',
-                  'api_paste_code': queue,
-                  'api_paste_private': '0',
-                  'api_paste_name': 'queue.php',
-                  'api_paste_expire_date': 'N',
-                  'api_paste_format': 'json',
-                  'api_user_key': ''}
-
-        data = urllib.parse.urlencode(values)
-        data = data.encode('utf-8')  # data should be bytes
-        req = urllib.request.Request(url, data)
-        with urllib.request.urlopen(req) as response:
-            the_page = response.read().decode("utf-8")
-        await ctx.send(f"here is your page Mister , {the_page}")
+  
+        url = "https://hastebin.com/documents"
+        response = requests.post(url, data=json.dumps(queue))
+        the_page = "https://hastebin.com/raw/" + response.json()['key']
+        await ctx.send(f"Here is your page Master, {the_page}")
 
     # ? IMPORT
     @commands.command(name="import")
@@ -2388,43 +2378,24 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
 
-        if "https://pastebin.com/" not in url:
-            await ctx.send("pwease add a pastw biwn link uwu")
-            return
-        
-        part = url[-8:]
-        url = "https://pastebin.com/raw/" + part
-
         response = requests.get(url)
         content = response.content.decode("utf-8")
-        
-        if "<!DOCTYPE HTML>" in content:
-            await ctx.send("niggwa pwease shut uwp uwu")
-            return
-        content = list(content)
-        for i in range(len(content)):
-            if content[i] == "'":
-                content[i] = '"'
-        content = "".join(content)
         try:
-            with open("yes.json", "w") as f:
-                f.write(content)
-
-            content = ast.literal_eval(content)
-        except Exception as w:
-            await ctx.send("niggwa will yo ass pwease shut uwp uwu")
+            content = json.loads(content)
+        except:
+            await ctx.send("Please recheck your link.")
             return
 
         if type(content) != list:
-            await ctx.send("nigga shut or gay")
+            await ctx.send("Please recheck your link.")
             return
 
         for i in content:
             if type(i) != dict:
-                await ctx.send("nigga shut up")
+                await ctx.send("Please recheck your link.")
                 return
             if "title" not in i or "url" not in i:
-                await ctx.send("nigga shut up1")
+                await ctx.send("Please recheck your link.")
                 return
 
         for i in content:
@@ -2435,11 +2406,14 @@ queue[0]) + 1, state.queue.index(queue[0]) + 1] = temp
                     if "watch?v" in split_list:
                         vid = YoutubeVideo(split_list[split_list.index(
                             "watch?v")+1], requested_by=ctx.author.name)
-                        if TempState(ctx.author.guild).queue == []:
-                            TempState(ctx.author.guild).queue.append(vid)
+                        state = TempState(ctx.author.guild)
+                        state.queue +=[vid]
+                        state.full_queue +=[vid]
+                        state.queue_ct +=[vid]
+                        state.full_queue_ct +=[vid] 
+                        if len(state.queue) == 1:
                             await self.player(ctx, voice)
-                        else:
-                            TempState(ctx.author.guild).queue.append(vid)
+                        
 
     @commands.command(name="generic-play", aliases=["gp", "genplay"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
