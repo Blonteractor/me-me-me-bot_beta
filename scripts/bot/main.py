@@ -13,13 +13,11 @@ from discord.ext import commands, tasks
 
 #? ALL OTHERS
 from itertools import cycle
-import asyncio
-from selenium.webdriver import Chrome as webdriver
 
 import traceback    
 
 #? FILES
-import Help
+from Help import MyHelpCommand
 
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../others/general.py"))
@@ -29,7 +27,7 @@ import general as gen
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../others/state.py"))
 
-from state import GuildState
+from state import GuildState, CustomContext
 
 PATHS = ["./Bin"]
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")
@@ -49,9 +47,14 @@ async def determine_prefix(bot, message):
         return state_prefix if state_prefix is not None else prefix
     else:
         return prefix
+    
+class Bot(commands.Bot):
+    async def on_message(self, message):
+        ctx = await self.get_context(message, cls=CustomContext)
+        await self.invoke(ctx)
 
-client = commands.Bot(command_prefix=determine_prefix, case_insensitive=True)
-status = cycle(gen.status)
+client = Bot(command_prefix=determine_prefix, case_insensitive=True, help_command=MyHelpCommand())
+status = []
 
 # * COG SET UP STUFF
 
@@ -176,7 +179,7 @@ async def develop(ctx , on_off, cog=""):
 # * STATUS CHANGE
 @tasks.loop(seconds=6)
 async def change_status():
-    await client.change_presence(activity=discord.Game(next(status)))
+    await client.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=next(status)))
 
 @tasks.loop(hours = 24)
 async def auto_backup():
@@ -187,11 +190,13 @@ async def auto_backup():
 @client.event
 async def on_ready():
   
-    client.help_command = Help.MyHelpCommand()
-    #change_status.start()
+    change_status.start()
     #auto_backup.start() 
    
     cog_load_startup()
+    
+    global status
+    status = cycle([f"me! {name}" for name in list(client.cogs.keys())])
    
     #gen.reset()
     
