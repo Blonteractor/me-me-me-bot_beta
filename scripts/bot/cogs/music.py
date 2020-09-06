@@ -438,7 +438,7 @@ class Music(commands.Cog):
                     await ctx.send(f"{queue[0].title} playing now.")
                     self.log("Downloaded song.")
                    
-                    voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options="-nostats -hide_banner -loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
+                    voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options="-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
                                after=lambda e: check_queue())
 
                     TempState(ctx.author.guild).time = 0
@@ -758,10 +758,8 @@ class Music(commands.Cog):
                 _vid = YoutubeVideo(vid.entries[i][0])
                              
                 if len(old_queue) == 0:
-                    print(_vid)
                     state.queue += [_vid]
                     flog = True
-                    print(state.queue)
                     await self.player(ctx, voice)
                     
                 else:
@@ -1785,30 +1783,6 @@ class Music(commands.Cog):
 
         return time
 
-    #  # ? BACK
-    # @commands.command()
-    # @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    # @vc_check()
-    # async def back(self, ctx):
-    #     '''Plays previous song.'''
-    #     state = TempState(ctx.author.guild)
-    #     voice = get(self.client.voice_clients, guild=ctx.guild)
-
-    #     if voice:
-    #         fq = [x for x in state.full_queue if not isinstance(x, str)]
-    #         q = [x for x in state.queue if not isinstance(x, str)]
-    #         state.queue += [fq[-(len(q)+1)]]
-    #         if not voice.is_playing():
-
-    #             if len(state.queue) == 1:
-    #                 await self.player(ctx, voice)
-    #             elif voice.is_paused():
-    #                 voice.resume()
-    #                 await ctx.invoke(self.client.get_command("restart"))
-
-    #         else:
-    #             await ctx.invoke(self.client.get_command("restart"))
-
     # ?SEEK
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
@@ -1824,7 +1798,7 @@ class Music(commands.Cog):
 
         if time:
             voice.source = discord.FFmpegPCMAudio(
-                queue[0].audio_url, before_options=f"-nostats -hide_banner -loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
+                queue[0].audio_url, before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
 
             state.time = time
           
@@ -1846,7 +1820,7 @@ class Music(commands.Cog):
         if time:
             if time <= queue[0].seconds - state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f"-nostats -hide_banner -loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
+                    queue[0].audio_url, before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
                 state.time += time
             else:
                 await ctx.send("The seek is greater than the song limit.")
@@ -1868,7 +1842,7 @@ class Music(commands.Cog):
         if time:
             if time <= state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f"-nostats -hide_banner -loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
+                    queue[0].audio_url, before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
                 state.time -= time
             else:
                 await ctx.send("The seek is greater than the song limit.")
