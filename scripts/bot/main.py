@@ -196,7 +196,7 @@ async def on_ready():
     cog_load_startup()
     
     global status
-    status = cycle([f"me! {name}" for name in list(client.cogs.keys())])
+    status = cycle([f"me! help {name}" for name in list(client.cogs.keys())])
    
     #gen.reset()
     

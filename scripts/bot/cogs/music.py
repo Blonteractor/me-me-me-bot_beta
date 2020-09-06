@@ -1,34 +1,20 @@
+
 import discord
+from discord.ext.commands.core import Command, cooldown
 from discord.utils import get
 import aiohttp
-from discord import FFmpegPCMAudio
 from discord.ext import commands, tasks
-
 import json
 from typing import List, Any
-import shutil
-from lxml import etree
-import lxml
 import re
-import urllib.parse
-import urllib.request
 import requests
-import urllib3
 from asyncio import sleep, TimeoutError
 import asyncio
-from youtube_dl import YoutubeDL
 import youtube_dl
-import time as t
-from os import system
-import time
 import lyricsgenius
 import random
-import concurrent.futures
-import ast
 from lyricsgenius.song import Song
 from datetime import timedelta
-import traceback
-
 import imp
 import os
 imp.load_source("general", os.path.join(
@@ -452,7 +438,7 @@ class Music(commands.Cog):
                     await ctx.send(f"{queue[0].title} playing now.")
                     self.log("Downloaded song.")
                    
-                    voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options=" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
+                    voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options="-nostats -hide_banner -loglevel 1 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
                                after=lambda e: check_queue())
 
                     TempState(ctx.author.guild).time = 0
@@ -1838,7 +1824,7 @@ class Music(commands.Cog):
 
         if time:
             voice.source = discord.FFmpegPCMAudio(
-                queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
+                queue[0].audio_url, before_options=f"-nostats -hide_banner -loglevel 1 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
 
             state.time = time
           
@@ -1860,7 +1846,7 @@ class Music(commands.Cog):
         if time:
             if time <= queue[0].seconds - state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
+                    queue[0].audio_url, before_options=f"-nostats -hide_banner -loglevel 1 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
                 state.time += time
             else:
                 await ctx.send("The seek is greater than the song limit.")
@@ -1882,7 +1868,7 @@ class Music(commands.Cog):
         if time:
             if time <= state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f" -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
+                    queue[0].audio_url, before_options=f"-nostats -hide_banner -loglevel 1 -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
                 state.time -= time
             else:
                 await ctx.send("The seek is greater than the song limit.")
@@ -1914,7 +1900,33 @@ class Music(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def playlist(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send_help(self.playlist)
+            pl_db = ctx.States.User.playlist
+            
+            embed = discord.Embed(title="",
+                                color=discord.Colour.dark_purple())
+            embed.set_author(name="Me!Me!Me!",
+                                icon_url=self.client.user.avatar_url)
+            embed.set_thumbnail(url=self.music_logo)
+            
+            for no, playlist in enumerate(pl_db.keys()):
+                embed.add_field(name=f"**{no + 1}.**", value=f"**{playlist}** \t\t `{len(pl_db[playlist])}`", inline=False)
+            
+            await ctx.send(embed=embed)
+            
+    @playlist.command(aliases=["make"])
+    @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
+    async def new(self, ctx, name):
+        playlist_db = ctx.States.User.playlist
+        
+        if name in playlist_db.keys():
+            await ctx.send("Playlists can't have the same name, I know creativity is lacking but think of a different name.")
+            return
+            
+        playlist_db = {**playlist_db, **{name: []}}
+        ctx.States.User.playlist = playlist_db
+        
+        await ctx.send(f"A playlist with the name `{name}` was created, use the `playlist add` command to add songs.")
+        
 
     @playlist.command(aliases=["v"])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
@@ -1974,7 +1986,14 @@ class Music(commands.Cog):
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
-        vid = await self.searching(ctx, query)
+        if "http" in query:
+            if "www.youtube.com" in query:
+                split_list = re.split("/|=|&", query)
+                if "watch?v" in split_list:
+                    vid = YoutubeVideo(split_list[split_list.index(
+                        "watch?v")+1], requested_by=ctx.author.name)
+        else:
+            vid = await self.searching(ctx, query)
 
         if vid:
 
