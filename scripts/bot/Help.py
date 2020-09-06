@@ -243,3 +243,6 @@ class MyHelpCommand(commands.HelpCommand):
             await ctx.send(f"No command {string} found.")
         else:
             await self.send_cog_help(cog)
+
+    async def send_error_message(self,string):
+        pass
