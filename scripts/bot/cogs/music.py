@@ -138,42 +138,19 @@ genius.verbose = False
 class Music(commands.Cog):
     ''':musical_note: The title says it all, commands related to music and stuff.'''
     
-    properties = ["queue", "full_queue", "queue_ct", "full_queue_ct", "cooldown", "loop_song", "loop_q", "skip_song", "time_for_disconnect", "shuffle_lim", "shuffle_var", "juke_box_embed_msg"]
-    
-    queue: List[Any] = [
-    ]                                      # queue of the format [items,"playlist name",playlist items,"/playlist name",items]
-    full_queue: List[Any] = []
-    queue_ct: List[Any] = []
-    full_queue_ct: List[Any] = []
-    
-    cooldown = 0
-
-    # variable used for looping song
-    loop_song = False
-    loop_q = False
-
-    skip_song = False
-    # variable used for skipping song
-    # time for auto disconnect
-    time_for_disconnect = 300
-
+    properties = ["queue", "full_queue", "queue_ct", "full_queue_ct", "cooldown", "loop_song", "loop_q", "skip_song", "time_for_disconnect", "shuffle_lim", "shuffle_var"]
     # str of loading emoji
     loading_emoji = ""
-
     # url of the image of thumbnail (vTube)
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
-    juke_box_url = "https://media.discordapp.net/attachments/623969275459141652/680480864316030996/juke_box.jpg"
-
-    time = 0
-
+   
     DPATH = os.path.join(
         os.path.dirname(__file__), '../../../cache.bot/Download')
     DPATH = os.path.abspath(DPATH)
-    
-    dj_role_id = 0
 
-    shuffle_lim = None
-    shuffle_var = 0
+    cooldown = 0
+    
+    
    # * ------------------------------------------------------------------------------PREREQUISITES--------------------------------------------------------------------------------------------------------------
 
     def __init__(self, client):
@@ -206,13 +183,13 @@ class Music(commands.Cog):
         driver.quit()
 
     def log(self, msg):                     # funciton for logging if developer mode is on
-        debug_info = gen.db_receive("var")["cogs"]
-        try:
-            debug_info[self.qualified_name]
-        except:
-            debug_info[self.qualified_name] = 0
-        if debug_info[self.qualified_name] == 1:
-            return gen.error_message(msg, gen.cog_colours[self.qualified_name])
+        # debug_info = gen.db_receive("var")["cogs"]
+        # try:
+        #     debug_info[self.qualified_name]
+        # except:
+        #     debug_info[self.qualified_name] = 0
+        # if debug_info[self.qualified_name] == 1:
+        return gen.error_message(msg, gen.cog_colours[self.qualified_name])
 
     def chunks(self, lst, n):
         for i in range(0, len(lst), n):
@@ -249,7 +226,7 @@ class Music(commands.Cog):
             awoo_channel = GuildState(guild).voice_text_channel
             voice = get(self.client.voice_clients, guild=guild)
 
-            for i in range(GuildState(guild).auto_pause_time):
+            for i in range(int(GuildState(guild).auto_pause_time)):
                 if self.disconnect_check(voice) and voice.is_playing():
                     await sleep(1)
                 else:
@@ -281,7 +258,7 @@ class Music(commands.Cog):
         async def disconnect(guild):
             voice = get(self.client.voice_clients, guild=guild)
 
-            for i in range(GuildState(guild).auto_disconnect_time):
+            for i in range(int(GuildState(guild).auto_disconnect_time)):
                 if voice and not voice.is_playing():
                     await asyncio.sleep(1)
                 else:
@@ -448,7 +425,7 @@ class Music(commands.Cog):
                     if ctx.author.guild not in self.time_l:
                         self.time_l.append(ctx.author.guild)
             
-                    if self.shuffle_lim:
+                    if state.shuffle_lim:
                         
                         state.shuffle_var += 1
                         if state.shuffle_var == state.shuffle_lim:

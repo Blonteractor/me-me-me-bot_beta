@@ -20,7 +20,7 @@ temp_data = {}
 class GuildState:
     """Stores state variables of a guild"""
     
-    properties = ["rank_roles", "rank_levels", "juke_box", "auto_meme", "vc_text", "level_up", "dj_role", "extra_cooldown", "auto_pause", "auto_disconnect", "doujin_category", "prefix"]
+    properties = ["rank_roles", "rank_levels", "jb_channel","jb_embed_id","jb_queue_id","jb_image_id","jb_loading_id", "auto_meme", "vc_text", "level_up", "dj_role", "extra_cooldown", "auto_pause", "auto_disconnect", "doujin_category", "prefix"]
     
     def __init__(self, guild: discord.Guild):
         self.guild = guild
@@ -29,9 +29,6 @@ class GuildState:
         make_db_if_not_exists(path=f"{DBPATH}\\{self.db_name}.json")
         
         [self.new_property(pr) for pr in self.properties if self.get_property(pr, rtr=True) is None]
-        
-    def get_channel(self, name) -> discord.TextChannel:
-        return get(self.guild.channels, name=name)
     
     def get_role(self, **kwargs) -> discord.Role:
         return get(self.guild.roles, name=kwargs.get("name")) if "name" in kwargs else get(self.guild.roles, id=int(kwargs.get("id")))
@@ -119,28 +116,42 @@ class GuildState:
         return dict(zip(levels, roles))
     
     @property
-    def juke_box_channel(self) -> discord.TextChannel:
-        name = self.get_property("juke_box")
+    def jb_channel(self) -> discord.TextChannel:
+        id = self.get_property("jb_channel")
+        return self.guild.get_channel(int(id)) if id != None else id
     
-        return self.get_channel(name)
+    @property
+    def jb_queue_id(self):
+        return self.get_property("jb_queue")
+    
+    @property
+    def jb_embed_id(self):
+        return self.get_property("jb_embed")
+    
+    @property
+    def jb_image_id(self):
+        return self.get_property("jb_image")
+    
+    @property
+    def jb_loading_id(self):
+        return self.get_property("jb_loading")
        
     @property
     def auto_meme_channel(self) -> discord.TextChannel:
-        name = self.get_property("auto_meme")
+        id = self.get_property("auto_meme")
            
-        return self.get_channel(name)
+        return self.guild.get_channel(int(id)) if id != None else id
     
     @property
     def voice_text_channel(self) -> discord.TextChannel:
-        name = self.get_property("vc_text")
+        id = self.get_property("vc_text")
         
-        return self.get_channel(name)
+        return self.guild.get_channel(int(id)) if id != None else id
     
     @property
     def level_up_channel(self) -> discord.TextChannel:
-        name = self.get_property("level_up")
-        
-        return self.get_channel(name)
+        id = self.get_property("level_up")
+        return self.guild.get_channel(int(id)) if id != None else id
     
     @property
     def dj_role(self) -> discord.Role:
@@ -159,12 +170,12 @@ class GuildState:
     @property
     def auto_pause_time(self) -> str:
         res = self.get_property("auto_pause")
-        return res if res is not None else "0"
+        return res if res is not None else "1"
     
     @property
     def auto_disconnect_time(self) -> str:
         res = self.get_property("auto_disconnect")
-        return res if res is not None else "0"
+        return res if res is not None else "1"
     
     @property
     def doujin_category(self) -> str:
@@ -187,10 +198,26 @@ class GuildState:
         self.set_property(property_name="rank_nums", property_val=ranks)
         self.set_property(property_name="rank_roles", property_val=roles)
         
-    @juke_box_channel.setter
-    def juke_box_channel(self, channel: discord.TextChannel):
-        self.set_property(property_name="juke_box", property_val=channel.name)
-        
+    @jb_channel.setter
+    def jb_channel(self, channel: discord.TextChannel):
+        self.set_property(property_name="jb_channel", property_val=channel.id)
+    
+    @jb_embed_id.setter
+    def jb_embed_id(self, embed_id):
+        self.set_property(property_name="jb_embed",property_val=embed_id)
+    
+    @jb_image_id.setter
+    def jb_image_id(self, image_id):
+        self.set_property(property_name="jb_image",property_val=image_id)
+    
+    @jb_queue_id.setter
+    def jb_queue_id(self, queue_id):
+        self.set_property(property_name="jb_queue",property_val=queue_id)
+    
+    @jb_loading_id.setter
+    def jb_loading_id(self, queue_id):
+        self.set_property(property_name="jb_loading",property_val=queue_id)
+
     @auto_meme_channel.setter
     def auto_meme_channel(self, channel: discord.TextChannel):
         self.set_property(property_name="auto_meme", property_val=channel.name)
@@ -654,8 +681,9 @@ class TempState:
     shuffle_lim = TempProperty(name="shuffle_lim")                                                                                                                    
     shuffle_var = TempProperty(name="shuffle_var")
     
-    juke_box_embed_msg = TempProperty(name="juke_box_embed_msg")
-    juke_box_loading = TempProperty(name="juke_box_loading")
+    playing = TempProperty(name="playing", default=False)
+    old_queue_embed = TempProperty(name="old_queue_embed", default=[])
+    old_queue_queue = TempProperty(name="old_queue_queue", default=[])
     
     def __init__(self, guild):
         self.guild = guild.id
