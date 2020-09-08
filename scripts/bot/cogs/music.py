@@ -438,7 +438,7 @@ class Music(commands.Cog):
                     await ctx.send(f"{queue[0].title} playing now.")
                     self.log("Downloaded song.")
                    
-                    voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, before_options="-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
+                    voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, executable="./Bin/ffmpeg.exe", before_options="-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
                                after=lambda e: check_queue())
 
                     TempState(ctx.author.guild).time = 0
@@ -1798,7 +1798,7 @@ class Music(commands.Cog):
 
         if time:
             voice.source = discord.FFmpegPCMAudio(
-                queue[0].audio_url, before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
+                queue[0].audio_url, executable="./Bin/ffmpeg.exe", before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
 
             state.time = time
           
@@ -1820,7 +1820,7 @@ class Music(commands.Cog):
         if time:
             if time <= queue[0].seconds - state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
+                    queue[0].audio_url, executable="./Bin/ffmpeg.exe", before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time + state.time}")
                 state.time += time
             else:
                 await ctx.send("The seek is greater than the song limit.")
@@ -1842,7 +1842,7 @@ class Music(commands.Cog):
         if time:
             if time <= state.time:
                 voice.source = discord.FFmpegPCMAudio(
-                    queue[0].audio_url, before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
+                    queue[0].audio_url,executable="./Bin/ffmpeg.exe", before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {state.time - time}")
                 state.time -= time
             else:
                 await ctx.send("The seek is greater than the song limit.")
