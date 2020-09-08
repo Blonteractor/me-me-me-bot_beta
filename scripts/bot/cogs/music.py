@@ -2168,7 +2168,7 @@ class Music(commands.Cog):
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         playlist_db = ctx.States.User.playlist
-        state = TempState(ctx.author.guild)
+        state = ctx.States.Temp
 
         try:
             if name in playlist_db:
@@ -2250,6 +2250,8 @@ class Music(commands.Cog):
                 state.queue += [f"----{pname}----"]
 
                 state.full_queue += [f"----{pname}----"]
+                
+                print(state.queue)
 
                 await ctx.send("Your Playlist has been added to the Queue.")
                 

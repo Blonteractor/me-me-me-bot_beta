@@ -93,7 +93,7 @@ class GuildState:
         
     @property
     def admin_role(self):
-        for role in guild.roles:
+        for role in self.guild.roles:
             if role.permissions.administrator:
                 return role
         
@@ -658,7 +658,7 @@ class TempState:
     juke_box_loading = TempProperty(name="juke_box_loading")
     
     def __init__(self, guild):
-        self.guild = guild.id
+        self.guild = str(guild.id)
     #     self._finalizer = weakref.finalize(self, self.reset)
     
     # @staticmethod

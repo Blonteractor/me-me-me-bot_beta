@@ -254,8 +254,6 @@ class Utility(commands.Cog):
         
         ctx.States.Guild.auto_meme_channel = channel
         
-        self.client.get_cog("meme").a_meme.start()
-        
         await ctx.send(f">>> Auto meme channel set to {channel.mention}")
     
     @setup.command(aliases=["cool"])     

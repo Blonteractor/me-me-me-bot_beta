@@ -41,6 +41,9 @@ EMOJIS_PATH = os.path.abspath("./assets/emojis")
 DB_PATH = os.path.abspath("./Database")
 
 prefix = gen.permu("me! ") + gen.permu("epic ")
+
+OWNERS = [413287145323626496, 580282285002194966]
+
 async def determine_prefix(bot, message):
     if message.guild:
         state_prefix = GuildState(message.guild).prefix
@@ -60,26 +63,37 @@ status = []
 
 is_cog = lambda filename: filename.endswith(".py") and not filename.endswith("-d.py")
 
+def mod_command():
+    async def predicate(ctx):
+        channel = ctx.message.channel
+        if ctx.author.id in OWNERS:
+            return True
+        else:
+            await channel.send("Really?")
+            return False
+    return commands.check(predicate)
+
+
 @client.command(aliases=["enable"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def load(ctx, extension):
     client.load_extension(f"cogs.{extension}")
     await ctx.send(f">>> {extension.capitalize()} commands are now ready to deploy.")
     
 @client.command(aliases=["enable_all"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def load_all(ctx):
     cog_load_startup()
 
 @client.command(aliases=["disable"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def unload(ctx, extension):
     
     client.unload_extension(f"cogs.{extension}")
     await ctx.send(f">>> {extension.capitalize()} commands were stopped, Master. ")
 
 @client.command(aliases=["disable_all"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def unload_all(ctx):
     
     for filename in os.listdir(COGS_PATH):
@@ -87,7 +101,7 @@ async def unload_all(ctx):
             client.unload_extension(f"cogs.{filename[:-3]}")
 
 @client.command(aliases=["refresh"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def reload(ctx, extension):
     client.unload_extension(f"cogs.{extension}")
     client.load_extension(f"cogs.{extension}")
@@ -95,7 +109,7 @@ async def reload(ctx, extension):
 
 
 @client.command(aliases=["refresh_all"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def reload_all(ctx):
     
     for filename in os.listdir(COGS_PATH):
@@ -112,7 +126,7 @@ def cog_load_startup():
 
 # * BACKING UP AND COMMIT STUFF
 @client.command(aliases=["commit", "baccup"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def backup(ctx, *, msg=""):
     done = gen.commit(f"| Manual - {msg} |")
     if not msg == "" and done:
@@ -123,7 +137,7 @@ async def backup(ctx, *, msg=""):
         await ctx.send(">>> Couldn't Backup Since Commit upto the mark.")
 
 @client.command(aliases = ["reboot"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def re_init(ctx):
     
     await ctx.invoke(client.get_command("unload_all"))
@@ -131,7 +145,7 @@ async def re_init(ctx):
     os.execv(sys.executable, ['python'] + sys.argv)  
 
 @client.command(aliases=["Debug","Development"])
-#@commands.has_role(gen.admin_role_id)
+@mod_command()
 async def develop(ctx , on_off, cog=""):
 
     var = gen.db_receive("var")
@@ -236,6 +250,18 @@ async def on_command_error(ctx, error: discord.DiscordException):
                                   color = discord.Color.red(),
                                    description=f"We have cooldowns here, try again after `{round(error.retry_after, 1)}s` ")
             await ctx.send(embed=embed)
+    elif isinstance(error, commands.MissingPermissions):
+        embed = discord.Embed(title="Missing Permissions",
+                                  color = discord.Color.red())
+        
+        description = "You are missing the following permsissions\n"
+        for perm in error.missing_perms:
+            description += f"\n`{perm}`"
+        description += "\n\n You can go beg the mods for them or something idk."
+        
+        embed.description = description
+        
+        await ctx.send(embed=embed)
     else:
         if not isinstance(error,commands.MissingRequiredArgument):
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
