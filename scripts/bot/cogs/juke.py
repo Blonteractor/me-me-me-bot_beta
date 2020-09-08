@@ -28,6 +28,18 @@ class Juke(commands.Cog):
         self.reset_phase = False
         self.juke_update.start()
 
+    def log(self, msg):                     # funciton for logging if developer mode is on
+        debug_info = gen.db_receive("var")
+        try:
+            debug_info["cogs"][self.qualified_name]
+        except:
+            debug_info["cogs"][self.qualified_name] = debug_info["cogs"]["DEV"]
+        if debug_info["cogs"][self.qualified_name] == 1:
+            if self.qualified_name in gen.cog_colours:
+                return gen.error_message(msg, gen.cog_colours[self.qualified_name])
+            else:
+                return gen.error_message(msg, gen.cog_colours["default"])
+
     @tasks.loop(seconds = 1)
     async def juke_update(self):
         for guild in self.client.guilds:

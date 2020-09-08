@@ -23,9 +23,9 @@ status = ["Saksham's Son", 'Is Mayank', 'Who Is Gay']
 
 subreddits = ["memes", "dankmemes", "cursedcomments", "animemes"]
 
-cog_colours = {"levels":"cyan", "Music":"green"}
+cog_colours = {"Levels":"cyan", "Music":"green","default":"pink"}
 
-cog_cooldown = {"music": 3, "default": 2, "nsfw": 3}
+cog_cooldown = {"Music": 3, "default": 2, "Nsfw": 3}
 
 epic = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
