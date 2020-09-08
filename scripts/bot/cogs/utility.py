@@ -227,13 +227,15 @@ class Utility(commands.Cog):
         
     @setup.command()  
     @commands.has_permissions(administrator=True)   
-    async def juke(self, ctx, channel: discord.TextChannel):
+    async def juke(self, ctx, channel):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(channel) in rem:
             ctx.States.Guild.juke_box_channel = None
             await ctx.send(f">>> Juke box removed")
-            return    
+            return   
+        
+        channel: discord.TextChannel 
         
         ctx.States.Guild.juke_box_channel = channel
         
@@ -243,14 +245,16 @@ class Utility(commands.Cog):
         
     @setup.command(aliases=["ameme", "aoutom"])     
     @commands.has_permissions(administrator=True)
-    async def automeme(self, ctx, channel: discord.TextChannel):
+    async def automeme(self, ctx, channel):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         
         if str(channel) in rem:
             ctx.States.Guild.auto_meme_channel = None
             await ctx.send(f">>> Auto meme removed")
-            return    
+            return 
+        
+        channel: discord.TextChannel    
         
         ctx.States.Guild.auto_meme_channel = channel
         
@@ -271,20 +275,22 @@ class Utility(commands.Cog):
         
     @setup.command(aliases=["dj"])     
     @commands.has_permissions(administrator=True)
-    async def djrole(self, ctx, role: discord.Role):
+    async def djrole(self, ctx, role):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         if str(role) in rem:
             ctx.States.Guild.dj_role = None
             await ctx.send(f">>> DJ role removed")
             return    
+        
+        role: discord.Role
         ctx.States.Guild.dj_role = role
         
         await ctx.send(f">>> DJ role changed to {role.mention}")  
         
     @setup.command(aliases=["lvl", "lvlup"])  
     @commands.has_permissions(administrator=True)   
-    async def levelup(self, ctx, channel: discord.TextChannel):
+    async def levelup(self, ctx, channel):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         
         rem = ["disable", "remove"]
@@ -292,13 +298,15 @@ class Utility(commands.Cog):
             ctx.States.Guild.level_up_channel = None
             await ctx.send(f">>> The level up channel was removed")
             return    
+        
+        channel: discord.TextChannel 
         ctx.States.Guild.level_up_channel = channel
         
         await ctx.send(f">>> The level up channel chaged to to {channel.mention}")  
         
     @setup.command()     
     @commands.has_permissions(administrator=True)
-    async def vc(self, ctx, channel: discord.TextChannel):
+    async def vc(self, ctx, channel):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         
         rem = ["disable", "remove"]
@@ -306,6 +314,8 @@ class Utility(commands.Cog):
             ctx.States.Guild.voice_text_channel = None
             await ctx.send(f">>> The primary voice text channel was removed")
             return    
+        
+        channel: discord.TextChannel
         ctx.States.Guild.voice_text_channel = channel
         
         await ctx.send(f">>> The primary voice text channel chaged to to {channel.mention}") 

@@ -1949,7 +1949,8 @@ class Music(commands.Cog):
         no = 1
         for song in playlist:
             title = song["title"]
-            embed.add_field(name=f"**{no}**", value=f"**{title}**")
+            url = "https://www.youtube.com/watch?v={id}".format(id = song["id"])
+            embed.add_field(name=f"**{no}**", value=f"**[{title}]({url})**")
             no += 1
         await ctx.send(embed=embed)
 
@@ -2250,8 +2251,6 @@ class Music(commands.Cog):
                 state.queue += [f"----{pname}----"]
 
                 state.full_queue += [f"----{pname}----"]
-                
-                print(state.queue)
 
                 await ctx.send("Your Playlist has been added to the Queue.")
                 

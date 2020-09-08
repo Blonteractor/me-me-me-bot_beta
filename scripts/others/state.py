@@ -189,18 +189,30 @@ class GuildState:
         
     @juke_box_channel.setter
     def juke_box_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="juke_box", property_val=None)
+            return
         self.set_property(property_name="juke_box", property_val=channel.name)
         
     @auto_meme_channel.setter
     def auto_meme_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="auto_meme", property_val=None)
+            return
         self.set_property(property_name="auto_meme", property_val=channel.name)
         
     @voice_text_channel.setter
     def voice_text_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="voice_text", property_val=None)
+            return
         self.set_property(property_name="voice_text", property_val=channel.name)
         
     @level_up_channel.setter
     def level_up_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="level_up", property_val=None)
+            return
         self.set_property(property_name="level_up", property_val=channel.name)
     
     @extra_cooldown.setter

@@ -123,7 +123,6 @@ class Meme(commands.Cog):
             subreddit = reddit.subreddit(sr)
             hot_memes = subreddit.hot(limit=limit)
             meme_info = gen.db_receive("meme")
-            print("\n\nhere1")
             
             if sr in meme_info:
                 sub_info = meme_info[sr]
@@ -138,13 +137,10 @@ class Meme(commands.Cog):
                         
                         sub_info["total"].append(str(submission))
                         sub_info["unshowed"].append(str(submission))
-            print("here2")
             
             gen.db_update("meme",meme_info)
-            print("for loop end of iteration")
        
         #! MAKE SUBMISSION EMBED
-        print("here3")
         meme_info = gen.db_receive("meme")
 
         for sub_name in meme_info:
@@ -165,7 +161,6 @@ class Meme(commands.Cog):
 
                 for guild in self.client.guilds:       
                     channel = GuildState(guild).auto_meme_channel
-                    print(channel)
                     if channel is None:
                         continue        
                     await channel.send(embed = meh)
