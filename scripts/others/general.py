@@ -23,15 +23,12 @@ status = ["Saksham's Son", 'Is Mayank', 'Who Is Gay']
 
 subreddits = ["memes", "dankmemes", "cursedcomments", "goodanimemes"]
 
-cog_colours = {"levels":"cyan", "music":"green"}
+cog_colours = {"Levels":"cyan", "Music":"green","default":"pink"}
 
-cog_cooldown = {"music": 3, "default": 2, "nsfw": 3}
+cog_cooldown = {"Music": 3, "default": 2, "Nsfw": 3}
 
 epic = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-dj_role = None
-auto_meme_channel = None
-juke_box_channel = None
 extra_cooldown = 0
 
 admin_role_id = 632906375839744001

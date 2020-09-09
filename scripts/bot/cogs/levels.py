@@ -19,7 +19,7 @@ imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
 from state import State, CustomContext, GuildState
 
-class levels(commands.Cog):
+class Levels(commands.Cog):
     ''':up: Level up by sending messages, earn new ranks and powers by doing so.'''
 
     cooldown = 0
@@ -39,15 +39,17 @@ class levels(commands.Cog):
 
         self.give_exp.start()
 
-    def log(self, msg):  # ! funciton for logging if developer mode is on
-        cog_name = os.path.basename(__file__)[:-3]
-        debug_info = gen.db_receive("var")["cogs"]
+    def log(self, msg):                     # funciton for logging if developer mode is on
+        debug_info = gen.db_receive("var")
         try:
-            debug_info[cog_name]
+            debug_info["cogs"][self.qualified_name]
         except:
-            debug_info[cog_name] = 0
-        if debug_info[cog_name] == 1:
-            return gen.error_message(msg, gen.cog_colours[cog_name])
+            debug_info["cogs"][self.qualified_name] = debug_info["cogs"]["DEV"]
+        if debug_info["cogs"][self.qualified_name] == 1:
+            if self.qualified_name in gen.cog_colours:
+                return gen.error_message(msg, gen.cog_colours[self.qualified_name])
+            else:
+                return gen.error_message(msg, gen.cog_colours["default"])
 
     def cog_unload(self):
         self.give_exp.cancel()
@@ -311,4 +313,4 @@ class levels(commands.Cog):
             return
 
 def setup(client):
-    client.add_cog(levels(client))
+    client.add_cog(Levels(client))

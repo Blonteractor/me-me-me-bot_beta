@@ -267,4 +267,5 @@ async def on_command_error(ctx, error: discord.DiscordException):
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
             gen.error_message(error)   
 
+
 client.run(TOKEN)
