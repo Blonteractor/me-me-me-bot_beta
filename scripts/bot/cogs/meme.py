@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands,tasks
-import json
 
 import imp,os
 imp.load_source("general", os.path.join(
@@ -116,7 +115,7 @@ class Meme(commands.Cog):
 
 
     #* AUTOMEME
-    @tasks.loop(hours = 1)
+    @tasks.loop(minutes = 30)
     async def a_meme(self):
         limit = 5       
         reddit = gen.reddit
@@ -140,11 +139,10 @@ class Meme(commands.Cog):
                         
                         sub_info["total"].append(str(submission))
                         sub_info["unshowed"].append(str(submission))
-                    
+            
             gen.db_update("meme",meme_info)
        
         #! MAKE SUBMISSION EMBED
-
         meme_info = gen.db_receive("meme")
 
         for sub_name in meme_info:

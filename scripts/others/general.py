@@ -21,7 +21,7 @@ roles = ['Prostitute', 'Rookie', 'Adventurer', 'Player', 'Hero']
 
 status = ["Saksham's Son", 'Is Mayank', 'Who Is Gay']
 
-subreddits = ["memes", "dankmemes", "cursedcomments", "animemes"]
+subreddits = ["memes", "dankmemes", "cursedcomments", "goodanimemes"]
 
 cog_colours = {"Levels":"cyan", "Music":"green","default":"pink"}
 

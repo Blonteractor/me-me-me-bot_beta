@@ -90,7 +90,7 @@ class GuildState:
         
     @property
     def admin_role(self):
-        for role in guild.roles:
+        for role in self.guild.roles:
             if role.permissions.administrator:
                 return role
         
@@ -220,14 +220,23 @@ class GuildState:
 
     @auto_meme_channel.setter
     def auto_meme_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="auto_meme", property_val=None)
+            return
         self.set_property(property_name="auto_meme", property_val=channel.name)
         
     @voice_text_channel.setter
     def voice_text_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="voice_text", property_val=None)
+            return
         self.set_property(property_name="voice_text", property_val=channel.name)
         
     @level_up_channel.setter
     def level_up_channel(self, channel: discord.TextChannel):
+        if channel is None:
+            self.set_property(property_name="level_up", property_val=None)
+            return
         self.set_property(property_name="level_up", property_val=channel.name)
     
     @extra_cooldown.setter
@@ -686,7 +695,7 @@ class TempState:
     old_queue_queue = TempProperty(name="old_queue_queue", default=[])
     
     def __init__(self, guild):
-        self.guild = guild.id
+        self.guild = str(guild.id)
     #     self._finalizer = weakref.finalize(self, self.reset)
     
     # @staticmethod
