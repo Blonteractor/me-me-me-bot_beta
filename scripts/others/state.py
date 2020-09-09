@@ -175,7 +175,7 @@ class GuildState:
     @property
     def auto_disconnect_time(self) -> str:
         res = self.get_property("auto_disconnect")
-        return res if res is not None else "1"
+        return res if res is not None else "15"
     
     @property
     def doujin_category(self) -> str:
@@ -223,21 +223,21 @@ class GuildState:
         if channel is None:
             self.set_property(property_name="auto_meme", property_val=None)
             return
-        self.set_property(property_name="auto_meme", property_val=channel.name)
+        self.set_property(property_name="auto_meme", property_val=channel.id)
         
     @voice_text_channel.setter
     def voice_text_channel(self, channel: discord.TextChannel):
         if channel is None:
             self.set_property(property_name="voice_text", property_val=None)
             return
-        self.set_property(property_name="voice_text", property_val=channel.name)
+        self.set_property(property_name="voice_text", property_val=channel.id)
         
     @level_up_channel.setter
     def level_up_channel(self, channel: discord.TextChannel):
         if channel is None:
             self.set_property(property_name="level_up", property_val=None)
             return
-        self.set_property(property_name="level_up", property_val=channel.name)
+        self.set_property(property_name="level_up", property_val=channel.id)
     
     @extra_cooldown.setter
     def extra_cooldown(self, cooldown: int):
@@ -688,11 +688,15 @@ class TempState:
     time_for_disconnect = TempProperty(name="time_for_disconnect", default=0)
     
     shuffle_lim = TempProperty(name="shuffle_lim")                                                                                                                    
-    shuffle_var = TempProperty(name="shuffle_var")
+    shuffle_var = TempProperty(name="shuffle_var",default = 0)
     
     playing = TempProperty(name="playing", default=False)
     old_queue_embed = TempProperty(name="old_queue_embed", default=[])
     old_queue_queue = TempProperty(name="old_queue_queue", default=[])
+
+    paused_by_handler = TempProperty(name = "paused_by_handler",default= False)
+    voice_handler_time = TempProperty(name = "voice_handler_time",default=0)
+    
     
     def __init__(self, guild):
         self.guild = str(guild.id)
