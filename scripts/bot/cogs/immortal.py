@@ -18,7 +18,7 @@ class Immortal(commands.Cog):
         try:
             debug_info["cogs"][self.qualified_name]
         except:
-            debug_info["cogs"][self.qualified_name] = debug_info["cogs"]["DEV"]
+            debug_info["cogs"][self.qualified_name] = debug_info["DEV"]
         if debug_info["cogs"][self.qualified_name] == 1:
             if self.qualified_name in gen.cog_colours:
                 return gen.error_message(msg, gen.cog_colours[self.qualified_name])

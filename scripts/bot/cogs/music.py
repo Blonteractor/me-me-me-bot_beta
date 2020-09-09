@@ -182,7 +182,7 @@ class Music(commands.Cog):
         try:
             debug_info["cogs"][self.qualified_name]
         except:
-            debug_info["cogs"][self.qualified_name] = debug_info["cogs"]["DEV"]
+            debug_info["cogs"][self.qualified_name] = debug_info["DEV"]
         if debug_info["cogs"][self.qualified_name] == 1:
             if self.qualified_name in gen.cog_colours:
                 return gen.error_message(msg, gen.cog_colours[self.qualified_name])
@@ -1179,7 +1179,7 @@ class Music(commands.Cog):
                 squeue = state.queue
                 i1 = squeue.index(f"--{temp.title}--")
                 i2 = squeue[i1+1:].index(f"--{temp.title}--")
-                squeue[i1:i2+1] = []
+                squeue[i1:i1+i2+2] = []
 
                 state.queue=squeue
 
@@ -1244,20 +1244,20 @@ class Music(commands.Cog):
 
             if isinstance(temp1, YoutubeVideo):
                 i11 = state.queue.index(temp1)
-                i12 = i11 + 1
+                i12 = -1
             else:
                 i11 = state.queue.index(f"--{temp1.title}--")
-                i12 = state.queue[i11+1:].index(f"--{temp1.title}--") + 1
+                i12 = state.queue[i11+1:].index(f"--{temp1.title}--")
 
             if isinstance(temp2, YoutubeVideo):
                 i21 = state.queue.index(temp2)
-                i22 = i21 + 1
+                i22 = -1
             else:
                 i21 = state.queue.index(f"--{temp2.title}--")
-                i22 = state.queue[i21+1:].index(f"--{temp2.title}--") + 1
+                i22 = state.queue[i21+1:].index(f"--{temp2.title}--")
 
             squeue = state.queue
-            squeue[i11:i12], squeue[i21:i22] = squeue[i21:i22], squeue[i11:i12]
+            squeue[i11:i12+i11+2], squeue[i21:i22+i21+2] = squeue[i21:i22+i21+2], squeue[i11:i12+i11+2]
             state.queue = squeue
         else:
             await ctx.send("The numbers you entered are just as irrelevant as your existence.")
@@ -1276,47 +1276,36 @@ class Music(commands.Cog):
             await ctx.send("NUMBERS GODDAMN NUMBERS")
             return
         queue = state.queue_ct
+        squeue = state.queue
         if change > 1 and change <= len(queue):
             temp1 = queue[change-1]
             temp2 = queue[0]
-            state.queue_ct.pop(state.queue.index(temp1))
             
-            queue2 = state.queue_ct[:]
-            queue2.pop(state.queue.index(temp1))
-            state.queue_ct = queue2
-            
-            state.queue_ct.insert(1, temp1)
-            queue2 = state.queue_ct[:]
-            queue2.insert(1, temp1)
-            state.queue_ct = queue2
-            
-            state.queue_ct.pop(0)
-            queue2 = state.queue_ct[:]
-            queue2.pop(0)
-            state.queue_ct = queue2
+            queue.pop(change-1)
+            queue.insert(0,temp1)
+
+            squeue.remove([x for x in squeue if type(x) != str][0])
 
             if isinstance(temp1, YoutubeVideo):
-                i11 = state.queue.index(temp1)
-                i12 = i11 + 1
+                squeue.remove(temp1)
+                squeue.insert(0,temp1)
             else:
-                i11 = state.queue.index(f"--{temp1.title}--")
-                i12 = TempState(ctx.author.guild).queue[i11+1:].index(f"--{temp1.title}--") + 1
+                i11 = squeue.index(f"--{temp1.title}--")
+                i12 = squeue[i11+1:].index(f"--{temp1.title}--")
+                pl = squeue[i11:i12+i11+2]
+                squeue[i11:i12+i11+2] = []
+                squeue = pl  + squeue
+
 
             if isinstance(temp2, YoutubeVideo):
-                i21 = state.queue.index(temp2)
-                i22 = i21 + 1
-            else:
-                i21 = state.queue.index(f"--{temp2.title}--")
-                i22 = state.queue[i21+1:].index(f"--{temp2.title}--") + 1
+                queue.remove(temp2)
 
-            queue = [x for x in state.queue if type(x) != str]
-            state.queue[i11:i12], state.queue[i21:i22] = [
-            ], queue[0:1] + [state.queue[i11:i12]]
-
+            state.queue = squeue
+            state.queue_ct = queue
         else:
             await ctx.send("The number you entered is just as irrelevant as your existence.")
             return
-        await ctx.invoke(self.client.get_command("next"))
+        await ctx.invoke(self.client.get_command("restart"))
 
     # ? QUEUE FULL
     @Queue.group(name="full")
