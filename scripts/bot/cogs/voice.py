@@ -51,6 +51,10 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
         
         if ctx.voice_client is None:
             return True
+        
+        dj_role = GuildState(ctx.author.guild).dj_role
+        if dj_role is not None and dj_role.id in [role.id for role in ctx.author.roles]:
+            return True
 
         members = ctx.guild.voice_client.channel.members
         
