@@ -43,6 +43,7 @@ class Nsfw(commands.Cog):
     cooldown = 0
 
     nhentai_logo = "https://i.imgur.com/uLAimaY.png" #! nhentai logo url
+    
     tags:  List[str] = gen.db_receive("nos")["tags"] #! the tags by which doujins are searched
     
     #* INIT AND PREQUISITES
@@ -235,6 +236,7 @@ class Nsfw(commands.Cog):
                 rand = randint(1, prev)
         else:
             return search
+        
     #* ERROR HANDLER
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -451,11 +453,11 @@ class Nsfw(commands.Cog):
     @nsfw_command()
     async def random(self, ctx): 
         '''Gives you a random doujin to enjoy yourself to'''
+        
         self.loading_emoji = str(discord.utils.get(ctx.guild.emojis, name="loading"))
         embed_msg = await ctx.send(f"Searching for doujins on nhentai.......{self.loading_emoji}")
         
         search = await self.find_doujins(search_by="tag", search_tag=str(choice(self.tags)), page_limit=50)
-
         doujin = choice(search)
         doujin_id = str(doujin).split("]")[0][2:]
 
@@ -509,7 +511,7 @@ class Nsfw(commands.Cog):
 
         search = await self.find_doujins(search_by="character", search_tag=query, page_limit=15)
 
-        if len(search) < 0:
+        if len(search) > 0:
             doujin = choice(search)
             doujin_id = str(doujin).split("]")[0][2:]
 
@@ -528,7 +530,7 @@ class Nsfw(commands.Cog):
             user_vault = ctx.States.User.vault
             
             if user_vault == {}:
-                await ctx.send("Looks like your vault is empty! Add doujins to you rvault by pressing ⭐ on the doujin embed")
+                await ctx.send("Looks like your vault is empty! Add doujins to your vault by pressing ⭐ on the doujin embed")
                 return
             content = [nhenpy.NHentaiDoujin(f"/g/{item}") for item in user_vault.values()]
             

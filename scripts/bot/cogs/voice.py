@@ -53,7 +53,11 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
             return True
         
         dj_role = GuildState(ctx.author.guild).dj_role
-        if dj_role is not None and dj_role.id in [role.id for role in ctx.author.roles]:
+        
+        if dj_role is None:
+            return True
+        
+        if dj_role.id in [role.id for role in ctx.author.roles]:
             return True
 
         members = ctx.guild.voice_client.channel.members
@@ -77,16 +81,12 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration,
                                                         check=check)
                 
-                if str(reaction) == reactions["admin"]:
-                    supposed_admins = await reaction.users().flatten()
+                if str(reaction) == reactions["admin"] and user.top_role.permissions.administrator:
+                    await msg.clear_reactions()
+                    await msg.edit(content=">>> Admin abooz, pls demote!")
+                    await msg.edit(content="Admin power excercised: " + yes_msg)
                     
-                    for supposed_admin in supposed_admins:
-                        if supposed_admin.top_role.permissions.administrator:
-                            await msg.clear_reactions()
-                            await msg.edit(content=">>> Admin abooz, pls demote!")
-                            await msg.edit(content="Admin power excercised: " + yes_msg)
-                            
-                            return True
+                    return True        
                         
                 else:
                     if user.id not in already_voted:
@@ -207,8 +207,39 @@ class Voice(commands.Cog):
                               url=vid.url, color=discord.Colour.blurple())
         embed.set_author(name="Me!Me!Me!",
                          icon_url=self.client.user.avatar_url)
-        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
-                         icon_url=ctx.message.author.avatar_url)
+        
+        voice = ctx.voice_client
+        volume = round(voice.source.volume * 100)
+        
+        VOLUME_LOWER = 33
+        VOLUME_UPPER = 66
+        
+        footer = ""
+        
+        if not voice.is_playing():
+            footer += "   ⏸"
+        else:
+            footer += "   ▶"
+            
+        if state.loop_song:
+            footer += "   🔂"
+        if state.loop_q:
+            footer += "   🔁"
+            
+        if state.shuffle_lim is not None:
+            footer += f"   🔀 {state.shuffle_lim}"
+            
+        if volume <= VOLUME_LOWER:
+            footer += "   🔈"
+        elif volume <= VOLUME_UPPER and volume > VOLUME_LOWER:
+            footer += "   🔉"
+        elif volume <= 100 and volume > VOLUME_UPPER:
+            footer += "   🔊"
+        footer += f" {volume}"
+        
+            
+        embed.set_footer(text=footer,
+                            icon_url=ctx.message.author.avatar_url)
 
         embed.set_thumbnail(url=vid.thumbnail)
 
@@ -283,7 +314,12 @@ class Voice(commands.Cog):
         if voice:
             temp = state.loop_song
             state.loop_song = True
+            
             voice.stop()
+            if ctx.author.guild in gen.time_l:
+                gen.time_l.remove(ctx.author.guild)
+                
+            state.time = 0
             await asyncio.sleep(0.01)
             state.loop_song = temp
         else:
@@ -294,6 +330,11 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=["p"])
     @vc_check()
+    @vote(votes_required=0.5,
+        vote_duration=20,
+        vote_msg="Looks like somone wants to pause song, VOTE!",
+        no_msg="Vote failed! Song will continue.",
+        yes_msg="Vote passed! Pausing song now..")
     async def pause(self, ctx):
         '''Pauses the current music.'''
         voice = get(self.client.voice_clients, guild=ctx.guild)
@@ -330,6 +371,11 @@ class Voice(commands.Cog):
     # ? STOP
     @commands.command(aliases=["st"])
     @vc_check()
+    @vote(votes_required=0.5,
+    vote_duration=20,
+    vote_msg="Looks like somone wants to stop the song, VOTE!",
+    no_msg="Vote failed! Not stopping song.",
+    yes_msg="Vote passed! Song stopped.")
     async def stop(self, ctx):
         '''Stops the current music AND clears the current queue.'''
         state = TempState(ctx.author.guild)
@@ -405,6 +451,11 @@ class Voice(commands.Cog):
 
     @commands.command()
     @vc_check()
+    @vote(votes_required=0.5,
+        vote_duration=20,
+        vote_msg="Looks like somone wants to play the previous song, VOTE!",
+        no_msg="Vote failed! Not playing previous the current song.",
+        yes_msg="Vote passed! Playing previuos song now...")
     async def back(self, ctx):
         '''Plays previous song.'''
         
@@ -429,6 +480,11 @@ class Voice(commands.Cog):
     # ? LEAVE
     @commands.command()
     @vc_check()
+    @vote(votes_required=0.5,
+        vote_duration=20,
+        vote_msg="Looks like somone wants me! to leave vc, VOTE!",
+        no_msg="Vote failed! No leaving vc.",
+        yes_msg="Vote passed! Leaving vc now.")
     async def leave(self, ctx):
         '''Leaves the voice channel.'''
         state = TempState(ctx.author.guild)

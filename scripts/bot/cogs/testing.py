@@ -82,10 +82,6 @@ class Testing(commands.Cog):
     @commands.command()
     async def role_rgb(self,ctx,role: discord.Role):
         await ctx.send(role.color.to_rgb())
-        
-    @commands.command()
-    async def tes(self, ctx, role_id):
-        await ctx.send(f">>> {get(ctx.guild.roles, id=int(role_id))}")
 
 def setup(client):
     client.add_cog(Testing(client))

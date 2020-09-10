@@ -5,6 +5,7 @@ import pytesseract
 import requests
 from PIL import Image
 import imp,os
+import io
 
 imp.load_source("general", os.path.join(
     os.path.dirname(__file__), "../../others/general.py"))
@@ -72,7 +73,6 @@ class Fun(commands.Cog):
             await ctx.send(">>> Enter the question boss.")
 
     #! DIX
-    # @commands.command(aliases=['penis', 'dicc', 'peepee', 'dick'])
     @commands.command(aliases=['penis', 'dicc', 'peepee', 'dick'])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def dix(self, ctx):
@@ -82,9 +82,6 @@ class Fun(commands.Cog):
         dicc_string = random_p 
         name = str(ctx.message.author)[:-5]
       
-        for role in ctx.author.roles:
-            if role.id == gen.admin_role_id:
-                dicc_string = 11
         dix = discord.Embed(
             title = "ME! DIX MACHINE",
             colour = discord.Colour.from_rgb(255,255,255),

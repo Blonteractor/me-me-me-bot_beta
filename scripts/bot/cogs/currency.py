@@ -120,7 +120,6 @@ class Currency(commands.Cog):
     @commands.cooldown(rate=3, per=30, type=commands.BucketType.user)
     async def bank(self, ctx):
         '''When you are broke, cry in front of the GOVT. and get some loan to use in a game which will have no impact on your true irl broke ass.'''
-        ctx = await self.client.get_context(ctx.message, cls=cc)
         
         name = ctx.author.name
         disc = ctx.author.discriminator
@@ -140,8 +139,6 @@ class Currency(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def souls(self, ctx):
         '''Just the balance of your souls. THATS IT.'''
-        
-        ctx = await self.client.get_context(ctx.message, cls=cc)
     
         await ctx.send(f">>> Souls of {ctx.author.name}: {ctx.State.User.souls}.")
 
