@@ -23,7 +23,7 @@ status = ["Saksham's Son", 'Is Mayank', 'Who Is Gay']
 
 subreddits = ["memes", "dankmemes", "cursedcomments", "goodanimemes"]
 
-cog_colours = {"Levels":"cyan", "Music":"green","default":"pink"}
+cog_colours = {"Levels":"cyan", "Music":"green","default":"red"}
 
 cog_cooldown = {"Music": 3, "default": 2, "Nsfw": 3}
 
@@ -35,6 +35,9 @@ admin_role_id = 632906375839744001
 
 MEE6_disc = 4876
 
+time_l = []
+
+guild_res_cancel = []
 
 level_Rookie = 5
 level_Adventurer = 10

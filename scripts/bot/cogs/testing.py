@@ -64,7 +64,9 @@ class Testing(commands.Cog):
         try:
             debug_info["cogs"][self.qualified_name]
         except:
-            debug_info["cogs"][self.qualified_name] = debug_info["cogs"]["DEV"]
+            debug_info["cogs"][self.qualified_name] = debug_info["DEV"]
+            gen.db_update("var",debug_info)
+
         if debug_info["cogs"][self.qualified_name] == 1:
             if self.qualified_name in gen.cog_colours:
                 return gen.error_message(msg, gen.cog_colours[self.qualified_name])
