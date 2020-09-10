@@ -37,7 +37,7 @@ def nsfw_command():
     return commands.check(predicate)
 
 
-class nsfw(commands.Cog):
+class Nsfw(commands.Cog):
     ''':high_heel: Commands for big boiz.'''
     
     cooldown = 0
@@ -57,15 +57,19 @@ class nsfw(commands.Cog):
 
         self.cooldown += gen.extra_cooldown
 
-    def log(self, msg):  # ! funciton for logging if developer mode is on
-        cog_name = os.path.basename(__file__)[:-3]
-        debug_info = gen.db_receive("var")["cogs"]
+    def log(self, msg):                     # funciton for logging if developer mode is on
+        debug_info = gen.db_receive("var")
         try:
-            debug_info[cog_name]
+            debug_info["cogs"][self.qualified_name]
         except:
-            debug_info[cog_name] = 0
-        if debug_info[cog_name] == 1:
-            return gen.error_message(msg, gen.cog_colours[cog_name])
+            debug_info["cogs"][self.qualified_name] = debug_info["DEV"]
+            gen.db_update("var",debug_info)
+
+        if debug_info["cogs"][self.qualified_name] == 1:
+            if self.qualified_name in gen.cog_colours:
+                return gen.error_message(msg, gen.cog_colours[self.qualified_name])
+            else:
+                return gen.error_message(msg, gen.cog_colours["default"])
         
     def vault_add(self, user: discord.User, item):
         st = State(member=user).User
@@ -575,4 +579,4 @@ class nsfw(commands.Cog):
     
 
 def setup(client):
-    client.add_cog(nsfw(client))
+    client.add_cog(Nsfw(client))

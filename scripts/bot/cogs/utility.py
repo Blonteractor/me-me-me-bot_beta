@@ -83,15 +83,19 @@ class Utility(commands.Cog):
             
         self.cooldown += gen.extra_cooldown
 
-    def log(self, msg):  # ! funciton for logging if developer mode is on
-        cog_name = os.path.basename(__file__)[:-3]
-        debug_info = gen.db_receive("var")["cogs"]
+    def log(self, msg):                     # funciton for logging if developer mode is on
+        debug_info = gen.db_receive("var")
         try:
-            debug_info[cog_name]
+            debug_info["cogs"][self.qualified_name]
         except:
-            debug_info[cog_name] = 0
-        if debug_info[cog_name] == 1:
-            return gen.error_message(msg, gen.cog_colours[cog_name])
+            debug_info["cogs"][self.qualified_name] = debug_info["DEV"]
+            gen.db_update("var",debug_info)
+
+        if debug_info["cogs"][self.qualified_name] == 1:
+            if self.qualified_name in gen.cog_colours:
+                return gen.error_message(msg, gen.cog_colours[self.qualified_name])
+            else:
+                return gen.error_message(msg, gen.cog_colours["default"])
 
     #* PING
     @commands.command()
@@ -207,7 +211,7 @@ class Utility(commands.Cog):
             embed.add_field(name="Prefix",
                              value=ctx.States.Guild.prefix if ctx.States.Guild.prefix is not None else "epic/me!", inline=False)
             embed.add_field(name="Juke box",
-                             value=ctx.States.Guild.juke_box_channel.mention if ctx.States.Guild.juke_box_channel is not None else "Not set", inline=False)
+                             value=ctx.States.Guild.jb_channel.mention if ctx.States.Guild.jb_channel is not None else "Not set", inline=False)
             embed.add_field(name="Auto meme",
                              value=ctx.States.Guild.auto_meme_channel.mention if ctx.States.Guild.auto_meme_channel is not None else "Not set", inline=False)
             embed.add_field(name="Level up",
@@ -230,16 +234,17 @@ class Utility(commands.Cog):
     async def juke(self, ctx, channel):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
+        state = ctx.States.Guild
         if str(channel) in rem:
-            ctx.States.Guild.juke_box_channel = None
+            ctx.States.Guild.jb_channel = None
+            state.jb_embed_id=state.jb_queue_id=state.jb_image_id=None
             await ctx.send(f">>> Juke box removed")
-            return   
+            return    
+        state.jb_embed_id=state.jb_queue_id=state.jb_image_id=state.jb_loading_id=None
+        ctx.States.Guild.jb_channel = channel
+
         
-        channel: discord.TextChannel 
-        
-        ctx.States.Guild.juke_box_channel = channel
-        
-        self.client.get_cog("music").juke_box.start()
+        await ctx.invoke(self.client.get_command("resetup"))
        
         await ctx.send(f">>> Juke box channel set to {channel.mention}")
         

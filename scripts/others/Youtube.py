@@ -20,7 +20,7 @@ chrome_options.add_argument("disable-gpu")
 chrome_options.add_argument("headless")
 chrome_options.add_argument("log-level=3")
 
-driver = webdriver.Chrome( options = chrome_options,executable_path=os.path.abspath("./Bin/chromedriver.exe")) 
+driver = webdriver.Chrome(chrome_options = chrome_options, executable_path=os.path.abspath("./Bin/chromedriver.exe")) 
 
 driver.get("http://www.youtube.com")
 
@@ -48,7 +48,7 @@ class YoutubeVideo:
     @classmethod
     def from_query(cls, query: str , amount:int = 1):
 
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 30)
 
         query_string = urllib.parse.urlencode({"search_query": query})
                 
@@ -59,19 +59,22 @@ class YoutubeVideo:
         entries_list : List[Any]=[]
         
         for element in search_results:
-            duration = element.text
-            driver.execute_script("arguments[0].scrollIntoView();", element)
-            ytd_thumbnail_overlay = driver.execute_script("return arguments[0].parentNode;", element)
-            div = driver.execute_script("return arguments[0].parentNode;", ytd_thumbnail_overlay)
-            link = driver.execute_script("return arguments[0].parentNode;", div)
-            thumbnail = driver.execute_script("return arguments[0].parentNode;", link)
-            video = driver.execute_script("return arguments[0].parentNode;", thumbnail)
-            name = video.find_element_by_css_selector("h3").text
-            channel_name = video.find_element_by_css_selector("ytd-channel-name").text
-
-            split_list = re.split("/|=|&",link.get_attribute("href"))
-            entries_list += [[(split_list[split_list.index("watch?v")+1]),name,channel_name,duration]]   
+            try:
+                duration = element.text
+                driver.execute_script("arguments[0].scrollIntoView();", element)
+                ytd_thumbnail_overlay = driver.execute_script("return arguments[0].parentNode;", element)
+                div = driver.execute_script("return arguments[0].parentNode;", ytd_thumbnail_overlay)
+                link = driver.execute_script("return arguments[0].parentNode;", div)
+                thumbnail = driver.execute_script("return arguments[0].parentNode;", link)
+                video = driver.execute_script("return arguments[0].parentNode;", thumbnail)
         
+                name = video.find_element_by_css_selector("h3").text
+                channel_name = video.find_element_by_css_selector("ytd-channel-name").text
+            except:
+                pass
+            else:
+                split_list = re.split("/|=|&",link.get_attribute("href"))
+                entries_list += [[(split_list[split_list.index("watch?v")+1]),name,channel_name,duration]]   
         return entries_list
 
     def __len__(self) -> int:
@@ -270,11 +273,15 @@ class YoutubePlaylist:
                                         (By.CSS_SELECTOR,"ytd-playlist-thumbnail a")))[:amount]
         
         for link in search_results:
-            driver.execute_script("arguments[0].scrollIntoView();", link)
-
-            split_list = re.split("/|=|&",link.get_attribute("href"))
-            yl += [split_list[split_list.index("list")+1]]    
-       
+            try:
+                driver.execute_script("arguments[0].scrollIntoView();", link)
+                split_list = re.split("/|=|&",link.get_attribute("href"))
+                
+            except:
+                pass
+            else: 
+                yl += [split_list[split_list.index("list")+1]]    
+                
         if requested_by:
             return [cls(x,requested_by=requested_by) for x in yl]
         else:

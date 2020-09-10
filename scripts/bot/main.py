@@ -57,7 +57,6 @@ class Bot(commands.Bot):
         await self.invoke(ctx)
 
 client = Bot(command_prefix=determine_prefix, case_insensitive=True, help_command=MyHelpCommand())
-status = []
 
 # * COG SET UP STUFF
 
@@ -73,7 +72,7 @@ def mod_command():
             return False
     return commands.check(predicate)
 
-
+ 
 @client.command(aliases=["enable"])
 @mod_command()
 async def load(ctx, extension):
@@ -203,14 +202,11 @@ async def auto_backup():
 # * ON READY
 @client.event
 async def on_ready():
-  
-    change_status.start()
     #auto_backup.start() 
    
     cog_load_startup()
     
-    global status
-    status = cycle([f"me! help {name}" for name in list(client.cogs.keys())])
+    
    
     #gen.reset()
     
@@ -266,5 +262,6 @@ async def on_command_error(ctx, error: discord.DiscordException):
         if not isinstance(error,commands.MissingRequiredArgument):
             traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
             gen.error_message(error)   
+
 
 client.run(TOKEN)
