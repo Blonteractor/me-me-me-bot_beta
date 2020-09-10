@@ -4,6 +4,7 @@ from discord.ext.commands.core import Command, cooldown
 from discord.utils import get
 import re
 import asyncio
+from asyncio import sleep, TimeoutError
 import imp,os
 
 imp.load_source("general", os.path.join(
@@ -12,7 +13,7 @@ import general as gen
 
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
-from state import GuildState,TempState,CustomContext
+from state import TempState,CustomContext
 
 
 class Playlist(commands.Cog):
@@ -47,17 +48,77 @@ class Playlist(commands.Cog):
     async def playlist(self, ctx):
         if ctx.invoked_subcommand is None:
             pl_db = ctx.States.User.playlist
-            
-            embed = discord.Embed(title="",
+            playlist_keys = list(pl_db.keys())
+
+            playlist_split = [playlist_keys[i:i + 25] for i in range(0, len(playlist_keys), 25)]
+            embeds = []
+            no = 1
+            for playlist_keys in playlist_split:
+                embed = discord.Embed(title="",
                                 color=discord.Colour.dark_purple())
-            embed.set_author(name="Me!Me!Me!",
-                                icon_url=self.client.user.avatar_url)
-            embed.set_thumbnail(url=self.music_logo)
+                embed.set_author(name="Me!Me!Me!",
+                                    icon_url=self.client.user.avatar_url)
+                embed.set_thumbnail(url=self.music_logo)
+                
+                for playlist in playlist_keys:
+                    embed.add_field(name=f"**{no}.**", value=f"**{playlist}** \t\t `{len(pl_db[playlist])}`", inline=False)
+                    no+=1   
+                
+                embeds += [embed] 
             
-            for no, playlist in enumerate(pl_db.keys()):
-                embed.add_field(name=f"**{no + 1}.**", value=f"**{playlist}** \t\t `{len(pl_db[playlist])}`", inline=False)
-            
-            await ctx.send(embed=embed)
+            wait_time = 180
+            page = 0 
+            embed_msg = await ctx.send(embed = embeds[0])
+            embed_msg: discord.Message
+
+            async def reactions_add(message, reactions):
+                    for reaction in reactions:
+                        await message.add_reaction(reaction)
+
+            reactions = {"back": "⬅", "forward": "➡","delete": "❌"}
+            ctx.bot.loop.create_task(reactions_add(embed_msg, reactions.values())) 
+
+            def check(reaction: discord.Reaction, user):  
+                return user == ctx.author and reaction.message.id == embed_msg.id
+
+            while True:
+
+                try:
+                    reaction, user = await ctx.bot.wait_for('reaction_add', timeout=wait_time, check=check)
+                
+                except TimeoutError:
+                    await ctx.send(f">>> Deleted Help Command due to inactivity.")
+                    await embed_msg.delete()
+
+                    return
+
+                else: 
+                    await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
+
+                    if str(reaction.emoji) in reactions.values():
+
+                        if str(reaction.emoji) == reactions["forward"]: 
+                            page += 1
+                            
+                            if page >= len(embeds):
+                                page = len(embeds)-1
+
+                            await embed_msg.edit(embed=embeds[page])
+
+                        elif str(reaction.emoji) == reactions["back"]: 
+                            page -= 1
+
+                            if page < 0:
+                                page = 0
+                            
+                            await embed_msg.edit(embed=embeds[page])
+
+                        elif str(reaction.emoji) == reactions["delete"]: 
+                            await embed_msg.delete(delay=1)
+                            return
+                    else:
+                        pass
+
             
     @playlist.command(aliases=["make"])
     async def new(self, ctx, name):
@@ -71,8 +132,33 @@ class Playlist(commands.Cog):
         ctx.States.User.playlist = playlist_db
         
         await ctx.send(f"A playlist with the name `{name}` was created, use the `playlist add` command to add songs.")
+    
+    @playlist.command()
+    async def delete(self,ctx,name):
+        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         
+        playlist_db = ctx.States.User.playlist
 
+        try:
+
+            if name in playlist_db:
+                pname = name
+            elif name.isnumeric():
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
+                        int(name)-1]
+                else:
+                    await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
+                    return
+            else:
+                await ctx.send("Could not find the playlist.")
+                return
+        except:
+            pass
+        del playlist_db[pname]
+        ctx.States.User.playlist = playlist_db
+        await ctx.send(f"Playlist `{name}` was deleted.")
+    
     @playlist.command(aliases=["v"])
     async def view(self, ctx, name=None):
         '''Shows your Playlist. Subcommands can alter your playlist'''
@@ -110,19 +196,76 @@ class Playlist(commands.Cog):
             await ctx.send("Your playlist has been created.")
             pname = f"{ctx.author.name}Playlist"
             ctx.States.User.playlist = playlist_db
-
-        embed = discord.Embed(title=pname,
-                                color=discord.Colour.dark_purple())
-        embed.set_author(name="Me!Me!Me!",
-                            icon_url=self.client.user.avatar_url)
-        embed.set_thumbnail(url=self.music_logo)
+        playlist_split = [playlist[i:i + 25] for i in range(0, len(playlist), 25)]
+        embeds = []
         no = 1
-        for song in playlist:
-            title = song["title"]
-            url = "https://www.youtube.com/watch?v={id}".format(id = song["id"])
-            embed.add_field(name=f"**{no}**", value=f"**[{title}]({url})**")
-            no += 1
-        await ctx.send(embed=embed)
+        for playlist in playlist_split:
+            embed = discord.Embed(title=pname,
+                                    color=discord.Colour.dark_purple())
+            embed.set_author(name="Me!Me!Me!",
+                                icon_url=self.client.user.avatar_url)
+            embed.set_thumbnail(url=self.music_logo)
+            
+            for song in playlist:
+                title = song["title"]
+                url = "https://www.youtube.com/watch?v={id}".format(id = song["id"])
+                embed.add_field(name=f"**{no}**", value=f"**[{title}]({url})**")
+                no += 1
+            embeds += [embed] 
+        
+        wait_time = 180
+        page = 0 
+        embed_msg = await ctx.send(embed = embeds[0])
+        embed_msg: discord.Message
+
+        async def reactions_add(message, reactions):
+                for reaction in reactions:
+                    await message.add_reaction(reaction)
+
+        reactions = {"back": "⬅", "forward": "➡","delete": "❌"}
+        ctx.bot.loop.create_task(reactions_add(embed_msg, reactions.values())) 
+
+        def check(reaction: discord.Reaction, user):  
+            return user == ctx.author and reaction.message.id == embed_msg.id
+
+        while True:
+
+            try:
+                reaction, user = await ctx.bot.wait_for('reaction_add', timeout=wait_time, check=check)
+            
+            except TimeoutError:
+                await ctx.send(f">>> Deleted Help Command due to inactivity.")
+                await embed_msg.delete()
+
+                return
+
+            else: 
+                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
+
+                if str(reaction.emoji) in reactions.values():
+
+                    if str(reaction.emoji) == reactions["forward"]: 
+                        page += 1
+                        
+                        if page >= len(embeds):
+                            page = len(embeds)-1
+
+                        await embed_msg.edit(embed=embeds[page])
+
+                    elif str(reaction.emoji) == reactions["back"]: 
+                        page -= 1
+
+                        if page < 0:
+                            page = 0
+                        
+                        await embed_msg.edit(embed=embeds[page])
+
+                    elif str(reaction.emoji) == reactions["delete"]: 
+                        await embed_msg.delete(delay=1)
+                        return
+                else:
+                    pass
+
 
     # ? PLAYLIST ADD
     @playlist.command()
@@ -130,6 +273,27 @@ class Playlist(commands.Cog):
         '''Adds a song to your Playlist.'''
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+
+        playlist_db = ctx.States.User.playlist
+        try:
+
+            if name in playlist_db:
+                pname = name
+            elif name.isnumeric():
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
+                        int(name)-1]
+                else:
+                    await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
+                    return
+            else:
+                await ctx.send("Could not find the playlist.")
+                return
+        except:
+            playlist_db = {
+                f"{ctx.author.name}Playlist": []}
+            await ctx.send("Your playlist has been created.")
+            pname = f"{ctx.author.name}Playlist"
 
         if "http" in query:
             if "www.youtube.com" in query:
@@ -141,27 +305,6 @@ class Playlist(commands.Cog):
             vid = await self.client.get_cog("Play").searching(ctx, query)
 
         if vid:
-
-            playlist_db = ctx.States.User.playlist
-            try:
-
-                if name in playlist_db:
-                    pname = name
-                elif name.isnumeric():
-                    if int(name) > 0 and int(name) <= len(playlist_db):
-                        pname = list(playlist_db.keys())[
-                            int(name)-1]
-                    else:
-                        await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
-                        return
-                else:
-                    await ctx.send("Could not find the playlist.")
-                    return
-            except:
-                playlist_db = {
-                    f"{ctx.author.name}Playlist": []}
-                await ctx.send("Your playlist has been created.")
-                pname = f"{ctx.author.name}Playlist"
 
             playlist_db[pname] += [{"id": vid.id, "title": vid.title}]
 
@@ -175,37 +318,35 @@ class Playlist(commands.Cog):
     @playlist.command(name="add-playlist", aliases=["addpl"])
     async def add_playlist(self, ctx, name, *, query):
         '''Adds a playlist to your Playlist.'''
-        
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
+        playlist_db = ctx.States.User.playlist
+
+        try:
+            if name in playlist_db:
+                pname = name
+            elif name.isnumeric():
+                if int(name) > 0 and int(name) <= len(playlist_db):
+                    pname = list(playlist_db.keys())[
+                        int(name)-1]
+                else:
+                    await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
+                    return
+
+            else:
+                await ctx.send("Could not find the playlist.")
+                return
+        except:
+            playlist_db = {
+                f"{ctx.author.name}Playlist": []}
+            await ctx.send("Your playlist has been created.")
+            pname = f"{ctx.author.name}Playlist"
+        
 
         vid = await self.client.get_cog("Play").searching(ctx, query, False)
 
         if vid:
 
-            playlist_db = ctx.States.User.playlist
-            try:
-
-                if name in playlist_db:
-                    pname = name
-                elif name.isnumeric():
-                    if int(name) > 0 and int(name) <= len(playlist_db):
-                        pname = list(playlist_db.keys())[
-                            int(name)-1]
-                    else:
-                        await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
-                        return
-
-                else:
-                    await ctx.send("Could not find the playlist.")
-                    return
-            except:
-                playlist_db = {
-                    f"{ctx.author.name}Playlist": []}
-                await ctx.send("Your playlist has been created.")
-                pname = f"{ctx.author.name}Playlist"
-
-            playlist_db[str(ctx.author.id)
-                        ][pname] += [{"id": vid.id, "title": vid.title}]
+            playlist_db[pname] += [{"id": vid.id, "title": vid.title}]
 
             await ctx.send(f"**{vid.title}** added to your Playlist")
 
@@ -238,10 +379,7 @@ class Playlist(commands.Cog):
                 return
         except:
             pass 
-        else:
-            await ctx.send("Your playlist too smol for rearrangement.")
-            return
-
+        
         if P1 < 1 or P1 > len(playlist_db[pname]) or P2 < 1 or P2 > len(playlist_db[pname]):
             return
 

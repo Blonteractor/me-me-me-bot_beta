@@ -10,7 +10,7 @@ import general as gen
 
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
-from state import GuildState,TempState,CustomContext
+from state import TempState
 
 def vc_check():
     async def predicate(ctx):           # Check if the user is in vc to run the command

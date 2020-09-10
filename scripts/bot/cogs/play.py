@@ -12,7 +12,7 @@ import general as gen
 
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
-from state import GuildState,TempState,CustomContext
+from state import TempState
 
 imp.load_source("Youtube", os.path.join(
     os.path.dirname(__file__), "../../others/Youtube.py"))
