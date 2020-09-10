@@ -16,7 +16,7 @@ import general as gen
 
 imp.load_source("state", os.path.join(
     os.path.dirname(__file__), "../../others/state.py"))
-from state import GuildState,TempState,CustomContext
+from state import TempState
 
 import lyricsgenius
 genius = lyricsgenius.Genius(os.environ.get("LYRICS_GENIUS_KEY"))
@@ -265,8 +265,11 @@ class Misc(commands.Cog):
   
         url = "https://hastebin.com/documents"
         response = requests.post(url, data=json.dumps(queue))
-        the_page = "https://hastebin.com/raw/" + response.json()['key']
-        await ctx.send(f"Here is your page Master, {the_page}")
+        try:
+            the_page = "https://hastebin.com/raw/" + response.json()['key']
+            await ctx.send(f"Here is your page Master, {the_page}")
+        except:
+            await ctx.send(f"Cant export")
 
     # ? IMPORT
     @commands.command(name="import")
@@ -322,8 +325,8 @@ class Misc(commands.Cog):
 
         voice = get(self.client.voice_clients, guild=ctx.guild)
         ydl_opts = {
-            "quiet": True
-            
+            "quiet": True,
+            "no_warnings": True            
         }
         try:
             info = youtube_dl.YoutubeDL(
@@ -347,40 +350,44 @@ class Misc(commands.Cog):
                 "url",
                 "ext"
                 ]
-
+      
         info2 = {}
         for i in need:
             if i in info:
                 info2[i] = info[i]
             else:
                 info2[i] = "0"
-    
-        vid = self.client.get_cog("Play").ytvid(info2["id"], info2, ctx.author)
+     
+        try:
+            
+            vid = self.client.get_cog("Play").ytvid(info2["id"], info2, ctx.author.name)
 
-        embed = discord.Embed(title=f"{vid.title} ({vid.duration}) - {vid.uploader}",
-                                    url=vid.url,
-                                    description=vid.description,
-                                    color=discord.Colour.blurple())
-        embed.set_author(name="Me!Me!Me!",
-                        icon_url=self.client.user.avatar_url)
-        embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
-                        icon_url=ctx.message.author.avatar_url)
-        embed.set_thumbnail(url=vid.thumbnail)
+            
+            embed = discord.Embed(title=f"{vid.title} ({vid.duration}) - {vid.uploader}",
+                                        url=vid.url,
+                                        description=vid.description,
+                                        color=discord.Colour.blurple())
+            embed.set_author(name="Me!Me!Me!",
+                            icon_url=self.client.user.avatar_url)
+            embed.set_footer(text=f"Requested By: {ctx.message.author.display_name}",
+                            icon_url=ctx.message.author.avatar_url)
+            embed.set_thumbnail(url=vid.thumbnail)
 
-        embed.add_field(name="Date of Upload", value=vid.date)
-        embed.add_field(name="Views", value=vid.views)
-        embed.add_field(name="Likes/Dislikes",
-                        value=f"{vid.likes}/{vid.dislikes}")
-        await ctx.send(embed=embed)
+            embed.add_field(name="Date of Upload", value=vid.date)
+            embed.add_field(name="Views", value=vid.views)
+            embed.add_field(name="Likes/Dislikes",
+                            value=f"{vid.likes}/{vid.dislikes}")
+            await ctx.send(embed=embed)
 
-       
-        if TempState(ctx.guild).queue == []:
-            print(TempState(ctx.guild).queue + [vid])
-            print(type(TempState(ctx.guild).queue + [vid]))
-            TempState(ctx.guild).queue += [vid]
-            await self.client.get_cog("Play").player(ctx, voice)
-        else:
-            TempState(ctx.guild).queue += [vid]
+        
+            if TempState(ctx.guild).queue == []: 
+                TempState(ctx.guild).queue += [vid]
+                await self.client.get_cog("Play").player(ctx, voice)
+            else:
+                TempState(ctx.guild).queue += [vid]
+        except:
+            await ctx.send("cant play that")
+            return
 
 def setup(client):
     client.add_cog(Misc(client))
