@@ -251,8 +251,8 @@ async def on_command_error(ctx, error: discord.DiscordException):
                                   color = discord.Color.red())
         
         description = "You are missing the following permsissions\n"
-        for perm in error.missing_perms:
-            description += f"\n`{perm}`"
+        for num, perm in enumerate(error.missing_perms):
+            description += f"\n{num}. `{perm}`"
         description += "\n\n You can go beg the mods for them or something idk."
         
         embed.description = description

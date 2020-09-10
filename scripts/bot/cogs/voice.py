@@ -43,21 +43,22 @@ def vc_check():
             return False
     return commands.check(predicate)
 
-def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_duration=15):
+def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_duration=15, yes_emoji="✔", no_emoji="❌", admin_emoji="🔑"):
     async def predicate(ctx: commands.Context):
         async def reactions_add(message, reactions):
             for reaction in reactions:
                 await message.add_reaction(reaction)
-                
-        admin_emoji = "🔑"
         
         if ctx.voice_client is None:
             return True
 
         members = ctx.guild.voice_client.channel.members
+        
+        if len(members) == 2:
+            return True
 
-        already_voted: List[int] = []
-        reactions = {"yes": "✔", "no": "❌", "admin": admin_emoji}
+        already_voted = []
+        reactions = {"yes": yes_emoji, "no": no_emoji, "admin": admin_emoji}
 
         def check(reaction: discord.Reaction, user):
             return user in members and reaction.message.id == msg.id and str(reaction) in reactions.values() and not user == ctx.bot.user
@@ -70,7 +71,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
         while True:
             try:
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=vote_duration,
-                                                        check=lambda reaction, user: user in members and reaction.message.id == msg.id and str(reaction) in reactions.values() and not user == ctx.bot.user)
+                                                        check=check)
                 
                 if str(reaction) == reactions["admin"]:
                     supposed_admins = await reaction.users().flatten()
@@ -83,9 +84,17 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
                             
                             return True
                         
-            except TimeoutError:
+                else:
+                    if user.id not in already_voted:
+                        already_voted.append(user.id)
+
+                        if len(already_voted) == len(members) - 1:
+                            raise asyncio.TimeoutError
+                    else:
+                        await msg.remove_reaction(str(reaction), user)
+                        
+            except asyncio.TimeoutError:
                 yes = no = 0
-                admin_re = None
                 new_message: discord.Message = await ctx.channel.fetch_message(msg.id)
                 
                 for reaction in new_message.reactions:
@@ -105,12 +114,6 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
                 await new_message.clear_reactions()
                 
                 return result
-
-            else:
-                if user.id not in already_voted:
-                    already_voted.append(user.id)
-                else:
-                    await msg.remove_reaction(str(reaction), user)
 
     return commands.check(predicate=predicate)
     
