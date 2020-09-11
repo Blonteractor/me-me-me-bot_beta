@@ -182,7 +182,7 @@ class GuildState:
         return self.get_property("doujin_category")
     
     @property
-    def prefix(self) -> str:
+    def prefix(self) -> list:
         return self.get_property("prefix")
     
     @property
@@ -261,10 +261,7 @@ class GuildState:
         
     @prefix.setter
     def prefix(self, new):
-        if len(new) == 1:
-            self.set_property(property_name="prefix", property_val=new)
-        else:
-            self.set_property(property_name="prefix", property_val=new + " ")
+        self.set_property(property_name="prefix", property_val=new)
             
 class MemberState:
     """Stores guild specific states which change between guilds"""
@@ -340,19 +337,6 @@ class MemberState:
         
     def get_designation(self, level_member: int):
         roles = self.guild_state.ranks
-        
-        # a = list(roles.keys())
-        # for i in range(len(a)):
-        #     if a[i] > level:
-        #         rel_role = a[i - 1]
-        #         break
-
-        #     else:
-        #         rel_role = a[-1]
-
-        # for role, level in roles.items():
-        #     if level == rel_role:
-        #         return role
         
         temp = list(roles.items())[0][1]
         for level, role in roles.items():

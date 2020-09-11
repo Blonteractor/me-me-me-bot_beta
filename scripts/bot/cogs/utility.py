@@ -421,14 +421,42 @@ class Utility(commands.Cog):
                     await ctx.send(">>> Reply in human language.", delete_after=5)
                     continue
 
-    @setup.command()
+    @setup.group()
     @commands.has_permissions(administrator=True)
-    async def prefix(self, ctx, *, pre):
-        ctx = await self.client.get_context(ctx.message, cls=cc)
+    async def prefix(self, ctx):
+        if ctx.invoked_subcommand is None:  
+            prefixes =  "`" + "`, `".join(ctx.States.Guild.prefix) + "`"
+            await ctx.send(f"Current bot prefixes: `{prefixes}`")
         
-        ctx.States.Guild.prefix = pre
+    @prefix.command(name="add-prefix", aliases=["addpr"])
+    @commands.has_permissions(administrator=True)
+    async def add_prefix(self, ctx, *, pre):
+   
+        prefixes = ctx.States.Guild.prefix
         
-        await ctx.send(f"Bot prefix changed to `{ctx.States.Guild.prefix}`")
+        if pre not in prefixes:
+            prefixes.extend(gen.permu(pre))
+            ctx.States.Guild.prefix = prefixes
+        else:
+            await ctx.send(f"`{pre}` is already in prefixes, use the prefix command to veiw all current prefixes.")
+            return
+        
+        await ctx.send(f"Added `{pre}` to prefixes.")
+        
+    @prefix.command(name="remove-prefix", aliases=["rempr"])
+    @commands.has_permissions(administrator=True)
+    async def remove_prefix(self, ctx, *, pre):
+        
+        prefixes = ctx.States.Guild.prefix
+        
+        if pre in prefixes:
+            prefixes.remove(pre)
+            ctx.States.Guild.prefix = prefixes
+        else:
+            await ctx.send(f"`{pre}` is not in prefixes, use the prefix command to veiw all current prefixes.")
+            return
+        
+        await ctx.send(f"Removed `{pre}` from prefixes.")
         
 def setup(client):
     client.add_cog(Utility(client))

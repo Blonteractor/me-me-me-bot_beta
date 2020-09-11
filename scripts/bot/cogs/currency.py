@@ -140,7 +140,7 @@ class Currency(commands.Cog):
     async def souls(self, ctx):
         '''Just the balance of your souls. THATS IT.'''
     
-        await ctx.send(f">>> Souls of {ctx.author.name}: {ctx.State.User.souls}.")
+        await ctx.send(f">>> Souls of {ctx.author.name}: {ctx.States.User.souls}.")
 
 
 def setup(client):
