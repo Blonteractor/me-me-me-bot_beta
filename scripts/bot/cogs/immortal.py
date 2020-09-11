@@ -7,6 +7,12 @@ imp.load_source("general", os.path.join(
 
 import general as gen
 
+imp.load_source("state", os.path.join(
+    os.path.dirname(__file__), "../../others/state.py"))
+
+from state import MemberState,UserState
+
+
 class Immortal(commands.Cog):
     ''':ghost: These commands are not for some puny mortals, Only Immortal beings possess these commands.'''
 
@@ -29,118 +35,95 @@ class Immortal(commands.Cog):
 
     #* STATS
     @commands.command()
-    async def stats(self, ctx):
+    async def stats(self, ctx,member: discord.Member = None):
         '''Shows stats of all the ACTIVE PEOPLE WHO HAVE NO LIFE.'''
+        if member:
+            state =  MemberState(member)
+            user = UserState(member)
+            stats = discord.Embed(
+            title = "ME! Stats",
+            colour = discord.Colour.from_rgb(0,0,0)
+            )
+           
 
-        found=False
-        for role in ctx.author.roles:
-            if role.id == gen.admin_role_id:
-                found=True  
+            stats.set_author(name = member.name, icon_url = member.avatar_url)
+            stats.add_field(name = "Messages",value= state.messages, inline = True)
+            stats.add_field(name = "Level",value= state.level, inline = True)
+            stats.add_field(name = "Souls",value=user.souls , inline = True)
+            await ctx.send(embed = stats)
+            return
+        
+        embeds = []
+        for member in ctx.guild.members:
+            state =  MemberState(member)
+            user = UserState(member)
+            stats = discord.Embed(
+            title = "ME! Stats",
+            colour = discord.Colour.from_rgb(0,0,0)
+            )
+           
 
-        if found:
-            mem_info = gen.db_receive("inf")
+            stats.set_author(name = member.name, icon_url = member.avatar_url)
+            stats.add_field(name = "Messages",value= state.messages, inline = True)
+            stats.add_field(name = "Level",value= state.level, inline = True)
+            stats.add_field(name = "Souls",value=user.souls , inline = True)
+            embeds += [stats]
+
+        wait_time = 180
+        page = 0 
+        embed_msg = await ctx.send(embed = embeds[0])
+        embed_msg: discord.Message
+
+        async def reactions_add(message, reactions):
+                for reaction in reactions:
+                    await message.add_reaction(reaction)
+
+        reactions = {"back": "⬅", "forward": "➡","delete": "❌"}
+        ctx.bot.loop.create_task(reactions_add(embed_msg, reactions.values())) 
+
+        def check(reaction: discord.Reaction, user):  
+            return user == ctx.author and reaction.message.id == embed_msg.id
+
+        while True:
+
+            try:
+                reaction, user = await ctx.bot.wait_for('reaction_add', timeout=wait_time, check=check)
             
-        
-            for key in mem_info:
-                stats = discord.Embed(
-                title = "ME! Stats",
-                colour = discord.Colour.from_rgb(0,0,0)
-                )
-                member = ctx.guild.get_member_named(mem_info[key]["name"])
+            except TimeoutError:
+                await ctx.send(f">>> Deleted Help Command due to inactivity.")
+                await embed_msg.delete()
 
+                return
 
-                stats.set_author(name = mem_info[key]["name"], icon_url = member.avatar_url)
-                stats.add_field(name = "Messages",value= mem_info[key]["messages"], inline = True)
-                stats.add_field(name = "Level",value= mem_info[key]["level"], inline = True)
-                stats.add_field(name = "Souls",value= mem_info[key]["coins"], inline = True)
-                await ctx.send(embed = stats)
+            else: 
+                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
 
-        else:
-            await ctx.send("How cute, you thought you could do that.")
+                if str(reaction.emoji) in reactions.values():
 
-    #* RECORDING
-    @commands.command()
-    async def record_stats(self,ctx):
-        '''Records stats of all the FUCKING SLAVES OF THIS SERVER.'''
+                    if str(reaction.emoji) == reactions["forward"]: 
+                        page += 1
+                        
+                        if page >= len(embeds):
+                            page = len(embeds)-1
 
-        found=False
-        for role in ctx.author.roles:
-            if role.id == gen.admin_role_id:
-                found=True  
+                        await embed_msg.edit(embed=embeds[page])
 
-        if found:
-            for member in ctx.guild.members:
-                mem_info = gen.db_receive("inf")
-                disc = member.discriminator
-                
-                if disc in mem_info:
-                    mem_info[disc]["name"] = member.name
-                    gen.db_update("inf",mem_info)
-                else:    
-                    name = member.name
-                    gen.new_entry(name,disc)
-                    
-                
-            await ctx.send(f"Done boss")
-        else:
-            await ctx.send("How cute, you thought you could do that.")
+                    elif str(reaction.emoji) == reactions["back"]: 
+                        page -= 1
 
-    #* LEVEL
-    @commands.command()
-    async def level(self, ctx,member: discord.Member,level:int): 
-        '''This is a MEE6 exclusive command, no puny mortal can use this.'''
-        
-        name = member.name
-        disc = member.discriminator
-        
-        
-        found=False
-        
-        for role in ctx.author.roles:                                                                               #! TODO make this a function
-            if role.id == gen.admin_role_id:
-                found=True    
-        mee6_disc = gen.MEE6_disc
-        
-        if int(ctx.author.discriminator) == mee6_disc:
-            found = True
-        if found:      
-        
-            roles_list = member.roles
-            for role in roles_list:
-                if str(role) in gen.roles:
-                    await member.remove_roles(role)
-            if level < gen.level_Rookie:
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Prostitute"))
-                leveler = "Prostitute"
-            if level >=gen.level_Rookie and level < gen.level_Adventurer:
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Rookie"))
-                leveler = "Rookie"
-            if level >= gen.level_Adventurer and level <gen.level_Player:
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Adventurer"))
-                leveler = "Adventurer"
-            if level >= gen.level_Player and level <gen.level_Hero:
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Player"))
-                leveler = "Player"
-            if level >= gen.level_Hero and level <gen.level_CON:
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Hero"))
-                leveler = "Hero"
-            if level >= gen.level_CON:
-                await member.add_roles(discord.utils.get(ctx.guild.roles, name="Council of Numericon"))  
-                leveler = "Council of Numericon"
+                        if page < 0:
+                            page = 0
+                        
+                        await embed_msg.edit(embed=embeds[page])
 
-            mem_info = gen.db_receive("inf")
-
-            if disc in mem_info:
-                mem_info[disc]["level"] = leveler
-            else:
-                gen.new_entry(name,disc)
-                mem_info[disc]["level"] = leveler
-
-            gen.db_update("inf",mem_info)
-            await ctx.send(f'Congrats **{member.display_name}** , You leveled up to Level {level}  :tada:. Now you are {leveler} :middle_finger:.')
-                
-        else:
-            await ctx.send(">>> You Filthy Bastard ain't MEE6.")
+                    elif str(reaction.emoji) == reactions["delete"]: 
+                        await embed_msg.delete(delay=1)
+                        return
+                else:
+                    pass
+    @stats.error
+    async def stats_error(self, ctx, error):
+        await self.stats(ctx)
 
     #* TOP SECRET DONT TOUCH
     @commands.command()

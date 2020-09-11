@@ -195,7 +195,8 @@ class Levels(commands.Cog):
         if not message.author.bot:
             state = State(message.author)
             state.Member.messages += 1
-            state.Member.active = True
+            if state.Guild.ranks:
+                state.Member.active = True
 
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
