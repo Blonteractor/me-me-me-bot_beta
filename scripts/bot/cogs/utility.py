@@ -232,14 +232,17 @@ class Utility(commands.Cog):
     @setup.command()  
     @commands.has_permissions(administrator=True)   
     async def juke(self, ctx, channel):
-        ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         state = ctx.States.Guild
+        
         if str(channel) in rem:
             ctx.States.Guild.jb_channel = None
             state.jb_embed_id=state.jb_queue_id=state.jb_image_id=None
             await ctx.send(f">>> Juke box removed")
             return    
+        
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)
         state.jb_embed_id=state.jb_queue_id=state.jb_image_id=state.jb_loading_id=None
         ctx.States.Guild.jb_channel = channel
 
@@ -259,7 +262,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> Auto meme removed")
             return 
         
-        channel: discord.TextChannel    
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)    
         
         ctx.States.Guild.auto_meme_channel = channel
         
@@ -288,7 +292,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> DJ role removed")
             return    
         
-        role: discord.Role
+        role_id = int(role[2:-1])
+        role = ctx.guild.get_channel(role_id)
         ctx.States.Guild.dj_role = role
         
         await ctx.send(f">>> DJ role changed to {role.mention}")  
@@ -304,7 +309,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> The level up channel was removed")
             return    
         
-        channel: discord.TextChannel 
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)
         ctx.States.Guild.level_up_channel = channel
         
         await ctx.send(f">>> The level up channel chaged to to {channel.mention}")  
@@ -320,7 +326,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> The primary voice text channel was removed")
             return    
         
-        channel: discord.TextChannel
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)
         ctx.States.Guild.voice_text_channel = channel
         
         await ctx.send(f">>> The primary voice text channel chaged to to {channel.mention}") 
