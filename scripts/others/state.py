@@ -1,14 +1,10 @@
 import os
 import discord
-import json
 from typing import Union
 from discord.utils import get
 from discord.ext.commands import Context
 from general import db_receive, db_update, DBPATH
-import imp
 import _pickle as pickle
-from itertools import repeat
-import weakref
 
 def make_db_if_not_exists(path: str):
     if not os.path.exists(path):
@@ -182,7 +178,7 @@ class GuildState:
         return self.get_property("doujin_category")
     
     @property
-    def prefix(self) -> str:
+    def prefix(self) -> list:
         return self.get_property("prefix")
     
     @property
@@ -200,7 +196,7 @@ class GuildState:
         
     @jb_channel.setter
     def jb_channel(self, channel: discord.TextChannel):
-        self.set_property(property_name="jb_channel", property_val=channel.id)
+        self.set_property(property_name="jb_channel", property_val=None) if channel is None else self.set_property(property_name="jb_channel", property_val=channel.id)
     
     @jb_embed_id.setter
     def jb_embed_id(self, embed_id):
@@ -253,7 +249,7 @@ class GuildState:
       
     @dj_role.setter
     def dj_role(self, role: discord.Role):
-        self.set_property(property_name="dj_role", property_val=int(role.id))
+        self.set_property(property_name="dj_role", property_val=None) if role is None else self.set_property(property_name="dj_role", property_val=int(role.id))
         
     @doujin_category.setter
     def doujin_category(self, name):
@@ -261,10 +257,7 @@ class GuildState:
         
     @prefix.setter
     def prefix(self, new):
-        if len(new) == 1:
-            self.set_property(property_name="prefix", property_val=new)
-        else:
-            self.set_property(property_name="prefix", property_val=new + " ")
+        self.set_property(property_name="prefix", property_val=new)
             
 class MemberState:
     """Stores guild specific states which change between guilds"""

@@ -232,14 +232,17 @@ class Utility(commands.Cog):
     @setup.command()  
     @commands.has_permissions(administrator=True)   
     async def juke(self, ctx, channel):
-        ctx = await self.client.get_context(ctx.message, cls=cc)
         rem = ["disable", "remove"]
         state = ctx.States.Guild
+        
         if str(channel) in rem:
             ctx.States.Guild.jb_channel = None
             state.jb_embed_id=state.jb_queue_id=state.jb_image_id=None
             await ctx.send(f">>> Juke box removed")
             return    
+        
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)
         state.jb_embed_id=state.jb_queue_id=state.jb_image_id=state.jb_loading_id=None
         ctx.States.Guild.jb_channel = channel
 
@@ -259,7 +262,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> Auto meme removed")
             return 
         
-        channel: discord.TextChannel    
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)    
         
         ctx.States.Guild.auto_meme_channel = channel
         
@@ -288,7 +292,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> DJ role removed")
             return    
         
-        role: discord.Role
+        role_id = int(role[2:-1])
+        role = ctx.guild.get_channel(role_id)
         ctx.States.Guild.dj_role = role
         
         await ctx.send(f">>> DJ role changed to {role.mention}")  
@@ -304,7 +309,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> The level up channel was removed")
             return    
         
-        channel: discord.TextChannel 
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)
         ctx.States.Guild.level_up_channel = channel
         
         await ctx.send(f">>> The level up channel chaged to to {channel.mention}")  
@@ -320,7 +326,8 @@ class Utility(commands.Cog):
             await ctx.send(f">>> The primary voice text channel was removed")
             return    
         
-        channel: discord.TextChannel
+        channel_id = int(channel[2:-1])
+        channel = ctx.guild.get_channel(channel_id)
         ctx.States.Guild.voice_text_channel = channel
         
         await ctx.send(f">>> The primary voice text channel chaged to to {channel.mention}") 
@@ -421,14 +428,42 @@ class Utility(commands.Cog):
                     await ctx.send(">>> Reply in human language.", delete_after=5)
                     continue
 
-    @setup.command()
+    @setup.group()
     @commands.has_permissions(administrator=True)
-    async def prefix(self, ctx, *, pre):
-        ctx = await self.client.get_context(ctx.message, cls=cc)
+    async def prefix(self, ctx):
+        if ctx.invoked_subcommand is None:  
+            prefixes =  "`" + "`, `".join(ctx.States.Guild.prefix) + "`"
+            await ctx.send(f"Current bot prefixes: `{prefixes}`")
         
-        ctx.States.Guild.prefix = pre
+    @prefix.command(name="add-prefix", aliases=["addpr"])
+    @commands.has_permissions(administrator=True)
+    async def add_prefix(self, ctx, *, pre):
+   
+        prefixes = ctx.States.Guild.prefix
         
-        await ctx.send(f"Bot prefix changed to `{ctx.States.Guild.prefix}`")
+        if pre not in prefixes:
+            prefixes.extend(gen.permu(pre))
+            ctx.States.Guild.prefix = prefixes
+        else:
+            await ctx.send(f"`{pre}` is already in prefixes, use the prefix command to veiw all current prefixes.")
+            return
+        
+        await ctx.send(f"Added `{pre}` to prefixes.")
+        
+    @prefix.command(name="remove-prefix", aliases=["rempr"])
+    @commands.has_permissions(administrator=True)
+    async def remove_prefix(self, ctx, *, pre):
+        
+        prefixes = ctx.States.Guild.prefix
+        
+        if pre in prefixes:
+            prefixes.remove(pre)
+            ctx.States.Guild.prefix = prefixes
+        else:
+            await ctx.send(f"`{pre}` is not in prefixes, use the prefix command to veiw all current prefixes.")
+            return
+        
+        await ctx.send(f"Removed `{pre}` from prefixes.")
         
 def setup(client):
     client.add_cog(Utility(client))
