@@ -107,10 +107,10 @@ class GuildState:
     @property
     def ranks(self) -> dict:
 
-        if self.get_property("rank_roles") is None or self.get_property("rank_nums") is None:
+        if self.get_property("rank_roles") is None or self.get_property("rank_levels") is None:
             return {}
         
-        levels = [int(level) for level in self.get_property("rank_nums")]
+        levels = [int(level) for level in self.get_property("rank_levels")]
         roles = [self.get_role(id=role) for role in self.get_property("rank_roles")]
         
         return dict(zip(levels, roles))
@@ -195,7 +195,7 @@ class GuildState:
         ranks = list(new_ranks.keys())
         roles = list(new_ranks.values())
         
-        self.set_property(property_name="rank_nums", property_val=ranks)
+        self.set_property(property_name="rank_levels", property_val=ranks)
         self.set_property(property_name="rank_roles", property_val=roles)
         
     @jb_channel.setter
@@ -340,20 +340,6 @@ class MemberState:
         
     def get_designation(self, level_member: int):
         roles = self.guild_state.ranks
-        
-        # a = list(roles.keys())
-        # for i in range(len(a)):
-        #     if a[i] > level:
-        #         rel_role = a[i - 1]
-        #         break
-
-        #     else:
-        #         rel_role = a[-1]
-
-        # for role, level in roles.items():
-        #     if level == rel_role:
-        #         return role
-        
         temp = list(roles.items())[0][1]
         for level, role in roles.items():
             if level_member > level:

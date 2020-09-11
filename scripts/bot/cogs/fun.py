@@ -79,13 +79,11 @@ class Fun(commands.Cog):
         '''Well, I calculate your peepee with my special MEASURING STICK that goes in ME! ass.'''
 
         random_p = random.randrange(1, 10)
-        dicc_string = random_p 
-        name = str(ctx.message.author)[:-5]
-      
+        
         dix = discord.Embed(
             title = "ME! DIX MACHINE",
             colour = discord.Colour.from_rgb(255,255,255),
-            description = f"{name}'s peepee is 8{'='*dicc_string}D long. \n You are a truly disgusting creature, asking ME! for sizes of dicks"
+            description = f"{ctx.author.name}'s peepee is 8{'='*random_p}D long. \n You are a truly disgusting creature, asking ME! for sizes of dicks"
         )
 
         await ctx.send(embed = dix)
@@ -98,6 +96,7 @@ class Fun(commands.Cog):
 
       strs = f":{emoji_name}: "*amount
       await ctx.send(strs)
+      
     @emoji.error
     async def emoji_error(self,ctx,error):
       await ctx.send(">>> Are you an emoji? Perhaps.")

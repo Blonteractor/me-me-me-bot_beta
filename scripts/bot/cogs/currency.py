@@ -50,13 +50,8 @@ class Currency(commands.Cog):
     async def bet(self, ctx, amount : int):
         '''Well, this is the only fun part, BET, hail KAKEGURUI.'''
         
-        ctx = await self.client.get_context(ctx.message, cls=cc)
-
-        name = ctx.author.name
-        disc = ctx.author.discriminator
-        
         #! GET COINS
-        coins = ctx.State.User.souls
+        coins = int(ctx.States.User.souls)
 
         #! REAL BITCH ASS CODE
         if amount <= coins and amount>0:
@@ -72,15 +67,15 @@ class Currency(commands.Cog):
                 Multiplier = 200
             else:
                 won_lost = "Bet Lost"
-                amount_rec =- (amount)
-                Multiplier =- 100
+                amount_rec = -(amount)
+                Multiplier = -100
                 
             coins+=amount_rec
 
-            ctx.State.User.souls = coins
+            ctx.States.User.souls = coins
             
         elif amount<= 0:
-            await ctx.send(f">>> So you want a spanky {name}.")
+            await ctx.send(f">>> So you want a spanky {ctx.author.name}.")
         else:
             await ctx.send(">>> Not enough SOULS man, go hunt.")
 
@@ -103,7 +98,7 @@ class Currency(commands.Cog):
         bet_list.add_field(name = "Multiplier",value = f"{Multiplier}%",inline=True)
         bet_list.add_field(name = "Amount Recieved",value = amount_rec,inline=True)
         bet_list.add_field(name = "Total Souls Left",value = coins ,inline=True)
-        bet_list.set_author(name = f"{name}'s BET", icon_url = ctx.author.avatar_url)
+        bet_list.set_author(name = f"{ctx.author.name}'s BET", icon_url = ctx.author.avatar_url)
 
         await ctx.send(embed = bet_list)
         #! SAVE THOSE DAMN COINS
@@ -115,32 +110,26 @@ class Currency(commands.Cog):
         elif isinstance(error, commands.BadArgument):
             await ctx.send(">>> U need to have actual souls, go hunt POET.")
     
-    #BANK
+    #? BANK
     @commands.command()
     @commands.cooldown(rate=3, per=30, type=commands.BucketType.user)
     async def bank(self, ctx):
         '''When you are broke, cry in front of the GOVT. and get some loan to use in a game which will have no impact on your true irl broke ass.'''
-        
-        name = ctx.author.name
-        disc = ctx.author.discriminator
         a = random.randrange(1,10)
-
-        coins = ctx.State.User.souls
+        coins = ctx.States.User.souls
 
         if coins == 0:
-            (mem_info[disc])["coins"] = a
-            await ctx.send(f">>> Given {a} SOULS to {name}, get rekt.")
-            ctx.State.User.souls += a
+            await ctx.send(f">>> Given {a} SOULS to {ctx.author.name}, get rekt.")
+            ctx.States.User.souls += a
         else:
             await ctx.send(">>> You are way too rich for us, get lost.") 
 
-    #SOULS
+    #? SOULS
     @commands.command(aliases=['bal','coins'])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def souls(self, ctx):
         '''Just the balance of your souls. THATS IT.'''
-    
-        await ctx.send(f">>> Souls of {ctx.author.name}: {ctx.State.User.souls}.")
+        await ctx.send(f">>> Souls of {ctx.author.name}: {ctx.States.User.souls}.")
 
 
 def setup(client):
