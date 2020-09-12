@@ -216,8 +216,14 @@ class Utility(commands.Cog):
                              value=ctx.States.Guild.auto_meme_channel.mention if ctx.States.Guild.auto_meme_channel is not None else "Not set", inline=False)
             embed.add_field(name="Level up",
                              value=ctx.States.Guild.level_up_channel.mention if ctx.States.Guild.level_up_channel is not None else "Not set", inline=False)
-            embed.add_field(name="VC text",
-                             value=ctx.States.Guild.voice_text_channel.mention if ctx.States.Guild.voice_text_channel is not None else "Not set", inline=False)
+            
+            try:
+                embed.add_field(name="VC text",
+                                value=ctx.States.Guild.voice_text_channel.mention if ctx.States.Guild.voice_text_channel is not None else "Not set", inline=False)
+            except AttributeError:
+                embed.add_field(name="VC text",
+                                value=ctx.States.Guild.voice_text_channel, inline=False)
+                
             embed.add_field(name="Extra cooldown",
                              value=f"`{ctx.States.Guild.extra_cooldown}`" + " seconds", inline=False)
             embed.add_field(name="Auto-disconenct time",
@@ -293,7 +299,7 @@ class Utility(commands.Cog):
             return    
         
         role_id = int(role[2:-1])
-        role = ctx.guild.get_channel(role_id)
+        role = ctx.guild.get_role(role_id)
         ctx.States.Guild.dj_role = role
         
         await ctx.send(f">>> DJ role changed to {role.mention}")  
@@ -321,10 +327,14 @@ class Utility(commands.Cog):
         ctx = await self.client.get_context(ctx.message, cls=cc)
         
         rem = ["disable", "remove"]
-        if str(channel) in rem:
+        if str(channel) == "remove":
             ctx.States.Guild.voice_text_channel = None
             await ctx.send(f">>> The primary voice text channel was removed")
             return    
+        if str(channel) == "disable":
+            ctx.States.Guild.voice_text_channel = "disabled"
+            await ctx.send(f">>> VC verbose was disabled")
+            return  
         
         channel_id = int(channel[2:-1])
         channel = ctx.guild.get_channel(channel_id)

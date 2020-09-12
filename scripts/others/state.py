@@ -140,9 +140,9 @@ class GuildState:
     
     @property
     def voice_text_channel(self) -> discord.TextChannel:
-        id = self.get_property("vc_text")
+        _id = self.get_property("vc_text")
         
-        return self.guild.get_channel(int(id)) if id != None else id
+        return self.guild.get_channel(int(_id)) if _id.isnumeric() else id
     
     @property
     def level_up_channel(self) -> discord.TextChannel:
@@ -224,9 +224,14 @@ class GuildState:
     @voice_text_channel.setter
     def voice_text_channel(self, channel: discord.TextChannel):
         if channel is None:
-            self.set_property(property_name="voice_text", property_val=None)
+            self.set_property(property_name="vc_text", property_val=None)
             return
-        self.set_property(property_name="voice_text", property_val=channel.id)
+        
+        elif isinstance(channel, str):
+             self.set_property(property_name="vc_text", property_val=channel)
+             return 
+         
+        self.set_property(property_name="vc_text", property_val=channel.id)
         
     @level_up_channel.setter
     def level_up_channel(self, channel: discord.TextChannel):

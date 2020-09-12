@@ -141,7 +141,15 @@ class Play(commands.Cog):
             #! plays the song
             if queue != []:
                 try:
-                    await ctx.send(f"{queue[0].title} playing now.")
+                    ch = ctx.States.Guild.voice_text_channel
+                    if ch is not None and not ch == "disabled":
+                        await ch.send(f"{queue[0].title} playing now.")
+                    else:
+                        if ch == "disabled":
+                            pass
+                        else:
+                            await ctx.send(f"{queue[0].title} playing now.")
+                            
                     self.log("Downloaded song.")
                    
                     voice.play(discord.FFmpegPCMAudio(queue[0].audio_url, executable="./Bin/ffmpeg.exe", before_options="-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5"),
@@ -165,7 +173,15 @@ class Play(commands.Cog):
                     
                     self.log(e)
                     self.log(f"{queue[0].title} cannot be played.")
-                    await ctx.send(f"{queue[0].title} cannot be played.")
+                    
+                    ch = ctx.States.Guild.voice_text_channel
+                    if ch is not None and not ch == "disabled":
+                        await ch.send(f"{queue[0].title} cannot be played.")
+                    else:
+                        if ch == "disabled":
+                            pass
+                        else:
+                            await ctx.send(f"{queue[0].title} cannot be played.")
                     
                     queue2 = state.queue
                     queue2.remove(queue[0])
@@ -179,7 +195,14 @@ class Play(commands.Cog):
                     flag = False
             else:
                 
-                await ctx.send(">>> All songs played. No more songs to play.")
+                ch = ctx.States.Guild.voice_text_channel
+                if ch is not None and not ch == "disabled":
+                     await ch.send(">>> All songs played. No more songs to play.")
+                else:
+                    if ch == "disabled":
+                        pass
+                    else:
+                         await ctx.send(">>> All songs played. No more songs to play.")
                 self.log("Ending the queue")
                 if ctx.author.guild in gen.time_l:
                     gen.time_l.remove(ctx.guild)
