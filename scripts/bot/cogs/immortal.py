@@ -61,8 +61,6 @@ class Immortal(commands.Cog):
             title = "ME! Stats",
             colour = discord.Colour.from_rgb(0,0,0)
             )
-           
-
             stats.set_author(name = member.name, icon_url = member.avatar_url)
             stats.add_field(name = "Messages",value= state.messages, inline = True)
             stats.add_field(name = "Level",value= state.level, inline = True)

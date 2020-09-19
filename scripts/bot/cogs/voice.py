@@ -258,7 +258,7 @@ class Voice(commands.Cog):
         
         embed.add_field(name=f"{vid.title}", value="**  **", inline=False)
         
-        amt = int(state.time/vid.seconds*10)
+        amt = int(state.time/vid.seconds*10) if vid.seconds != 0 else 0
         
         ntime = ntime.split(":")
         for i in range(3 - len(vid.duration.split(":"))):
