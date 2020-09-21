@@ -130,9 +130,13 @@ class YoutubeVideo:
                 "url",
                 "ext"
                 ]
-        
-        info = youtube_dl.YoutubeDL(ydl_opts).extract_info(self.id,download = False)
-    
+        try:
+            info = youtube_dl.YoutubeDL(ydl_opts).extract_info(self.id,download = False)
+        except:
+            ydl_opts = {
+            'quiet': True,
+            }
+            info = youtube_dl.YoutubeDL(ydl_opts).extract_info(self.id,download = False)
         info2 = {}
         for i in need:
             info2[i] = info[i]

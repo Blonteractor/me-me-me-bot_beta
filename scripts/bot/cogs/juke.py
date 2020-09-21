@@ -111,7 +111,7 @@ class Juke(commands.Cog):
                                     
                                 ntime = str(timedelta(seconds=tstate.time))
 
-                                amt = int(tstate.time/vid.seconds*10)
+                                amt = int(tstate.time/vid.seconds*10) if vid.seconds != 0 else 0
                                 
                                 ntime = ntime.split(":")
                                 for i in range(3 - len(vid.duration.split(":"))):

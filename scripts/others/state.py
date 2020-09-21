@@ -142,7 +142,7 @@ class GuildState:
     def voice_text_channel(self) -> discord.TextChannel:
         _id = self.get_property("vc_text")
         
-        return self.guild.get_channel(int(_id)) if _id.isnumeric() else id
+        return self.guild.get_channel(int(_id)) if _id and _id.isnumeric() else _id
     
     @property
     def level_up_channel(self) -> discord.TextChannel:
@@ -312,11 +312,9 @@ class MemberState:
         
         db_update(self.db_name, states)
         
-    def get_property(self, property_name: str, rtr=False):
-        state_variables = self.state_variables
-        exists = property_name in state_variables
-       
-        if not exists:
+    def get_property(self, property_name: str, rtr=False):   
+        state_variables = self.state_variables  
+        if not (property_name in state_variables):
             if not rtr:
                 raise AttributeError(f"{property_name} not found in the state variables")
 
