@@ -377,7 +377,6 @@ class Utility(commands.Cog):
                 res = {}
                 return
             else:
-                print("\n\n" + message.content.upper())
                 if message.content in rem:
                     res = {}
                     await ctx.send("All rank roles removed, exp counting disabled.")
@@ -387,9 +386,7 @@ class Utility(commands.Cog):
                     _id = int(spl[1][3:][:-1])
                     rank = int(spl[2])
                     
-                    print(f"Rank: {rank}, Role_id: {_id}")
                     role = discord.utils.get(ctx.guild.roles, id=_id)
-                    print(f"Role Received: {role.name}")
                     
                     if role in res.values():
                         await ctx.send("That's a duplicate you phoccin.", delete_after=5)
@@ -401,9 +398,8 @@ class Utility(commands.Cog):
                     
                     await ctx.send(f"Added `@{role.name}` for level {rank}")
                     res[rank] = role
-                    print(res)
                 elif message.content == "stop":
-                    print("here")
+            
                     break
                 else:
                     await ctx.send(f"`{message.content}` is not a valid response.")
