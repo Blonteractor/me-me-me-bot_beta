@@ -109,8 +109,14 @@ class Levels(commands.Cog):
 
         a = list(roles.keys())
        
-
-        for i in range(0,len(a)):
+        role = None
+        role_cap = None
+        role_colour = None
+        role_next = None
+        role_next_colour = None
+               
+        for i in range(len(a)):
+            
             if level < roles[a[i]][0]:
                 if i == 0:                                                                  #! hardcoded
                     role = "Undefined"
@@ -119,17 +125,29 @@ class Levels(commands.Cog):
                     role_next, role_next_colour = roles[a[0]]
                 else:
                     role = a[i-1]
-                    role_cap, role_colour = roles[a[i-1]]
+                    role_cap, role_colour = roles[role]
                     role_next, role_next_colour = roles[a[i]]
-                    if blend:
-                        dominant_colour = list(ct.get_color(quality=1))
-                        role_next_colour = role_colour = dominant_colour
                     role_colour = role_colour[:]
 
-                break    
+                break
+            
+            elif level >= roles[a[-1]][0]:
+                role = a[-1]
+                role_cap, role_colour = roles[role]
+                role_next, role_next_colour = role_cap, role_colour    
+                
+        if blend:
+            dominant_colour = list(ct.get_color(quality=1))
+            role_next_colour = role_colour = dominant_colour
 
             
-        role_percent = (level - role_cap)/(role_next - role_cap)
+        role_percent_1 = (level - role_cap)
+        role_percent_2 = (role_next - role_cap)
+        
+        try:
+            role_percent = role_percent_1 / role_percent_2
+        except ZeroDivisionError:
+            role_percent = 0
 
         for i in range(3):
         
