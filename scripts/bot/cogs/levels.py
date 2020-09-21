@@ -1,5 +1,6 @@
 import discord
 from random import randint
+import random
 from discord.ext import commands, tasks
 import requests
 import io
@@ -164,18 +165,31 @@ class Levels(commands.Cog):
 
         bg = Image.new("RGB", (1000, 1000), color=role_colour)
         
-        print(luminance(*role_colour))
         
         fg_colour = BLACK if luminance(*role_colour) >= BLACK_LUMINANCE_THRESHOLD else WHITE
+
+        fg_colour = BLACK
         
         fg = Image.new("RGB", (1000, 980), color=fg_colour)
         
+        MPATH = os.path.abspath(os.path.join(
+                                os.path.dirname(__file__), "../../../assets/masks"))
+        MDIR = os.listdir(MPATH)
+        
+        filename = random.choice(MDIR)
+        mask = Image.open(os.path.join(MPATH, "mask1.png")).convert('L').resize((950,980))
+
+        egg = Image.new("RGB", mask.size, color=(138,3,3))
+        
+        
+        fg = Image.composite(egg,fg,mask)
+        
         bg.paste(fg, (0, 0))
-        bg.paste(avatar_photo, (200, 100), avatar_photo)
+        # bg.paste(avatar_photo, (200, 100), avatar_photo)
 
         draw = ImageDraw.Draw(bg)
-        draw.arc([(190, 90), (810, 710)], start=arc_start,
-                 end=arc_end, fill=role_colour, width=10)
+        # draw.arc([(190, 90), (810, 710)], start=arc_start,
+        #          end=arc_end, fill=role_colour, width=10)
 
         name = member.name
         if len(name) > 15:
@@ -195,10 +209,10 @@ class Levels(commands.Cog):
 
         roboto_black = ImageFont.truetype('./Fonts/Roboto-Black.ttf', 110)
 
-        d = roboto_cond.getsize("LEVEL")[0]
-        draw.text((600, 850), "LEVEL", font=roboto_cond, fill=role_colour)
-        draw.text((620+d, 810), str(level),
-                  font=roboto_black, fill=role_colour)
+        # d = roboto_cond.getsize("LEVEL")[0]
+        # draw.text((600, 850), "LEVEL", font=roboto_cond, fill=role_colour)
+        # draw.text((620+d, 810), str(level),
+        #           font=roboto_black, fill=role_colour)
 
         d = roboto_cond.getsize("RANK")[0]
         
@@ -209,24 +223,24 @@ class Levels(commands.Cog):
             draw.text((50, 50), "RANK", font=roboto_cond, fill=BLACK)
             draw.text((70+d, 10), str(rank), font=roboto_black, fill=BLACK)
 
-        if len(role) > 13:
-            role = role.split()
-            nrole = []
-            for i in role:
-                nrole += [i[0]]
-            if len(nrole)<=6:
-                role = " ".join(nrole)
-            else:
-                role = "".join(nrole)
+        # if len(role) > 13:
+        #     role = role.split()
+        #     nrole = []
+        #     for i in role:
+        #         nrole += [i[0]]
+        #     if len(nrole)<=6:
+        #         role = " ".join(nrole)
+        #     else:
+        #         role = "".join(nrole)
             
-        if len(role) > 13:
-            role = role[:13]
+        # if len(role) > 13:
+        #     role = role[:13]
 
 
-        x = 10
-        for i in role.upper():
-            draw.text((950, x), i, font=roboto_cond, fill=role_colour)
-            x += roboto_cond.getsize(i)[0]+40
+        # x = 10
+        # for i in role.upper():
+        #     draw.text((950, x), i, font=roboto_cond, fill=role_colour)
+        #     x += roboto_cond.getsize(i)[0]+40
 
         bg.save(f"{member.guild.id + member.id}.png")
 
