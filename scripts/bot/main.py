@@ -104,6 +104,7 @@ async def unload_all(ctx):
 async def reload(ctx, extension):
     client.unload_extension(f"cogs.{extension}")
     client.load_extension(f"cogs.{extension}")
+    print(f"-----------------------------------RELOADED {extension}--------------------------------------------")
     await ctx.send(f">>> {extension.capitalize()} commands drank some coke, they are now refreshed. ")
 
 

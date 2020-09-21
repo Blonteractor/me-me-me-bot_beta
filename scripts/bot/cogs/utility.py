@@ -365,27 +365,31 @@ class Utility(commands.Cog):
         rem = ["disable", "remove"]
         res = {}
         
-        await ctx.send(""">>> Send the ranks you want to add like this `add @role level_required`, a total of 6 will be accepted, say `stop` when done.
-                        You can only add a maximum of 10 roles""")
+        await ctx.send("""Send the ranks you want to add like this `add @role level_required`, say `stop` when done. You can only add a maximum of 10 roles""")
         
         while len(res) <= 10:
         
             try:
-                message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author and m.content.startswith("add "), timeout=60)
+                message = await self.client.wait_for("message", check=lambda m: m.author == ctx.author and (m.content.startswith("add ") or m.content == "stop" or m.content in rem), timeout=60)
                 message: discord.Message
             except asyncio.TimeoutError:
                 await ctx.send("Looks like no one is adding any more roles")
                 res = {}
-                break
+                return
             else:
+                print("\n\n" + message.content.upper())
                 if message.content in rem:
                     res = {}
                     await ctx.send("All rank roles removed, exp counting disabled.")
                     break
-                elif message.content.startswith("add @"):
+                elif message.content.startswith("add <@"):
                     spl = message.content.split()
-                    role = discord.utils.get(ctx.guild.roles, id=int(spl[1][3:][:-1]))
+                    _id = int(spl[1][3:][:-1])
                     rank = int(spl[2])
+                    
+                    print(f"Rank: {rank}, Role_id: {_id}")
+                    role = discord.utils.get(ctx.guild.roles, id=_id)
+                    print(f"Role Received: {role.name}")
                     
                     if role in res.values():
                         await ctx.send("That's a duplicate you phoccin.", delete_after=5)
@@ -395,8 +399,11 @@ class Utility(commands.Cog):
                     if rank < 0:
                         await ctx.send("I dont remember asking your pp size, give a number greater than zero please.")
                     
+                    await ctx.send(f"Added `@{role.name}` for level {rank}")
                     res[rank] = role
+                    print(res)
                 elif message.content == "stop":
+                    print("here")
                     break
                 else:
                     await ctx.send(f"`{message.content}` is not a valid response.")
