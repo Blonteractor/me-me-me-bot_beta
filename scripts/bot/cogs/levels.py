@@ -79,6 +79,12 @@ class Levels(commands.Cog):
                     
 
     def rank_creation(self, ctx, member, roles):
+        
+        luminance = lambda r,g,b: (0.2126)*r + (0.7152)*g + (0.0722)*b
+        
+        BLACK_LUMINANCE_THRESHOLD = 40
+        BLACK = (0, 0, 0)
+        WHITE = (255, 255, 255)
 
         state = State(member).Member
         blend = State(member).User.card_blend
@@ -157,7 +163,13 @@ class Levels(commands.Cog):
         role_colour = tuple(role_colour)
 
         bg = Image.new("RGB", (1000, 1000), color=role_colour)
-        fg = Image.new("RGB", (1000, 980), color=(0, 0, 0))
+        
+        print(luminance(*role_colour))
+        
+        fg_colour = BLACK if luminance(*role_colour) >= BLACK_LUMINANCE_THRESHOLD else WHITE
+        
+        fg = Image.new("RGB", (1000, 980), color=fg_colour)
+        
         bg.paste(fg, (0, 0))
         bg.paste(avatar_photo, (200, 100), avatar_photo)
 
@@ -173,8 +185,13 @@ class Levels(commands.Cog):
         roboto_cond = ImageFont.truetype('./Fonts/RobotoCondensed-Light.ttf', 60)
         d = nanotech.getsize(name)[0]
 
-        draw.text((50, 750), name, font=nanotech)
-        draw.text((70+d, 750), f"#{discrim}", font=roboto_cond)
+        if fg_colour == BLACK:
+            draw.text((50, 750), name, font=nanotech)
+            draw.text((70+d, 750), f"#{discrim}", font=roboto_cond)
+
+        elif fg_colour == WHITE:
+            draw.text((50, 750), name, font=nanotech, fill=BLACK)
+            draw.text((70+d, 750), f"#{discrim}", font=roboto_cond, fill=BLACK)
 
         roboto_black = ImageFont.truetype('./Fonts/Roboto-Black.ttf', 110)
 
@@ -184,8 +201,13 @@ class Levels(commands.Cog):
                   font=roboto_black, fill=role_colour)
 
         d = roboto_cond.getsize("RANK")[0]
-        draw.text((50, 50), "RANK", font=roboto_cond)
-        draw.text((70+d, 10), str(rank), font=roboto_black)
+        
+        if fg_colour == BLACK:
+            draw.text((50, 50), "RANK", font=roboto_cond)
+            draw.text((70+d, 10), str(rank), font=roboto_black)
+        elif fg_colour == WHITE:
+            draw.text((50, 50), "RANK", font=roboto_cond, fill=BLACK)
+            draw.text((70+d, 10), str(rank), font=roboto_black, fill=BLACK)
 
         if len(role) > 13:
             role = role.split()
