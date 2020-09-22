@@ -56,6 +56,7 @@ class Misc(commands.Cog):
     # ? LYRICS
     @commands.command()
     async def lyrics(self, ctx: commands.Context):
+        """Get lyrics to the currently playing song (or not, depends on the song)"""
         
         state = TempState(ctx.author.guild)
 
@@ -79,8 +80,9 @@ class Misc(commands.Cog):
 
         await self.client.get_cog("Queue").embed_pages(ctx=ctx, _content=lyrics, embed_msg=embed_msg, wait_time=120)
         
-    @commands.command(name="choose-lyrics")
+    @commands.command(name="choose-lyrics",aliases = ['clyrics'])
     async def clyrics(self, ctx: commands.Context,query = None):
+        """Get the lyrics not ANY(susceptible to terms and conditions) song."""
         state = TempState(ctx.author.guild)
         if not query and state.queue == []:
             await ctx.send("no song sad lyf")
@@ -169,6 +171,7 @@ class Misc(commands.Cog):
 
     @commands.command(name="song-info", aliases=["sinfo", "sf"])
     async def song_info(self, ctx, *, query):
+        """Gets info about a song, who could have guessed."""
         result = await self.client.get_cog("Play").searching(ctx, query)
         embed = discord.Embed(title=f"{result.title} ({result.duration}) - {result.uploader}",
                               url=result.url,
@@ -189,7 +192,8 @@ class Misc(commands.Cog):
     # ? PLAYLIST_INFO
     @commands.command(name="playlist-info", aliases=["plinfo", "pf"])
     async def playlist_info(self, ctx, *, query):
-
+        """Gets info about a playlist, who could have guessed."""
+        
         result = await self.client.get_cog("Play").searching(ctx, query, False)
 
         embed = discord.Embed(title=f"{result.title} ({result.duration}) - {result.uploader}",
@@ -214,6 +218,7 @@ class Misc(commands.Cog):
     @commands.command()
     async def download(self, ctx, *, query = None):
         '''Downloads a song for you, so your pirated ass doesn't have to look for it online.'''
+        
         if query:
             if "http" in query:
                 if "www.youtube.com" in query:

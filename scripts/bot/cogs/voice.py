@@ -199,6 +199,8 @@ class Voice(commands.Cog):
 
     @commands.command(name="now-playing", aliases=["np"])
     async def now_playing(self, ctx):
+        """Tells you the currently playing song."""
+        
         state = TempState(ctx.author.guild)
         queue = [x for x in state.queue if type(x) != str]
         vid = queue[0]
@@ -328,7 +330,7 @@ class Voice(commands.Cog):
 
    # ? PAUSE
 
-    @commands.command(aliases=["p"])
+    @commands.command()
     @vc_check()
     @vote(votes_required=0.5,
         vote_duration=20,
@@ -351,7 +353,7 @@ class Voice(commands.Cog):
 
     # ? RESUME
 
-    @commands.command(aliases=["r"])
+    @commands.command()
     @vc_check()
     async def resume(self, ctx):
         '''Resumes the current music.'''
@@ -369,7 +371,7 @@ class Voice(commands.Cog):
             await ctx.send(">>> Ya know to resume stuff, stuff also needs to be paused first.")
 
     # ? STOP
-    @commands.command(aliases=["st"])
+    @commands.command(aliases=["yamete"])
     @vc_check()
     @vote(votes_required=0.5,
     vote_duration=20,
@@ -397,7 +399,7 @@ class Voice(commands.Cog):
             await ctx.send(">>> Ya know to stop stuff, stuff also needs to be playing first.")
 
     # ? HARD_STOP
-    @commands.command(name="hardstop", aliases=["hst"])
+    @commands.command(name="hardstop", aliases=["yamero"])
     @vc_check()
     async def hard_stop(self, ctx):
         '''Stops the current music AND clears the current queue.'''
@@ -509,7 +511,7 @@ class Voice(commands.Cog):
 
     # ? VOLUME
 
-    @commands.command(aliases=["v", "vl"])
+    @commands.command(aliases=["v"])
     @vc_check()
     async def volume(self, ctx, volume: int):
         '''Changes the volume of the player. Volume should be between 0 and 100.'''
@@ -582,7 +584,7 @@ class Voice(commands.Cog):
     @commands.command()
     @vc_check()
     async def seek(self, ctx, time):
-        """Skip ahead to a timestamp in the current song"""
+        """Go to a timestamp in the current song"""
         state = TempState(ctx.author.guild)
         
         queue = [x for x in state.queue if type(x) != str]
@@ -700,6 +702,7 @@ class Voice(commands.Cog):
     async def shuffle(self, ctx, amount: int = None):
         state = TempState(ctx.author.guild)
         """Shuffle the current queue"""
+        
         state.queue = [x for x in state.queue if type(x) != str]
         state.queue_ct = state.queue[:]
         next_queue = state.queue[1:]

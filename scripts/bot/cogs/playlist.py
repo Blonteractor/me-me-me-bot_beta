@@ -134,19 +134,19 @@ class Playlist(commands.Cog):
         await ctx.send(f"A playlist with the name `{name}` was created, use the `playlist add` command to add songs.")
     
     @playlist.command()
-    async def delete(self,ctx,name):
+    async def delete(self,ctx,pl_name):
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         
         playlist_db = ctx.States.User.playlist
 
         try:
 
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
@@ -157,26 +157,26 @@ class Playlist(commands.Cog):
             pass
         del playlist_db[pname]
         ctx.States.User.playlist = playlist_db
-        await ctx.send(f"Playlist `{name}` was deleted.")
+        await ctx.send(f"Playlist `{pl_name}` was deleted.")
     
-    @playlist.command(aliases=["v"])
-    async def view(self, ctx, name=None):
+    @playlist.command()
+    async def view(self, ctx, pl_name=None):
         '''Shows your Playlist. Subcommands can alter your playlist'''
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         
         playlist_db = ctx.States.User.playlist
         try:
-            if name:
-                if name in playlist_db:
-                    playlist = playlist_db[name]
-                    pname = name
-                elif name.isnumeric():
-                    if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name:
+                if pl_name in playlist_db:
+                    playlist = playlist_db[pl_name]
+                    pname = pl_name
+                elif pl_name.isnumeric():
+                    if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                         playlist = list(playlist_db.values())[
-                            int(name)-1]
+                            int(pl_name)-1]
                         pname = list(playlist_db.keys())[
-                            int(name)-1]
+                            int(pl_name)-1]
                     else:
                         await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                         return
@@ -269,7 +269,7 @@ class Playlist(commands.Cog):
 
     # ? PLAYLIST ADD
     @playlist.command()
-    async def add(self, ctx, name, *, query):
+    async def add(self, ctx, pl_name, *, query):
         '''Adds a song to your Playlist.'''
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
@@ -277,12 +277,12 @@ class Playlist(commands.Cog):
         playlist_db = ctx.States.User.playlist
         try:
 
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
@@ -316,18 +316,18 @@ class Playlist(commands.Cog):
 
     # ? PLAYLIST ADD_PLAYLIST
     @playlist.command(name="add-playlist", aliases=["addpl"])
-    async def add_playlist(self, ctx, name, *, query):
+    async def add_playlist(self, ctx, pl_name, *, query):
         '''Adds a playlist to your Playlist.'''
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         playlist_db = ctx.States.User.playlist
 
         try:
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
@@ -355,7 +355,7 @@ class Playlist(commands.Cog):
 
     # ? PLAYLIST REARRANGE
     @playlist.command(aliases=["rng"])
-    async def rearrange(self, ctx, name, P1: int, P2: int):
+    async def rearrange(self, ctx, pl_name, index1: int, index2: int):
         '''Rearranges 2 songs/playlist places of your playlist.'''
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
@@ -364,12 +364,12 @@ class Playlist(commands.Cog):
 
         try:
 
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
@@ -380,19 +380,19 @@ class Playlist(commands.Cog):
         except:
             pass 
         
-        if P1 < 1 or P1 > len(playlist_db[pname]) or P2 < 1 or P2 > len(playlist_db[pname]):
+        if index1 < 1 or index1 > len(playlist_db[pname]) or index2 < 1 or index2 > len(playlist_db[pname]):
             return
 
-        playlist_db[pname][P1-1], playlist_db[pname][P2 - 1] = playlist_db[pname][P2-1], playlist_db[pname][P1-1]
+        playlist_db[pname][index1-1], playlist_db[pname][index2 - 1] = playlist_db[pname][index2-1], playlist_db[pname][index1-1]
                                                                                                 
-        await ctx.send(f"Number {P1} and {P2} have been rearranged.")
+        await ctx.send(f"Number {index1} and {index2} have been rearranged.")
         self.log(f"altered {pname}")
 
         ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST REMOVE
-    @commands.command(name="plremove") #! experimentation
-    async def plremove(self, ctx, name, R: int):
+    @playlist.command(name="remove") #! experimentation
+    async def pl_remove(self, ctx, pl_name, index: int):
         '''Removes a song/playlist from your playlist.'''
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         
@@ -400,12 +400,12 @@ class Playlist(commands.Cog):
 
         try:
 
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
@@ -424,11 +424,11 @@ class Playlist(commands.Cog):
                 await ctx.send("Your playlist too smol for alteration.")
                 return
 
-            if R < 1 or R > len(playlist_db[pname]):
+            if index < 1 or index > len(playlist_db[pname]):
                 return
 
-            playlist_db[pname].pop(R-1)
-            await ctx.send(f"Number {R} has been removed.")
+            playlist_db[pname].pop(index-1)
+            await ctx.send(f"Number {index} has been removed.")
             self.log(f"altered {pname}")
 
         ctx.States.User.playlist = playlist_db
@@ -468,8 +468,8 @@ class Playlist(commands.Cog):
             ctx.States.User.playlist = playlist_db
 
     # ? PLAYLIST PLAY
-    @playlist.command()
-    async def plplay(self, ctx, name):
+    @playlist.command(name = "play")
+    async def pl_play(self, ctx, pl_name):
         '''Plays your playlist.'''
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
@@ -478,12 +478,12 @@ class Playlist(commands.Cog):
         state = ctx.States.Temp
 
         try:
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:   
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return
@@ -554,18 +554,20 @@ class Playlist(commands.Cog):
                 
     # ? PLAYLIST EXPAND
     @playlist.command(name="expand")
-    async def expandd(self, ctx, name):
+    async def pl_expand(self, ctx, pl_name):
+        """If you have any playlists in your playlist, this command will expand them into songs."""
+        
         playlist_db = ctx.States.User.playlist
         
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
 
         try:
-            if name in playlist_db:
-                pname = name
-            elif name.isnumeric():
-                if int(name) > 0 and int(name) <= len(playlist_db):
+            if pl_name in playlist_db:
+                pname = pl_name
+            elif pl_name.isnumeric():
+                if int(pl_name) > 0 and int(pl_name) <= len(playlist_db):
                     pname = list(playlist_db.keys())[
-                        int(name)-1]
+                        int(pl_name)-1]
                 else:
                     await ctx.send("Your playlist number should be between 1 and the amount of playlist you have.")
                     return

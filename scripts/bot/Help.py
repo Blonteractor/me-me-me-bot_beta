@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands, tasks
 from asyncio import TimeoutError
 
-      
 class MyHelpCommand(commands.HelpCommand):
     
     def __init__(self):
@@ -11,6 +10,8 @@ class MyHelpCommand(commands.HelpCommand):
 	    		'cooldown': commands.Cooldown(1, 3.0, commands.BucketType.member)})
 
     nsfw_cog_name = "Nsfw"
+
+    footer_text = "[optional fields]    <necessary fields>    (aliases)"
 
     def get_command_signature(self, command):
         """Method to return a commands name and signature"""
@@ -88,6 +89,7 @@ class MyHelpCommand(commands.HelpCommand):
                     embed = discord.Embed(title = f"{emoji} **{cog_name}** ", description = desc, color=discord.Colour.magenta())
                     for command in commands:
                         embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                    embed.set_footer(text = self.footer_text )
                     embeds += [embed]
                     cogs_list+=[cog_name]
                 else:
@@ -95,6 +97,7 @@ class MyHelpCommand(commands.HelpCommand):
                         embed = discord.Embed(title = f"{emoji} **{cog_name} {i}/{n}** ", description = desc, color=discord.Colour.magenta())
                         for command in cog_split[i-1]:
                             embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                        embed.set_footer(text = self.footer_text)
                         embeds += [embed]
                         cogs_list+=[cog_name+f' {i}/{n}']
 
@@ -113,6 +116,7 @@ class MyHelpCommand(commands.HelpCommand):
             if cog:
                 cog_name = cog.qualified_name.capitalize()
                 embed.add_field(name = f"{emoji} **{cog_name}**", value= f">>> `{ctx.prefix}HELP {cog_name}`")
+        embed.set_footer(text = self.footer_text)
 
         embeds.insert(0,embed)
         
@@ -184,6 +188,7 @@ class MyHelpCommand(commands.HelpCommand):
         ctx=self.context
       
         embed = discord.Embed(title =  f"{self.get_command_signature(command)} {self.get_command_aliases(command)}",description=self.get_command_help(command), color=discord.Colour.magenta())
+        embed.set_footer(text = self.footer_text)
         await ctx.send(embed=embed)
 
     async def send_cog_help(self, cog):
@@ -203,6 +208,7 @@ class MyHelpCommand(commands.HelpCommand):
             embed = discord.Embed(title = f"{emoji} **{cog_name}** ", description = desc, color=discord.Colour.magenta())
             for command in commands:
                 embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+            embed.set_footer(text = self.footer_text)
             await ctx.send(embed=embed)
 
         else:
@@ -210,6 +216,7 @@ class MyHelpCommand(commands.HelpCommand):
                 embed = discord.Embed(title = f"{emoji} **{cog_name} {i}/{n}** ", description = desc, color=discord.Colour.magenta())
                 for command in cog_split[i-1]:
                     embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                embed.set_footer(text = self.footer_text)
                 await ctx.send(embed=embed)   
 
 
@@ -226,6 +233,7 @@ class MyHelpCommand(commands.HelpCommand):
             embed = discord.Embed(title =  f"{self.get_command_signature(parent_command)} {self.get_command_aliases(parent_command)}",description=self.get_command_help(parent_command), color=discord.Colour.magenta())
             for command in commands:
                 embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+            embed.set_footer(text = self.footer_text)
             await ctx.send(embed=embed)
 
         else:
@@ -233,6 +241,7 @@ class MyHelpCommand(commands.HelpCommand):
                 embed = discord.Embed(title =  f"{self.get_command_signature(parent_command)} {self.get_command_aliases(parent_command)} {i}/{n}",description=self.get_command_help(parent_command), color=discord.Colour.magenta())
                 for command in com_split[i-1]:
                     embed.add_field(name = f'{self.get_command_signature(command)} {self.get_command_aliases(command)}',value = self.get_command_description(command))
+                embed.set_footer(text = self.footer_text)
                 await ctx.send(embed=embed) 
     
     async def command_not_found(self,string):

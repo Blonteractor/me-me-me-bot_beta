@@ -319,54 +319,37 @@ class Levels(commands.Cog):
         
         os.remove(filename)
         
-    @commands.group()
-    async def exp(self, ctx):
-        """Change the member's exp count, only for my admins"""
-        
-        await ctx.send(f"_ _")
-    
-    @exp.command()
-    @commands.has_role(gen.admin_role_id)
-    async def add(self, ctx: commands.Context, ammount: int, member: discord.Member):
-        """Give exp to a member"""
-        
-        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
-        ctx.State.Member.xp += ammount
-        
-        await ctx.send(f">>> `{ammount}`xp given to {member.mention}")
-    
-    @exp.command()
-    @commands.has_role(gen.admin_role_id)
-    async def sub(self, ctx: commands.Context, ammount: int, member: discord.Member):
-        """Take exp from a member"""
-        
-        ctx = await self.client.get_context(ctx.message, cls=CustomContext)
-        ctx.State.Member.xp += ammount
-        
-        await ctx.send(f">>> `{ammount}`xp taken from {member.mention}")
-        
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    async def blend(self, ctx, resp):
+    async def blend(self, ctx, response = None):
+        """Turning this on will make your rank card accent color blend with the most doiminant color in your profile pic, so you can show off your anime pfp more you weeb."""
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
         
-        yes = ["yes", "enable", "sure", "y"]
-        no = ["nop", "disable", "no", "n"]
+        yes = ["yes", "enable", "sure", "y","true","on"]
+        no = ["nop", "disable", "no", "n","false","off"]
         
         state = ctx.States.User
         
-        if resp in yes:
+        if not response:
+            if state.card_blend:
+                response = "nop"
+            else:
+                response = "yes"
+        else:
+            response = response.lower()
+
+        if response in yes:
             state.card_blend = True
             await ctx.send("Your rank card color will now blend with your profile pic.")
             return
         
-        elif resp in no:
+        elif response in no:
             state.card_blend = False
             await ctx.send("Your rank card color will now not blend with your profile pic.")
             return
         
         else:
-            await ctx.send("Invalid response, reply like a hooman.")
+            await ctx.send("Invalid response, reply on/off yes/no true/false.")
             return
 
 def setup(client):

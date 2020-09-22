@@ -12,7 +12,6 @@ imp.load_source("state", os.path.join(
 
 from state import MemberState,UserState
 
-
 class Immortal(commands.Cog):
     ''':ghost: These commands are not for some puny mortals, Only Immortal beings possess these commands.'''
 

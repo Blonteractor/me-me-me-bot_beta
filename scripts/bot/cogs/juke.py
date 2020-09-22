@@ -191,6 +191,7 @@ class Juke(commands.Cog):
     
     @commands.command()
     async def resetup(self,ctx):
+        """Re-SetUp the juke box, idk why would you wanna do that but you can, so yay"""
         
         state = GuildState(ctx.guild)
         jb_channel = state.jb_channel

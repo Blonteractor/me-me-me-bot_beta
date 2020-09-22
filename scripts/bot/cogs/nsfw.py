@@ -279,7 +279,7 @@ class Nsfw(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def read(self, ctx, doujin_id): #! makes a different channel in the doujins categoryand posts all doujin images there
-        '''Read the doujin, will create a seperate channel and post all images there. Recomend muting the doujin category.'''
+        '''Read the doujin, will create a seperate channel and post all images there. Recommend muting the doujin category.'''
 
         doujin = nhenpy.NHentaiDoujin(f"/g/{doujin_id}")
         doujin_pages = len(doujin.pages)
@@ -524,6 +524,8 @@ class Nsfw(commands.Cog):
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     @nsfw_command()
     async def vault(self, ctx: commands.Context):
+        """The holy VAULT is where you store all your culture, use subcommands to release it to ur dm and do ther stuff."""
+         
         if ctx.invoked_subcommand is None:
             ctx = await self.client.get_context(ctx.message, cls=CustomContext)
             
@@ -548,6 +550,8 @@ class Nsfw(commands.Cog):
         
     @vault.command()
     async def release(self, ctx: commands.Context):
+        """Send your entire vault to ur DM"""
+        
         ctx = await self.client.get_context(ctx.message, cls=CustomContext)
             
         user_vault = ctx.States.User.vault      
@@ -564,6 +568,8 @@ class Nsfw(commands.Cog):
     @vault.command()
     @nsfw_command()
     async def pop(self, ctx: commands.Context, index):
+        """Remove item from vault, for when u add a doujin to vault and later find out it was necrophilia"""
+        
         try:
             i = int(index)
         except:

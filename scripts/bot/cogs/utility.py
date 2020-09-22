@@ -448,7 +448,7 @@ class Utility(commands.Cog):
             prefixes =  "`" + "`, `".join(ctx.States.Guild.prefix) + "`"
             await ctx.send(f"Current bot prefixes: `{prefixes}`")
         
-    @prefix.command(name="add-prefix", aliases=["addpr"])
+    @prefix.command(name="add-prefix", aliases=["addpr"],usage = "<prefix>")
     @commands.has_permissions(administrator=True)
     async def add_prefix(self, ctx, *, pre):
    
@@ -463,7 +463,7 @@ class Utility(commands.Cog):
         
         await ctx.send(f"Added `{pre}` to prefixes.")
         
-    @prefix.command(name="remove-prefix", aliases=["rempr"])
+    @prefix.command(name="remove-prefix", aliases=["rempr"],usage = "<prefix>")
     @commands.has_permissions(administrator=True)
     async def remove_prefix(self, ctx, *, pre):
         

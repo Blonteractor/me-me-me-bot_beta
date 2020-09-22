@@ -34,7 +34,7 @@ class Meme(commands.Cog):
 
     @commands.command()
     async def meme(self,ctx,subreddit = "memes", amount = 1,types = "hot"):
-        '''Get some fresh memes, you insolent prick.'''
+        '''Get some fresh memes, probably reposts (i mean its reddit we are talking about) but whatever.'''
         
         reddit = gen.reddit
         subr = reddit.subreddit(subreddit)

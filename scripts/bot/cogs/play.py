@@ -372,6 +372,8 @@ class Play(commands.Cog):
     # ? PLAY PLAYLIST
     @commands.command(name="play-playlist", aliases=["ppl"])
     async def play_playlist(self, ctx, *, query):
+        """Plays a playlist? What did you even expect"""
+        
         play_command = self.client.get_command("play")
         if("https://www.youtube.com/playlist?list" in query):
             await ctx.invoke(play_command, query=query)
@@ -386,7 +388,7 @@ class Play(commands.Cog):
 
     # ? SEARCH
 
-    @commands.command(aliases=["s"])
+    @commands.command()
     async def search(self, ctx, *, query):
         """Search on youtube, returns 5 videos that match your query, play one of them using reactions"""
         if not (await ctx.invoke(self.client.get_command("join"))):

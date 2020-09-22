@@ -48,7 +48,7 @@ class Currency(commands.Cog):
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def bet(self, ctx, amount : int):
-        '''Well, this is the only fun part, BET, hail KAKEGURUI.'''
+        '''Use this command to bet souls you had earned.'''
         
         #! GET COINS
         coins = int(ctx.States.User.souls)
@@ -75,7 +75,7 @@ class Currency(commands.Cog):
             ctx.States.User.souls = coins
             
         elif amount<= 0:
-            await ctx.send(f">>> So you want a spanky {ctx.author.name}.")
+            await ctx.send(f">>> You are a little daring today, aren't you, {ctx.author.name}.")
         else:
             await ctx.send(">>> Not enough SOULS man, go hunt.")
 
@@ -104,7 +104,7 @@ class Currency(commands.Cog):
         #! SAVE THOSE DAMN COINS
 
     @bet.error
-    async def ball_error(self, ctx, error):
+    async def bet_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(">>> You need to bet something to gamble, seems like common sense tbh.")
         elif isinstance(error, commands.BadArgument):

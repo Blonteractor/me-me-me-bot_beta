@@ -43,7 +43,7 @@ class Fun(commands.Cog):
 
 
     #! QUES
-    @commands.command(aliases=['8ball', '_8ball', 'question'])
+    @commands.command(aliases=['8ball', 'question'])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def ques(self, ctx, *, question):
         '''I have answers to all your questions in this GOD DAMN WORLD.'''
@@ -54,7 +54,7 @@ class Fun(commands.Cog):
             'Very well.', 'Yes.', 'My compass point to yes.',
             'Dimaag kharab, no jawaab.', "Can't answer right now.",
             'Kya tha? Bhul gyi.', 'Prediction.exe stopped working.',
-            'Meditation.exe started.', "Nikal Laude. Galat h.", 'Nahi.',
+            'Meditation.exe     rted.', "Nikal Laude. Galat h.", 'Nope.',
             'Aditya Giri said no.', 'Bhag bhosadike. No.', 'What the fuck.'
         ]
 
@@ -73,7 +73,7 @@ class Fun(commands.Cog):
             await ctx.send(">>> Enter the question boss.")
 
     #! DIX
-    @commands.command(aliases=['penis', 'dicc', 'peepee', 'dick'])
+    @commands.command(aliases=['penis', 'dicc', 'pp', 'dick'])
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
     async def dix(self, ctx):
         '''Well, I calculate your peepee with my special MEASURING STICK that goes in ME! ass.'''
@@ -105,24 +105,24 @@ class Fun(commands.Cog):
     #! OCR
     @commands.command()
     @commands.cooldown(rate=1, per=cooldown, type=commands.BucketType.user)
-    async def ocr(self,ctx,im = ""):
+    async def ocr(self,ctx,image_url = ""):
         '''Read the text in an image.
             Why is it in FUN you may ask, well see for yourself.
         '''
 
-        if im =="":
+        if image_url =="":
             await ctx.send("Enter a url.")
             return
         pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
        
         embed = discord.Embed(colour=discord.Colour.green(), timestamp=ctx.message.created_at)
 
-        response = requests.get(im)
+        response = requests.get(image_url)
         img = Image.open(io.BytesIO(response.content))
         text = pytesseract.image_to_string(img, lang="eng")
 
         embed.set_footer(text=f"Requested by {ctx.author}", icon_url=ctx.author.avatar_url)
-        embed.set_image(url=im)
+        embed.set_image(url=image_url)
         embed.add_field(name='Text',value=text)
         await ctx.channel.purge(limit=2)
         await ctx.send(embed=embed)

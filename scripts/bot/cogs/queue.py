@@ -171,7 +171,7 @@ class Queue(commands.Cog):
             await self.embed_pages(_content=desc_l, ctx=ctx, embed_msg=embed_msg, wait_time=120)
 
     # ? QUEUE REPLACE
-    @Queue.command()
+    @Queue.command(aliases = ['move'])
     @vc_check()
     async def replace(self, ctx, change1, change2):
         '''Replaces two queue members.'''
@@ -267,8 +267,8 @@ class Queue(commands.Cog):
 
 
     # ? CONTRACTED REMOVE
-    @contracted.command()
-    async def remm(self, ctx, remove):
+    @contracted.command(name = "remove")
+    async def ct_remove(self, ctx, remove):
         '''Removes the Queue member.'''
         
         state = TempState(ctx.author.guild)
@@ -310,9 +310,9 @@ class Queue(commands.Cog):
             return
 
     # ? CONTRACTED REPLACE
-    @contracted.command()
+    @contracted.command(name = "replace")
     @vc_check()
-    async def repla(self, ctx, change1, change2):
+    async def ct_replace(self, ctx, change1, change2):
         '''Replaces two queue members.'''
 
         state = TempState(ctx.author.guild)
@@ -387,9 +387,9 @@ class Queue(commands.Cog):
 
     # ? CONTRACTED NOW
 
-    @contracted.command()
+    @contracted.command(name = "now")
     @vc_check()
-    async def no(self, ctx, change):
+    async def ct_now(self, ctx, change):
         '''Plays a queue member NOW.'''
         state = TempState(ctx.author.guild)
         try:
@@ -461,9 +461,9 @@ class Queue(commands.Cog):
     
     # ? FULL NOW
 
-    @full.command()
+    @full.command(name = "now")
     @vc_check()
-    async def ow(self, ctx, start_index, last_index = None):
+    async def f_now(self, ctx, start_index, last_index = None):
         '''Plays a sub queue Now. if not last_index then only 1 song played'''
         state = TempState(ctx.author.guild)
         if not last_index:
@@ -493,9 +493,9 @@ class Queue(commands.Cog):
 
     # ? FULL ADD
 
-    @full.command()
+    @full.command(name = "add")
     @vc_check()
-    async def faddd(self, ctx, start_index, last_index = None):
+    async def f_add(self, ctx, start_index, last_index = None):
         '''adds a sub queue of fullqueue to the end of the queue. if not last_index then only 1 song added'''
         state = TempState(ctx.author.guild)
         if not last_index:
@@ -551,9 +551,9 @@ class Queue(commands.Cog):
     
     # ? FULL CT NOW
 
-    @fullct.command()
+    @fullct.command(name = "now")
     @vc_check()
-    async def fow(self, ctx, start_index, last_index = None):
+    async def f_ct_now(self, ctx, start_index, last_index = None):
         '''Plays a sub queue Now. if not last_index then only 1 song played'''
         state = TempState(ctx.author.guild)
         if not last_index:
@@ -591,9 +591,9 @@ class Queue(commands.Cog):
 
     # ? FULL CT ADD
 
-    @fullct.command()
+    @fullct.command(name = "add")
     @vc_check()
-    async def ffaddd(self, ctx, start_index, last_index = None):
+    async def f_ct_add(self, ctx, start_index, last_index = None):
         '''adds a sub queue of fullqueue to the end of the queue. if not last_index then only 1 song added'''
         state = TempState(ctx.author.guild)
         if not last_index:
