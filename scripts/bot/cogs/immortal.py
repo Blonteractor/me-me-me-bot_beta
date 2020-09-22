@@ -54,7 +54,10 @@ class Immortal(commands.Cog):
             return
         
         embeds = []
-        for member in ctx.guild.members:
+        for member in ctx.guild.members:  
+            if member.bot:
+                continue
+            
             state =  MemberState(member)
             user = UserState(member)
             stats = discord.Embed(
