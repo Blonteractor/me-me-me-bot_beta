@@ -98,6 +98,7 @@ class Utility(commands.Cog):
                 return gen.error_message(msg, gen.cog_colours["default"])
 
     #* PING
+    @gen.cooldown()
     @commands.command()
     async def ping(self, ctx):
         '''It really means nothing, but well it tells the DAMN PING.'''
@@ -209,7 +210,7 @@ class Utility(commands.Cog):
             embed = discord.Embed(title="Current setUp", color=discord.Color.from_rgb(150, 77, 232))
             
             embed.add_field(name="Prefix",
-                             value=ctx.States.Guild.prefix if ctx.States.Guild.prefix is not None else "epic/me!", inline=False)
+                             value=f"`{'`, `'.join(ctx.States.Guild.prefix)}`", inline=False)
             embed.add_field(name="Juke box",
                              value=ctx.States.Guild.jb_channel.mention if ctx.States.Guild.jb_channel is not None else "Not set", inline=False)
             embed.add_field(name="Auto meme",
@@ -445,17 +446,20 @@ class Utility(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def prefix(self, ctx):
         if ctx.invoked_subcommand is None:  
-            prefixes =  "`" + "`, `".join(ctx.States.Guild.prefix) + "`"
+            prefixes =  "`, `".join(ctx.States.Guild.prefix)
             await ctx.send(f"Current bot prefixes: `{prefixes}`")
         
-    @prefix.command(name="add-prefix", aliases=["addpr"])
+    @prefix.command(name="add")
     @commands.has_permissions(administrator=True)
     async def add_prefix(self, ctx, *, pre):
    
         prefixes = ctx.States.Guild.prefix
         
+        for i in range(len(prefixes)):
+            prefixes[i] = prefixes[i].lower()
+
         if pre not in prefixes:
-            prefixes.extend(gen.permu(pre))
+            prefixes.append(pre)
             ctx.States.Guild.prefix = prefixes
         else:
             await ctx.send(f"`{pre}` is already in prefixes, use the prefix command to veiw all current prefixes.")
@@ -463,12 +467,15 @@ class Utility(commands.Cog):
         
         await ctx.send(f"Added `{pre}` to prefixes.")
         
-    @prefix.command(name="remove-prefix", aliases=["rempr"])
+    @prefix.command(name="remove", aliases=["rem"])
     @commands.has_permissions(administrator=True)
     async def remove_prefix(self, ctx, *, pre):
         
         prefixes = ctx.States.Guild.prefix
-        
+
+        for i in range(len(prefixes)):
+            prefixes[i] = prefixes[i].lower()
+
         if pre in prefixes:
             prefixes.remove(pre)
             ctx.States.Guild.prefix = prefixes

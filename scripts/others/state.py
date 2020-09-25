@@ -179,7 +179,7 @@ class GuildState:
     
     @property
     def prefix(self) -> list:
-        return self.get_property("prefix")
+        return ["me! ","epic "] if self.get_property("prefix") == None else self.get_property("prefix")
     
     @property
     def exp_counting(self) -> bool:

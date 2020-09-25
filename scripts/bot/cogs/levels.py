@@ -177,7 +177,7 @@ class Levels(commands.Cog):
         MDIR = os.listdir(MPATH)
         
         filename = random.choice(MDIR)
-        mask = Image.open(os.path.join(MPATH, "mask1.png")).convert('L').resize((950,980))
+        mask = Image.open(os.path.join(MPATH, "mask26.png")).convert('L').resize((950,980))
 
         egg = Image.new("RGB", mask.size, color=(138,3,3))
         
@@ -210,7 +210,7 @@ class Levels(commands.Cog):
         roboto_black = ImageFont.truetype('./Fonts/Roboto-Black.ttf', 110)
 
         # d = roboto_cond.getsize("LEVEL")[0]
-        # draw.text((600, 850), "LEVEL", font=roboto_cond, fill=role_colour)
+        # draw.text((600, 850), "LEVEL", font=roboto_cond, fill=role_colour)    
         # draw.text((620+d, 810), str(level),
         #           font=roboto_black, fill=role_colour)
 

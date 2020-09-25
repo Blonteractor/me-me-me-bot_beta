@@ -47,7 +47,10 @@ OWNERS = [413287145323626496, 580282285002194966]
 async def determine_prefix(bot, message):
     if message.guild:
         state_prefix = GuildState(message.guild).prefix
-        return state_prefix if state_prefix is not None else prefix
+        prefixes = []
+        for i in range(len(state_prefix)):
+            prefixes += gen.permu(state_prefix[i])
+        return prefixes if prefixes is not None else prefix
     else:
         return prefix
     
