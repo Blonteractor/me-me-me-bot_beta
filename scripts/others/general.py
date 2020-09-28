@@ -2,6 +2,7 @@ import praw
 import os
 import discord
 from colorama import init, Fore, Back, Style
+from discord.ext.commands import Command, Cooldown,CooldownMapping, BucketType
 import json
 #import git
 #from git import Repo
@@ -153,3 +154,29 @@ def new_entry(name, disc):
     mem_info[disc] = {"name": name, "messages": 0,
                       "level": "Prostitute", "coins": 500}
     db_update("inf", mem_info)
+    
+def make_db_if_not_exists(path: str):
+    if not os.path.exists(path):
+        with open(path, "w+b") as f:
+            f.write(b"{}")
+
+default_cooldown = 0.0
+def cooldown(rate=None, per=None, type=BucketType.default):
+    def decorator(func):
+        if isinstance(func, Command):
+            nonlocal rate,per,type
+            db_name = (f"Cooldowns")
+            make_db_if_not_exists(path=f"{DBPATH}\\{db_name}.json")
+            cooldowns = db_receive(db_name)
+            if not rate:
+                rate = 1
+            if not per:
+                if str(func) not in cooldowns:
+                    cooldowns[str(func)] = default_cooldown
+                db_update(db_name,cooldowns)
+                per = cooldowns[str(func)]
+            func._buckets = CooldownMapping(Cooldown(rate, per, type))
+        else:
+            func.__commands_cooldown__ = Cooldown(rate, per, type)
+        return func
+    return decorator 

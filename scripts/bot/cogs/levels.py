@@ -177,7 +177,7 @@ class Levels(commands.Cog):
         MDIR = os.listdir(MPATH)
         
         filename = random.choice(MDIR)
-        mask = Image.open(os.path.join(MPATH, "mask1.png")).convert('L').resize((950,980))
+        mask = Image.open(os.path.join(MPATH, "mask26.png")).convert('L').resize((950,980))
 
         egg = Image.new("RGB", mask.size, color=(138,3,3))
         
