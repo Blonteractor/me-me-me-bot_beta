@@ -445,17 +445,20 @@ class Utility(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def prefix(self, ctx):
         if ctx.invoked_subcommand is None:  
-            prefixes =  "`" + "`, `".join(ctx.States.Guild.prefix) + "`"
+            prefixes =  "`, `".join(ctx.States.Guild.prefix)
             await ctx.send(f"Current bot prefixes: `{prefixes}`")
         
-    @prefix.command(name="add-prefix", aliases=["addpr"],usage = "<prefix>")
+    @prefix.command(name="add")
     @commands.has_permissions(administrator=True)
     async def add_prefix(self, ctx, *, pre):
    
         prefixes = ctx.States.Guild.prefix
         
+        if pre[0] == '"' and  pre[-1] == '"' :
+            pre = pre[1:-1]
+        
         if pre not in prefixes:
-            prefixes.extend(gen.permu(pre))
+            prefixes.append(pre)
             ctx.States.Guild.prefix = prefixes
         else:
             await ctx.send(f"`{pre}` is already in prefixes, use the prefix command to veiw all current prefixes.")
@@ -463,12 +466,17 @@ class Utility(commands.Cog):
         
         await ctx.send(f"Added `{pre}` to prefixes.")
         
-    @prefix.command(name="remove-prefix", aliases=["rempr"],usage = "<prefix>")
+    @prefix.command(name="remove", aliases=["rem"]) 
     @commands.has_permissions(administrator=True)
     async def remove_prefix(self, ctx, *, pre):
         
         prefixes = ctx.States.Guild.prefix
-        
+
+        if pre[0] == '"' and  pre[-1] == '"' :
+            pre = pre[1:-1]
+            
+        prefixes = list(map(lambda i: i.lower(), prefixes))
+          
         if pre in prefixes:
             prefixes.remove(pre)
             ctx.States.Guild.prefix = prefixes

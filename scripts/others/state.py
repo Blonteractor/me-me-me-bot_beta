@@ -84,18 +84,20 @@ class JSONProperty:
         return f"{DBPATH}\\{self.db_name}.json"
     
     def __get__(self, instance, owner):
-        self.unique_num = instance.unique_num
+        self.unique_num = instance.unique_num if not self.is_unique else None
+            
         d = self.data
         
-        self.db_name = self.db_name.format(id=instance.unique_num)
+        self.db_name = self.db_name.format(id=self.unique_num)
         make_db_if_not_exists(path=self.db_path)
         
         if instance.identifier not in self.data:
-            self.new_entry(entry=instance.identifier, unique_num=instance.unique_num) if not self.is_unique else self.new_entry(entry=instance.identifier)
+            self.new_entry(entry=instance.identifier, unique_num=self.unique_num) if not self.is_unique else self.new_entry(entry=instance.identifier)
             d = self.data
-        
-        if self.name in d[instance.identifier]:
-            result = d[instance.identifier][self.name] 
+
+        if self.name in d[str(instance.identifier)]:
+            
+            result = d[str(instance.identifier)][self.name] 
             if self.decoder is None:       
                 return result
             else:
@@ -111,14 +113,14 @@ class JSONProperty:
             return self.default
       
     def __set__(self, instance, value):
-        self.unique_num = instance.unique_num
+        self.unique_num = instance.unique_num if not self.is_unique else None
         new = self.data
         
-        self.db_name = self.db_name.format(id=instance.unique_num)
+        self.db_name = self.db_name.format(id=self.unique_num)
         make_db_if_not_exists(path=self.db_path)
         
         if instance.identifier not in new:
-            self.new_entry(entry=instance.identifier, unique_num=instance.unique_num) if not self.is_unique else self.new_entry(entry=instance.identifier)
+            self.new_entry(entry=instance.identifier, unique_num=self.unique_num) if not self.is_unique else self.new_entry(entry=instance.identifier)
             
         new = self.data
         
@@ -133,7 +135,7 @@ class JSONProperty:
             else:
                 raise Exception("Faulty Encocoder, decoder must either take 1 or 2 arguments.")
                 
-        self.set_data(new_db=new, unique_num=instance.unique_num) if not self.is_unique else self.set_data(new_db=new)
+        self.set_data(new_db=new, unique_num=self.unique_num) if not self.is_unique else self.set_data(new_db=new)
     
     @property
     def data(self):
@@ -176,7 +178,8 @@ class GuildState:
     
     dj_role = JSONProperty(**class_properties, **role_properties, name="dj_role")
     doujin_category = JSONProperty(**class_properties, name="doujin_category")
-    prefix = JSONProperty(**class_properties, name="prefix", default=["me!", "epic"])
+    
+    prefix = JSONProperty(**class_properties, name="prefix", default=["me! ", "epic "], encoder=lambda prefix: ["me! ", "epic "] if prefix == [] else prefix)
     
     jb_embed_id = JSONProperty(**class_properties, name="jb_embed_id")
     jb_queue_id = JSONProperty(**class_properties, name="jb_queue_id")
@@ -204,6 +207,10 @@ class GuildState:
         
         return dict(zip(levels, roles))
     
+    @property
+    def exp_counting(self) -> bool:
+        return not self.ranks == {}
+    
 class MemberState:
     """Stores guild specific states which change between guilds"""
     
@@ -217,13 +224,13 @@ class MemberState:
     def __init__(self, member: discord.Member):
         
         if member.bot:
-            raise AttributeError("Bots cant have a memberState.")
+            return
         
         self.member = member
         self.guild_state = GuildState(member.guild)
 
-        self.identifier = member.id
-        self.unique_num = member.guild.id
+        self.identifier = str(member.id)
+        self.unique_num = str(member.guild.id)
         
     def get_role(self, name) -> discord.Role:
         return get(self.member.roles, name=name)
@@ -322,10 +329,10 @@ class UserState:
     def __init__(self, user: Union[discord.User, discord.Member]):
         
         if user.bot:
-            raise AttributeError("Bots cant have a userState.")
+            return
         
         self.user = user
-        self.identifier = user.id
+        self.identifier = str(user.id)
 
 class TempState:
     time = PKLProperty(name="time", default=0)
