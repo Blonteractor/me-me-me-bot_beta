@@ -1,14 +1,12 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 from discord.ext import commands
 import json
 import asyncio
 from datetime import datetime
-import imp,os
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
-
 import general as gen
 from state import CustomContext as cc
 

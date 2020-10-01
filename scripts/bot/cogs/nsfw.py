@@ -1,3 +1,7 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 from discord.ext import commands
 
@@ -5,23 +9,8 @@ from random import choice, randint, randrange
 from asyncio import TimeoutError
 from typing import List
 import requests
-
-
-import imp,os
-
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
-
 import general as gen
-
-imp.load_source("nhenpy", os.path.join(
-    os.path.dirname(__file__), "../../others/nhenpy.py"))
-
 import nhenpy
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
-
 from state import State, CustomContext
 
 

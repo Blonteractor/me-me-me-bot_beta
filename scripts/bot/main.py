@@ -4,7 +4,7 @@ load_dotenv()
 #? OS/SYS
 import os
 import sys
-import imp
+sys.path.append(os.path.abspath("./scripts/others/"))
 
 #? DISCORD
 import discord
@@ -18,15 +18,7 @@ import traceback
 
 #? FILES
 from Help import MyHelpCommand
-
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../others/general.py"))
-
 import general as gen
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../others/state.py"))
-
 from state import GuildState, CustomContext
 
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")

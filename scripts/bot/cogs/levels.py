@@ -1,23 +1,17 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 from random import randint
 import random
 from discord.ext import commands, tasks
 import requests
 import io
-import asyncio
 from threading import Thread
-from colorama import Fore, Back, Style, init
 from PIL import Image, ImageDraw, ImageOps, ImageFont
-import imp
-import os
 from colorthief import ColorThief
-
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
 import general as gen
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
 from state import State, CustomContext, GuildState
 
 class Levels(commands.Cog):

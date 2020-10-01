@@ -1,3 +1,7 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 from discord.ext import commands,tasks
 from discord.ext.commands.core import Command, cooldown
@@ -6,13 +10,7 @@ import asyncio
 import imp,os
 import random
 from datetime import timedelta
-
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
 import general as gen
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
 from state import GuildState,TempState,CustomContext
 
 def is_dj():

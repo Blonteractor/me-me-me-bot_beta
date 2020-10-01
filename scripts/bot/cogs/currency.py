@@ -1,15 +1,11 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 import random
-import json
 from discord.ext import commands
-import imp,os
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
-
 import general as gen
-
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
 from state import CustomContext as cc 
 
 

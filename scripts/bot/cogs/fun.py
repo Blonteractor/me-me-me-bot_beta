@@ -1,14 +1,14 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 import random
 from discord.ext import commands
 import pytesseract
 import requests
 from PIL import Image
-import imp,os
 import io
-
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
 import general as gen
 
 

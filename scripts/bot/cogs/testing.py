@@ -1,16 +1,12 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 from discord.ext import commands
 import concurrent.futures
 from discord.utils import get
-
-import imp,os
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
-
 import general as gen
-
-imp.load_source("command", os.path.join(
-    os.path.dirname(__file__), "../../others/command.py"))
 
 TESTING_GUILD_ID = 623891519723667467
 

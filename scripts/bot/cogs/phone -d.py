@@ -1,17 +1,12 @@
-import discord,time
-from PIL import Image,ImageDraw,ImageFont
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
+import discord
+from PIL import Image,ImageDraw
 from discord.ext import commands
 from threading import Thread
-
-import imp,os
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
-
 import general as gen
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
-
 from state import CustomContext as cc
 class Phone(commands.Cog):
     ''':iphone: PHONE SIMULATOR 2019.'''

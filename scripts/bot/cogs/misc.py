@@ -1,6 +1,9 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
-from discord.ext import commands,tasks
-from discord.ext.commands.core import Command, cooldown
+from discord.ext import commands
 from discord.utils import get
 from lyricsgenius.song import Song
 import requests,json
@@ -9,13 +12,7 @@ import youtube_dl
 import aiohttp
 
 import asyncio
-import imp,os
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
 import general as gen
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
 from state import TempState
 
 import lyricsgenius

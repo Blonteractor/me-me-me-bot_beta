@@ -1,21 +1,16 @@
+import sys
+import os 
+sys.path.append(os.path.abspath("./scripts/others/"))
+
 import discord
 from discord.ext import commands,tasks
 from discord.ext.commands.core import Command, cooldown
 from discord.utils import get
 import asyncio
 from asyncio import sleep, TimeoutError
-import imp,os
 import re
-imp.load_source("general", os.path.join(
-    os.path.dirname(__file__), "../../others/general.py"))
 import general as gen
-
-imp.load_source("state", os.path.join(
-    os.path.dirname(__file__), "../../others/state.py"))
 from state import TempState
-
-imp.load_source("Youtube", os.path.join(
-    os.path.dirname(__file__), "../../others/Youtube.py"))
 from Youtube import YoutubePlaylist, YoutubeVideo, driver
 
 def clear_pl(state): #! clears empty playlists
