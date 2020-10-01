@@ -29,7 +29,6 @@ imp.load_source("state", os.path.join(
 
 from state import GuildState, CustomContext
 
-PATHS = ["./Bin"]
 TOKEN = os.environ.get("DISCORD_BOT_SECRET")
 
 COGS_PATH = os.path.join(os.path.dirname(__file__), "cogs")
