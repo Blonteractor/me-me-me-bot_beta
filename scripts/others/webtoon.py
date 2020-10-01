@@ -6,7 +6,7 @@ class Days:
     MONDAY = 0
     TUESDAY = 1
     WEDNESDAY = 2
-    THURDAY = 3
+    THURSDAY = 3
     FRIDAY = 4
     SATURDAY = 5
     SUNDAY = 6
@@ -39,11 +39,19 @@ class Webtoon:
         return f"{self.title}, By {self.author}"
     
     def __len__(self):
-        return self.length
+        return int(self.length)
         
     @property
     def title(self) -> str:
         return self.info["title"]
+    
+    @property
+    def url(self) -> str:
+        return self.info["url"]
+    
+    @property
+    def thumbnail(self) -> str:
+        return self.info["thumbnail"]
     
     @property
     def likes(self) -> str:
@@ -109,7 +117,7 @@ class Webtoon:
             elif character.isalnum():
                 clean_title += character.lower()
         
-        new_url = "https://www.webtoons.com/en/" + webtoon["genre"].lower() + "/" + clean_title + "/" + "list?title_no=" + anchor["href"].split("=")[-1]
+        new_url = "https://www.webtoons.com/en/" + webtoon["genre"].lower().replace(" ", "-") + "/" + clean_title + "/" + "list?title_no=" + anchor["href"].split("=")[-1]
         webtoon["url"] = new_url
         
         soup = BeautifulSoup(requests.get(new_url).text, "lxml")
@@ -127,7 +135,7 @@ class Webtoon:
         
         ep_element = soup.find("ul", id="_listUl").li
 
-        webtoon["length"] = ep_element.find("span", class_="subj").text.split()[1]
+        webtoon["length"] = ep_element.find("span", class_="tx").text[1:]
         webtoon["last_updated"] = ep_element.find("span", class_="date").text
         
         return cls(info=webtoon)
@@ -160,7 +168,7 @@ class Webtoon:
         return search_result
     
     @classmethod
-    def get_webtons_by_genre(cls, genre: int):
+    def get_webtoons_by_genre(cls, genre: int, limit=-1):
         HTML = requests.get(url=cls.SITE_URL + "/genre").text
         soup = BeautifulSoup(HTML, "lxml")
         
@@ -169,7 +177,9 @@ class Webtoon:
         
         cards = genre_list.find_all("ul", class_="card_lst")[genre].find_all("li")
         
-        for card in cards:
+        for i, card in enumerate(cards):
             yield cls.get_info_from_card(card, genre=genre_name)
+            if i + 1 == limit:
+                return
             
         
