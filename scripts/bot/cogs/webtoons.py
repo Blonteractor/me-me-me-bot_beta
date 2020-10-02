@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 from webtoon import Webtoon, Days, Genres
 from random import choice
+from fuzzywuzzy import fuzz
 
 class Webtoons(commands.Cog):
     
@@ -27,7 +28,7 @@ class Webtoons(commands.Cog):
         embed.add_field(name="Genre", value=webtoon.genre)
         embed.add_field(name="Author", value=webtoon.author)
         embed.add_field(name="Likes", value=webtoon.likes)
-        embed.add_field(name="Status", value=webtoon.status.replace("UP", "UP ")) if webtoon.status.startswith("UP") else embed.add_field(name="Status", value=webtoon.status)
+        embed.add_field(name="Status", value=webtoon.status.replace("UP", "UP ").lower().capitalize()) if webtoon.status.startswith("UP") else embed.add_field(name="Status", value=webtoon.status.lower().capitalize())
         embed.add_field(name="Last Updated", value=webtoon.last_updated)
         
         return embed
@@ -37,20 +38,101 @@ class Webtoons(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send_help(self.webtoon)
      
-    @webtoon.command(name="search")
-    async def webtoon_search(self, ctx, *, query):
-        webtoon = Webtoon.search(query)[0]
+    @webtoon.command(name="name")
+    async def webtoon_name(self, ctx, *, query):
+        webtoons = Webtoon.search(query)
+        
+        webtoons_to_ratio = {webtoon: fuzz.ratio(webtoon.title.lower(), query) for webtoon in webtoons}
+        max_match = max(list(webtoons_to_ratio.values()))
+        webtoon = None
+        for _webtoon, ratio in webtoons_to_ratio.items():
+            if ratio == max_match:
+                webtoon = _webtoon
         
         embed = self.make_webtoon_embed(webtoon)
         
         await ctx.send(embed=embed)
         
+    @webtoon.command(name="search")
+    async def webtoon_search(self, ctx, *, query):
+        async def reactions_add(message, reactions):
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+                
+        reactions = {"1️⃣": 1, "2️⃣": 2, "3️⃣": 3, "4️⃣": 4, "5️⃣": 5}
+                
+        webtoons = Webtoon.search(query)
+        
+        if len(webtoons) == 1:
+            embed = self.make_webtoon_embed(webtoons[0])
+            await ctx.send(embed=embed)
+            return
+        
+        embed = discord.Embed(title=f"Search for '{query}' returned the following", color=discord.Colour.red())
+        
+        description = ""
+        for index, webtoon in enumerate(webtoons):
+            description += f"{index + 1}. [{webtoon.title + ' `By ' + webtoon.author + '`'}]({webtoon.url})\n\n"
+        
+        embed.description = description
+        
+        embed_msg = await ctx.send(embed=embed)
+        
+        self.client.loop.create_task(reactions_add(embed_msg, list(reactions.keys())[:len(webtoons)]))
+        
+        while True:
+            try:
+                reaction, user = await self.client.wait_for('reaction_add', timeout=30, check=lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id and str(reaction.emoji) in reactions.keys())
+            except TimeoutError:
+                await ctx.send(f">>> I guess no ones wants any webtoons")
+                await embed_msg.delete()
+
+                return None
+
+            else:
+                await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
+                await embed_msg.delete(delay=1)
+                
+                num = reactions[str(reaction)]
+                webtoon = webtoons[num - 1]
+                embed = self.make_webtoon_embed(webtoon)
+                await ctx.send(embed=embed)
+                return
+        
     @webtoon.command()
-    async def genre(self, ctx, query):
-        result = list(Webtoon.get_webtoons_by_genre(query, limit=7))
+    async def genre(self, ctx, *, query):
+        logic = {
+        ("drama",) : Genres.DRAMA,
+        ("fantasy", "fan") : Genres.FANTASY,
+        ("comedy", "com") : Genres.COMEDY,
+        ("action",) : Genres.ACTION,
+        ("slice of life", "sol") : Genres.SLICE_OF_LIFE,
+        ("romance", "rom") : Genres.ROMANCE,
+        ("superhero",) : Genres.SUPERHERO,
+        ("sci fi", "science fiction") : Genres.SCI_FI,
+        ("thriller",) : Genres.THRILLER,
+        ("supernatural",) : Genres.SUPERNATURAL,
+        ("mystery",) : Genres.MYSTERY,
+        ("sports",) : Genres.SPORTS,
+        ("historical", "history") : Genres.HISTORICAL,
+        ("heartwarming", "warming") : Genres.HEARTWARMING,
+        ("horror",) : Genres.HORROR,
+        ("informative", "info") : Genres.INFORMATIVE
+    }
+        query = query.lower()
+        
+        genre = None
+        for i, j in logic.items():
+            if query in i:
+                genre = j
+        if genre is None:
+            await ctx.send("I dont think that genre exists.")
+            return
+                
+        result = list(Webtoon.get_webtoons_by_genre(genre))
         webtoon = choice(result)
         embed = self.make_webtoon_embed(webtoon)
-        await ctx.send(embed)
+        await ctx.send(embed=embed)
         
     @webtoon.command()
     async def day(self, ctx, query):

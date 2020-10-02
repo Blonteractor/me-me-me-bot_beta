@@ -1,6 +1,7 @@
 
 from bs4 import BeautifulSoup
 import requests
+from random import choice
 
 class Days:
     MONDAY = 0
@@ -52,6 +53,10 @@ class Webtoon:
     @property
     def thumbnail(self) -> str:
         return self.info["thumbnail"]
+    
+    @property
+    def clean_title(self) -> str:
+        return self.info["clean_title"]
     
     @property
     def likes(self) -> str:
@@ -116,6 +121,8 @@ class Webtoon:
                 clean_title += "-"
             elif character.isalnum():
                 clean_title += character.lower()
+                
+        webtoon["clean_title"] = clean_title
         
         new_url = "https://www.webtoons.com/en/" + webtoon["genre"].lower().replace(" ", "-") + "/" + clean_title + "/" + "list?title_no=" + anchor["href"].split("=")[-1]
         webtoon["url"] = new_url
@@ -168,7 +175,7 @@ class Webtoon:
         return search_result
     
     @classmethod
-    def get_webtoons_by_genre(cls, genre: int, limit=-1):
+    def get_webtoons_by_genre(cls, genre: int, all=False, limit=-1):
         HTML = requests.get(url=cls.SITE_URL + "/genre").text
         soup = BeautifulSoup(HTML, "lxml")
         
@@ -177,9 +184,13 @@ class Webtoon:
         
         cards = genre_list.find_all("ul", class_="card_lst")[genre].find_all("li")
         
-        for i, card in enumerate(cards):
-            yield cls.get_info_from_card(card, genre=genre_name)
-            if i + 1 == limit:
-                return
+        if not all:
+            ch = choice(cards)
+            yield cls.get_info_from_card(ch, genre=genre_name)
+        else:
+            for i, card in enumerate(cards):
+                yield cls.get_info_from_card(card, genre=genre_name)
+                if i + 1 == limit:
+                    return
             
         
