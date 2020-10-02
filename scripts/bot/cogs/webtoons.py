@@ -24,11 +24,30 @@ class Webtoons(commands.Cog):
         embed.set_thumbnail(url=Webtoons.webtoon_logo)
         embed.description = webtoon.summary
         
-        embed.add_field(name="Episodes", value=webtoon.length)
+        ep_string = "Number of "
+        
+        if webtoon.is_completed:
+            if not webtoon.is_daily_pass:
+                ep_string += "Episodes"
+            else:
+                ep_string += "Free Episodes"
+        else:
+            if webtoon.extra_ep_app is not None:
+                ep_string += "Free Episodes"
+            else:
+                ep_string += "Episodes"
+        
+        embed.add_field(name=ep_string, value=webtoon.length)
         embed.add_field(name="Genre", value=webtoon.genre)
         embed.add_field(name="Author", value=webtoon.author)
         embed.add_field(name="Likes", value=webtoon.likes)
-        embed.add_field(name="Status", value=webtoon.status.replace("UP", "UP ").lower().capitalize()) if webtoon.status.startswith("UP") else embed.add_field(name="Status", value=webtoon.status.lower().capitalize())
+        embed.add_field(name="Status", value=webtoon.status) 
+        
+        if webtoon.is_completed:
+            embed.add_field(name="Is Daily Pass", value="Yes") if webtoon.is_daily_pass else embed.add_field(name="Is Daily Pass", value="No")
+        elif webtoon.extra_ep_app:
+            embed.add_field(name="Extra episodes on app", value=webtoon.extra_ep_app)
+            
         embed.add_field(name="Last Updated", value=webtoon.last_updated)
         
         return embed
@@ -85,18 +104,21 @@ class Webtoons(commands.Cog):
                 reaction, user = await self.client.wait_for('reaction_add', timeout=30, check=lambda reaction, user: user == ctx.author and reaction.message.id == embed_msg.id and str(reaction.emoji) in reactions.keys())
             except TimeoutError:
                 await ctx.send(f">>> I guess no ones wants any webtoons")
-                await embed_msg.delete()
+                await embed_msg.edit()
 
                 return None
 
             else:
                 await embed_msg.remove_reaction(str(reaction.emoji), ctx.author)
-                await embed_msg.delete(delay=1)
                 
                 num = reactions[str(reaction)]
                 webtoon = webtoons[num - 1]
                 embed = self.make_webtoon_embed(webtoon)
-                await ctx.send(embed=embed)
+                
+                for reaction in reactions.keys():
+                    await embed_msg.remove_reaction(str(reaction), self.client.user)
+                    
+                await embed_msg.edit(content="", embed=embed)
                 return
         
     @webtoon.command()

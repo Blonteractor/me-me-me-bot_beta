@@ -76,7 +76,19 @@ class Webtoon:
     
     @property
     def status(self) -> str:
-        return self.info["status"]
+        return self.info["status"].replace("UP", "UP ").lower().capitalize()
+    
+    @property
+    def is_daily_pass(self) -> bool:
+        return self.info["is_daily_pass"]
+    
+    @property
+    def is_completed(self) -> bool:
+        return not self.status.startswith("Up")
+    
+    @property
+    def extra_ep_app(self) -> str:
+        return self.info["extra_ep_app"]
     
     @property
     def length(self) -> int:
@@ -139,6 +151,18 @@ class Webtoon:
     
         page_1_request = requests.get(new_url + "&page=1").text
         soup = BeautifulSoup(page_1_request, "lxml")
+        
+        app_add = ep_element = soup.find("div", class_="detail_install_app")
+        if app_add is not None:
+            if app_add.strong.text == "Read more episodes for free every day on the app!":
+                webtoon["is_daily_pass"] = True
+                webtoon["extra_ep_app"] = None
+            else:
+                webtoon["extra_ep_app"] = app_add.em.text
+                webtoon["is_daily_pass"] = False
+        else:
+            webtoon["is_daily_pass"] = False
+            webtoon["extra_ep_app"] = None
         
         ep_element = soup.find("ul", id="_listUl").li
 
