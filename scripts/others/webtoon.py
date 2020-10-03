@@ -2,6 +2,9 @@
 from bs4 import BeautifulSoup
 import requests
 from random import choice
+from imgurpython import ImgurClient
+import os
+from state import BotState
 
 class Days:
     MONDAY = 0
@@ -32,9 +35,17 @@ class Genres:
 
 class Webtoon:
     SITE_URL = "https://www.webtoons.com/en/"
+    HEADERS = referer_header = { "Referer": SITE_URL[:-4] }
+    
+    _CLIENT_ID = "d25b6deb1dedc8e"
+    _CLIENT_SECRET = "7a357962df433442627eb65cdada3daed03465dc"
+    
+    _client = ImgurClient(_CLIENT_ID, _CLIENT_SECRET)
+    
+    cache = BotState("w").webtoon_cache
     
     def __init__(self, info):
-        self.info = info
+        self._info = info
         
     def __str__(self):
         return f"{self.title}, By {self.author}"
@@ -44,43 +55,43 @@ class Webtoon:
         
     @property
     def title(self) -> str:
-        return self.info["title"]
+        return self._info["title"]
     
     @property
     def url(self) -> str:
-        return self.info["url"]
+        return self._info["url"]
     
     @property
     def thumbnail(self) -> str:
-        return self.info["thumbnail"]
+        return self._info["thumbnail"]
     
     @property
     def clean_title(self) -> str:
-        return self.info["clean_title"]
+        return self._info["clean_title"]
     
     @property
     def likes(self) -> str:
-        return self.info["likes"]
+        return self._info["likes"]
     
     @property
     def genre(self) -> str:
-        return self.info["genre"]
+        return self._info["genre"]
     
     @property
     def author(self) -> str:
-        return self.info["author"]
+        return self._info["author"]
     
     @property
     def summary(self) -> str:
-        return self.info["summary"]
+        return self._info["summary"]
     
     @property
     def status(self) -> str:
-        return self.info["status"].replace("UP", "UP ").lower().capitalize()
+        return self._info["status"].replace("UP", "UP ").lower().capitalize()
     
     @property
     def is_daily_pass(self) -> bool:
-        return self.info["is_daily_pass"]
+        return self._info["is_daily_pass"]
     
     @property
     def is_completed(self) -> bool:
@@ -88,15 +99,15 @@ class Webtoon:
     
     @property
     def extra_ep_app(self) -> str:
-        return self.info["extra_ep_app"]
+        return self._info["extra_ep_app"]
     
     @property
     def length(self) -> int:
-        return int(self.info["length"])
+        return int(self._info["length"])
     
     @property
     def last_updated(self) -> str:
-        return self.info["last_updated"]
+        return self._info["last_updated"]
     
     @classmethod
     def get_info_from_card(cls, card, genre=None):
@@ -122,9 +133,7 @@ class Webtoon:
             webtoon["genre"] = card.find_all("span")[1].text
         else:
             webtoon["genre"] = genre
-            
-        webtoon["thumbnail"] = card.img["src"]
-
+        
         anchor = card.a
         
         clean_title = ""
@@ -134,12 +143,32 @@ class Webtoon:
             elif character.isalnum():
                 clean_title += character.lower()
                 
+        thumbnail_url = card.img["src"].replace("?type=q90", "")
+        url = thumbnail_url
+        
+        if clean_title not in cls.cache:
+            response_thumbnail = requests.get(thumbnail_url, headers=cls.HEADERS)
+            img_path = f'./cache.bot/{clean_title}.png'
+            
+            with open(img_path, "wb+") as f:
+                f.write(response_thumbnail.content)
+                
+            url = cls._client.upload_from_path(img_path)["link"]
+            
+            cls.cache[clean_title] = url 
+        else:
+            url = cls.cache[clean_title]
+            
+        BotState("w").webtoon_cache = cls.cache
+        
+        webtoon["thumbnail"] = url
+                
         webtoon["clean_title"] = clean_title
         
         new_url = "https://www.webtoons.com/en/" + webtoon["genre"].lower().replace(" ", "-") + "/" + clean_title + "/" + "list?title_no=" + anchor["href"].split("=")[-1]
         webtoon["url"] = new_url
         
-        soup = BeautifulSoup(requests.get(new_url).text, "lxml")
+        soup = BeautifulSoup(requests.get(new_url, headers=cls.HEADERS).text, "lxml")
         
         if webtoon["author"] is None:
             webtoon["author"] = soup.find("div", class_="info").a.text.replace("author info", "").strip()
@@ -149,7 +178,7 @@ class Webtoon:
         webtoon["status"] = details_box.find("p", class_="day_info").text
         webtoon["summary"] = details_box.find("p", class_="summary").text
     
-        page_1_request = requests.get(new_url + "&page=1").text
+        page_1_request = requests.get(new_url + "&page=1", headers=cls.HEADERS).text
         soup = BeautifulSoup(page_1_request, "lxml")
         
         app_add = ep_element = soup.find("div", class_="detail_install_app")
@@ -174,7 +203,7 @@ class Webtoon:
     
     @classmethod
     def get_webtoons_by_day(cls, day: int):
-        HTML = requests.get(url=cls.SITE_URL).text
+        HTML = requests.get(url=cls.SITE_URL, headers=cls.HEADERS).text
         soup = BeautifulSoup(HTML, "lxml")
 
         weekly_list = soup.find("div", id="weekdayList")
@@ -186,7 +215,7 @@ class Webtoon:
     @classmethod
     def search(cls, query: str) -> list:  
         url = cls.SITE_URL + "search?keyword=" + query.replace(" ", "%20")
-        html = requests.get(url).text
+        html = requests.get(url, headers=cls.HEADERS).text
         soup = BeautifulSoup(html, "lxml")
         
         cards = soup.find("ul", class_="card_lst").find_all("li")              
@@ -200,7 +229,7 @@ class Webtoon:
     
     @classmethod
     def get_webtoons_by_genre(cls, genre: int, all=False, limit=-1):
-        HTML = requests.get(url=cls.SITE_URL + "/genre").text
+        HTML = requests.get(url=cls.SITE_URL + "/genre", headers=cls.HEADERS).text
         soup = BeautifulSoup(HTML, "lxml")
         
         genre_list = soup.find("div", class_="card_wrap genre")
@@ -216,5 +245,4 @@ class Webtoon:
                 yield cls.get_info_from_card(card, genre=genre_name)
                 if i + 1 == limit:
                     return
-            
-        
+

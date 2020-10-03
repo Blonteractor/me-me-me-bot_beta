@@ -197,13 +197,13 @@ async def auto_backup():
 # * ON READY
 @client.event
 async def on_ready():
-    #auto_backup.start() 
+    auto_backup.start() 
    
     cog_load_startup()
     
     
    
-    #gen.reset()
+    gen.reset()
     
     with open(os.path.join(DB_PATH, "temp.pkl"), "wb") as f:
         f.write(b"")

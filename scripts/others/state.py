@@ -362,6 +362,16 @@ class TempState:
     
     def __init__(self, guild):
         self.guild = str(guild.id)
+    
+class BotState:
+    """Store bot specific stuff"""
+    
+    class_properties = {"db_scope":"bot", "is_unique":True}
+    
+    webtoon_cache = JSONProperty(**class_properties, name="webtoon_cache", default={})
+    
+    def __init__(self, identifer):
+        self.identifier = identifer
  
         
 class State:
@@ -377,6 +387,7 @@ class State:
         self.Member = MemberState(member)
         self.Guild = GuildState(guild)
         self.Temp = TempState(guild)
+        self.Bot = BotState("w")
  
         
         

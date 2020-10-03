@@ -23,6 +23,7 @@ class Webtoons(commands.Cog):
         embed.set_author(name="Me!Me!Me!", icon_url=self.client.user.avatar_url)
         embed.set_thumbnail(url=Webtoons.webtoon_logo)
         embed.description = webtoon.summary
+        embed.set_image(url=webtoon.thumbnail)
         
         ep_string = "Number of "
         
