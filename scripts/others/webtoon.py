@@ -4,7 +4,23 @@ import requests
 from random import choice
 from imgurpython import ImgurClient
 import os
+import concurrent.futures
 from state import BotState
+
+_CLIENT_ID = "d25b6deb1dedc8e"
+_CLIENT_SECRET = "7a357962df433442627eb65cdada3daed03465dc"
+    
+_client = ImgurClient(_CLIENT_ID, _CLIENT_SECRET)
+
+def get_image_url(response, path) -> str:
+    with open(path, "wb+") as f:
+        f.write(response.content)
+                
+    url = _client.upload_from_path(path)["link"]
+    
+    os.remove(path)
+    
+    return url
 
 class Days:
     MONDAY = 0
@@ -36,11 +52,6 @@ class Genres:
 class Webtoon:
     SITE_URL = "https://www.webtoons.com/en/"
     HEADERS = referer_header = { "Referer": SITE_URL[:-4] }
-    
-    _CLIENT_ID = "d25b6deb1dedc8e"
-    _CLIENT_SECRET = "7a357962df433442627eb65cdada3daed03465dc"
-    
-    _client = ImgurClient(_CLIENT_ID, _CLIENT_SECRET)
     
     cache = BotState("w").webtoon_cache
     
@@ -150,18 +161,18 @@ class Webtoon:
             response_thumbnail = requests.get(thumbnail_url, headers=cls.HEADERS)
             img_path = f'./cache.bot/{clean_title}.png'
             
-            with open(img_path, "wb+") as f:
-                f.write(response_thumbnail.content)
-                
-            url = cls._client.upload_from_path(img_path)["link"]
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                thread = executor.submit(get_image_url, response_thumbnail, img_path)
+                url = thread.result()
             
             cls.cache[clean_title] = url 
+            webtoon["thumbnail"] = url
         else:
             url = cls.cache[clean_title]
+            webtoon["thumbnail"] = url
             
         BotState("w").webtoon_cache = cls.cache
         
-        webtoon["thumbnail"] = url
                 
         webtoon["clean_title"] = clean_title
         
@@ -209,8 +220,13 @@ class Webtoon:
         weekly_list = soup.find("div", id="weekdayList")
         cards = weekly_list.find_all("ul", class_="card_lst")[day].find_all("li")[:-1]
         
-        for card in cards:
-            yield cls.get_info_from_card(card)
+        search_result = []
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            threads = [executor.submit(cls.get_info_from_card, card) for card in cards]
+            results = [thread.result() for thread in concurrent.futures.as_completed(threads)]
+            search_result.extend(results)
+            
+        return search_result
     
     @classmethod
     def search(cls, query: str) -> list:  
@@ -221,9 +237,10 @@ class Webtoon:
         cards = soup.find("ul", class_="card_lst").find_all("li")              
         
         search_result = []
-        for card in cards: 
-            webtoon_object = cls.get_info_from_card(card)
-            search_result.append(webtoon_object)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            threads = [executor.submit(cls.get_info_from_card, card) for card in cards]
+            results = [thread.result() for thread in concurrent.futures.as_completed(threads)]
+            search_result.extend(results)
             
         return search_result
     
@@ -245,4 +262,3 @@ class Webtoon:
                 yield cls.get_info_from_card(card, genre=genre_name)
                 if i + 1 == limit:
                     return
-
