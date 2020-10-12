@@ -1,3 +1,4 @@
+from asyncio.tasks import sleep
 from dotenv import load_dotenv #? ENV
 load_dotenv()
 
@@ -13,7 +14,7 @@ from discord.ext import commands, tasks
 
 #? ALL OTHERS
 from itertools import cycle
-
+from asyncio import sleep
 import traceback    
 
 #? FILES
@@ -34,6 +35,8 @@ DB_PATH = os.path.abspath("./Database")
 prefix = gen.permu("me! ") + gen.permu("epic ")
 
 OWNERS = [413287145323626496, 580282285002194966]
+
+status = []
 
 async def determine_prefix(bot, message):
     if message.guild:
@@ -137,6 +140,12 @@ async def re_init(ctx):
     await ctx.invoke(client.get_command("unload_all"))
     await ctx.send("DONE")
     os.execv(sys.executable, ['python'] + sys.argv)  
+    
+@client.command(name="close", aliases=["shut"])
+@mod_command()
+async def shut_down(ctx):
+    await ctx.send("Haha i go away")
+    client.close()
 
 @client.command(aliases=["Debug","Development"])
 @mod_command()
@@ -198,17 +207,23 @@ async def auto_backup():
 @client.event
 async def on_ready():
     auto_backup.start() 
-   
     cog_load_startup()
-    
-    
-   
     gen.reset()
     
     with open(os.path.join(DB_PATH, "temp.pkl"), "wb") as f:
         f.write(b"")
-
+    
+    global status
+    status = list(client.cogs.keys())
+    status = cycle(status)
     print('Bot is ready as sef!')
+
+#* ON DISCONNECT 
+@client.event
+async def on_disconnect():
+    gen.commit(f"| Bot close commit |")
+    sleep(5)
+    quit()
     
 #* WELCOME MESSAGE AND ADD NECESSARY EMOJIS OT GUILD WHEN BOT JOINS A GUILD
 @client.event
