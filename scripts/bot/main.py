@@ -15,7 +15,10 @@ from discord.ext import commands, tasks
 #? ALL OTHERS
 from itertools import cycle
 from asyncio import sleep
-import traceback    
+import traceback  
+from zipfile import ZipFile
+from datetime import datetime
+from time import time as current_time
 
 #? FILES
 from Help import MyHelpCommand
@@ -31,6 +34,7 @@ asasas
 """
 EMOJIS_PATH = os.path.abspath("./assets/emojis")
 DB_PATH = os.path.abspath("./Database")
+BACKUP_PATH = os.path.abspath("./Backup")
 
 prefix = gen.permu("me! ") + gen.permu("epic ")
 
@@ -193,6 +197,26 @@ async def develop(ctx , on_off, cog=""):
 
 # ? EVENTS
 
+#* BACKUP OFFLINE BY MAKING ZIP
+@tasks.loop(hours=168)
+async def offline_backup():
+    if offline_backup.current_loop > 0:
+        to_be_zipped = [file for file in os.listdir(DB_PATH) if file.endswith(".json")]
+        zip_name = str(datetime.now()).replace(" ", "_").replace(":", "").replace("-", "").split(".")[0]
+        
+        print(f"Starting offline backup now for {datetime.now()}...")
+        
+        start = current_time()
+        
+        with ZipFile(zip_name, "w") as zip:
+            for file in to_be_zipped:
+                file_path = os.path.join(DB_PATH, file)
+                zip.write(file_path, arcname=file)
+                
+        delta_time = current_time() - start
+                
+        print(f"Offline backup took {round(delta_time, 2)} ...")
+
 # * STATUS CHANGE
 @tasks.loop(seconds=6)
 async def change_status():
@@ -208,6 +232,7 @@ async def auto_backup():
 async def on_ready():
     auto_backup.start() 
     cog_load_startup()
+    offline_backup.start()
     gen.reset()
     
     with open(os.path.join(DB_PATH, "temp.pkl"), "wb") as f:
