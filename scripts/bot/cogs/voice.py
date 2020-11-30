@@ -123,7 +123,7 @@ class Voice(commands.Cog):
     
     def __init__(self, client):
         self.client = client      
-        self.auto_voice_handler.start()
+        # self.auto_voice_handler.start()
 
         if self.qualified_name in gen.cog_cooldown:
             self.cooldown = gen.cog_cooldown[self.quailifed_name]
@@ -201,6 +201,11 @@ class Voice(commands.Cog):
         
         state = TempState(ctx.author.guild)
         queue = [x for x in state.queue if type(x) != str]
+        
+        if queue == []:
+            await ctx.send("Nothing playing right now, use the play command to play something so it shows up here.")
+            return
+        
         vid = queue[0]
 
         embed = discord.Embed(title="NOW PLAYING",  
@@ -465,7 +470,6 @@ class Voice(commands.Cog):
         if voice:
             
             state.queue =  [state.full_queue[-1]] + state.queue
-            print(state.queue)
             if not voice.is_playing():
                 if len(state.queue) == 1:
                     play = self.client.get_cog("Play")
@@ -591,7 +595,6 @@ class Voice(commands.Cog):
         time = await self.int_time(ctx, time)
 
         if time:
-            print(time)
             voice.source = discord.FFmpegPCMAudio(queue[0].audio_url, executable="./Bin/ffmpeg.exe", before_options=f"-loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -ss {time}")
             state.time = time
         else:
