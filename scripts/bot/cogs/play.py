@@ -310,7 +310,7 @@ class Play(commands.Cog):
         self.loading_emoji = str(discord.utils.get(
             ctx.guild.emojis, name="loading"))
         
-        message = await ctx.send(f"Searching song `{vid.title}`.... {self.loading_emoji}")
+        message = await ctx.send(f"Searching song `{query}`.... {self.loading_emoji}")
         message: discord.Message
 
         embed = discord.Embed(title="Song Added to Queue",  # TODO make a function
