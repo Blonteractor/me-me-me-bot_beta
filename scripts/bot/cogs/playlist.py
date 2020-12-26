@@ -15,6 +15,7 @@ from state import TempState,CustomContext
 
 
 class Playlist(commands.Cog):
+    ":bookmark_tabs: Playlist creating and modification"
     
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
     

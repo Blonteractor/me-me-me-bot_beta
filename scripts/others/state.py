@@ -1,12 +1,13 @@
 import os
 import discord
-from typing import Union
+from typing import Type, Union
 from discord.utils import get
 from discord.ext.commands import Context
 from general import db_receive, db_update, DBPATH
 import pickle
 from json import JSONDecodeError
 from inspect import signature
+from copy import deepcopy
 
 def make_db_if_not_exists(path: str):
     if not os.path.exists(path):
@@ -20,16 +21,30 @@ class PKLProperty:
         
     def __init__(self, name, default=None):
         self.name = name
-        self.default = default
+        self.default = deepcopy(default)
         
+        try:
+            self.is_default_empty = len(self.default) == 0
+        except TypeError:
+            self.is_default_empty = None
+        
+    #default getting changed somehow without triggering the print statement in setter
     
     def __get__(self, instance, owner):
         d = self.data
         if instance.guild not in self.data:
             self.new_entry(entry=instance.guild)
             d = self.data
-      
-        return d[instance.guild][self.name] if self.name in d[instance.guild] else self.default   
+            
+        if self.name in d[instance.guild]:
+            return d[instance.guild][self.name]
+        
+        else:
+            try:
+                if self.is_default_empty == True:
+                    self.default.clear()
+            finally:
+                return self.default  
       
     def __set__(self, instance, value):
         new = self.data
@@ -37,7 +52,6 @@ class PKLProperty:
             self.new_entry(entry=instance.guild)
             
         new = self.data
-        
         new[instance.guild][self.name] = value
         self.set_data(new_db=new) 
     
@@ -65,7 +79,7 @@ class JSONProperty:
           
     def __init__(self, name, db_scope, is_unique, default=None, encoder=None, decoder=None):
         self.name = name
-        self.default = default
+        self.default = deepcopy(default)
         self.is_unique = is_unique
         
         self.db_name = f"{db_scope}-states" if is_unique else (db_scope + "-states" + "----{id}") 
@@ -75,6 +89,11 @@ class JSONProperty:
         
         if decoder is not None and not callable(decoder):
             raise AttributeError("'decoder' must be a callable")
+        
+        try:
+            self.is_default_empty = len(self.default) == 0
+        except TypeError:
+            self.is_default_empty = None
         
         self.encoder = encoder
         self.decoder = decoder
@@ -110,7 +129,11 @@ class JSONProperty:
                 else:
                     raise Exception("Faulty Decoder, decoder must either take 1 or 2 arguments.")
         else:
-            return self.default
+            try:
+                if self.is_default_empty == True:
+                    self.default.clear()
+            finally:
+                return self.default
       
     def __set__(self, instance, value):
         self.unique_num = instance.unique_num if not self.is_unique else None
@@ -159,10 +182,35 @@ class JSONProperty:
         db_update(name=self.db_name, db=new_db)
         
 class GuildState:
+    
+    def channel_encoder(channel):
+        if channel == "disabled" or channel is None:
+            return channel
+        else:
+            return str(channel.id)
+        
+    def role_encoder(role):
+        if role == "disabled" or role is None:
+            return role
+        else:
+            return str(role.id)
+        
+    def channel_decoder(self, _id):
+        if _id == "disabled" or _id is None:
+            return _id
+        else:
+            return self.guild.get_channel(channel_id=int(_id))
+        
+    def role_decoder(self, _id):
+        if _id == "disabled" or _id is None:
+            return _id
+        else:
+            return self.guild.get_role(role_id=int(_id))
+    
     class_properties = {"db_scope":"guild", "is_unique":True}
     
-    channel_properties = {"encoder": lambda channel: str(channel.id), "decoder": lambda self, _id: self.guild.get_channel(channel_id=int(_id))}
-    role_properties = {"encoder": lambda role: str(role.id), "decoder": lambda self, _id: self.guild.get_role(role_id=int(_id))}
+    channel_properties = {"encoder": channel_encoder, "decoder": channel_decoder}
+    role_properties = {"encoder": role_encoder, "decoder": lambda self, _id: role_decoder}
     
     rank_roles = JSONProperty(**class_properties, name="rank_roles", default=[])
     rank_levels = JSONProperty(**class_properties, name="rank_levels", default=[])
@@ -203,9 +251,18 @@ class GuildState:
             return {}
         
         levels = [int(level) for level in self.rank_levels]
-        roles = [self.get_role(id=role) for role in self.rank_roles]
+        roles = [self.guild.get_role(role) for role in self.rank_roles]
         
         return dict(zip(levels, roles))
+        
+    @ranks.setter
+    def ranks(self, new):
+        if len(new) == 0:
+            raise AttributeError("Cant set ranks to empty")
+           
+        levels, roles = list(new.keys()), [role.id for role in list(new.values())]
+        self.rank_roles = roles
+        self.rank_levels = levels
     
     @property
     def exp_counting(self) -> bool:
@@ -218,7 +275,6 @@ class MemberState:
     
     xp = JSONProperty(**class_properties, name="exp", default=0)
     messages = JSONProperty(**class_properties, name="messages", default=0)
-    rank = JSONProperty(**class_properties, name="rank", default=0)
     active = JSONProperty(**class_properties, name="active", default=False)
     
     def __init__(self, member: discord.Member):
@@ -300,6 +356,32 @@ class MemberState:
 
         return info
     
+    @property
+    def rank(self) -> int:
+        all_xp = {}
+        for member in self.member.guild.members:
+            if member.bot:
+                continue
+            
+            state = MemberState(member)
+            
+            all_xp[member.id] = state.xp
+            
+        all_xp = {k: v for k, v in sorted(all_xp.items(), key=lambda item: item[1], reverse=True)}
+        print(all_xp)
+        
+        for rank, member in enumerate(list(all_xp.keys())):
+            if member  == self.member.id:
+                return rank + 1
+        
+    @property
+    def rel_xp(self) -> int:
+        return int(self.info["rel_xp"])
+        
+    @property
+    def rel_bar(self) -> int:
+        return int(self.info["rel_bar"])
+    
     @property 
     def database(self) -> dict:
         return db_receive(self.db_name)
@@ -335,13 +417,17 @@ class UserState:
         self.identifier = str(user.id)
 
 class TempState:
+    
+    def empty_list():
+        return []
+    
     time = PKLProperty(name="time", default=0)
     cooldown = PKLProperty(name="cooldown", default=0)
     
-    queue = PKLProperty(name="queue", default=[])
-    full_queue = PKLProperty(name="full_queue", default=[])
-    queue_ct = PKLProperty(name="queue_ct", default=[])
-    full_queue_ct = PKLProperty(name="full_queue_ct", default=[])
+    queue = PKLProperty(name="queue", default=empty_list())
+    full_queue = PKLProperty(name="full_queue", default=empty_list())
+    queue_ct = PKLProperty(name="queue_ct", default=empty_list())
+    full_queue_ct = PKLProperty(name="full_queue_ct", default=empty_list())
     
     loop_song = PKLProperty(name="loop_song", default=False)
     loop_q = PKLProperty(name="loop_q", default=False)
@@ -353,8 +439,8 @@ class TempState:
     shuffle_var = PKLProperty(name="shuffle_var",default = 0)
     
     playing = PKLProperty(name="playing", default=False)
-    old_queue_embed = PKLProperty(name="old_queue_embed", default=[])
-    old_queue_queue = PKLProperty(name="old_queue_queue", default=[])
+    old_queue_embed = PKLProperty(name="old_queue_embed", default=empty_list())
+    old_queue_queue = PKLProperty(name="old_queue_queue", default=empty_list())
 
     paused_by_handler = PKLProperty(name = "paused_by_handler", default= False)
     voice_handler_time = PKLProperty(name = "voice_handler_time", default=0)

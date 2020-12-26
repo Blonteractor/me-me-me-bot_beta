@@ -6,6 +6,7 @@ import json
 import git
 from git import Repo
 from datetime import datetime
+import pytz
 
 server_id = 617021917622173747
 awoo_id = 640862189288423425
@@ -15,6 +16,8 @@ gen_id = 617021918071226369
 DBPATH = os.path.join(
     os.path.dirname(__file__),'../../Database')
 DBPATH = os.path.abspath(DBPATH)
+
+TIMEZONE = pytz.timezone("Asia/Calcutta")
  
 roles = ['Prostitute', 'Rookie', 'Adventurer', 'Player', 'Hero']
 
@@ -65,7 +68,7 @@ def commit(sp_msg: str()):
             print(e)
             return
 
-    now = datetime.now()
+    now = datetime.now(tz=TIMEZONE)
     date_time = now.strftime("%d/%m/%Y %H:%M:%S")
     commit_msg = f"Database updated - {date_time} -> {sp_msg} "
     g = git.Git(DBPATH)

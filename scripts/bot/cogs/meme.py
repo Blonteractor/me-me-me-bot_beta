@@ -32,12 +32,19 @@ class Meme(commands.Cog):
     def cog_unload(self):
         self.a_meme.cancel()
 
-    @commands.command()
+    @commands.command(name="reddit", aliases=["meme", "r"])
     async def meme(self,ctx,subreddit = "memes", amount = 1,types = "hot"):
         '''Get some fresh memes, probably reposts (i mean its reddit we are talking about) but whatever.'''
         
         reddit = gen.reddit
         subr = reddit.subreddit(subreddit)
+        
+        if subr.over18 and not ctx.channel.is_nsfw():
+            await ctx.send(f"The `{subreddit}` is marked NSFW, so call the command in a NSFW channel instead.")
+            return
+        
+        is_channel_nsfw = ctx.channel.is_nsfw()
+        
         if types.lower() == "hot":                  #* Checks no stickied
             memes=[]
             i=1
@@ -60,8 +67,11 @@ class Meme(commands.Cog):
                     x+=[j]
                 x=x[-1]
                 if not x.stickied:
-                    memes += [x]
+                    if x.over_18:
+                        if is_channel_nsfw:
+                            memes += [x]
                 i+=1
+                
         elif types.lower() == "new":
             memes=[]
             i=1
@@ -71,8 +81,11 @@ class Meme(commands.Cog):
                     x+=[j]
                 x=x[-1]
                 if not x.stickied:
-                    memes += [x]
+                    if x.over_18:
+                        if is_channel_nsfw:
+                            memes += [x]
                 i+=1
+                
         elif types.lower() == "controversial":
             memes=[]
             i=1
@@ -82,8 +95,11 @@ class Meme(commands.Cog):
                     x+=[j]
                 x=x[-1]
                 if not x.stickied:
-                    memes += [x]
+                    if x.over_18:
+                        if is_channel_nsfw:
+                            memes += [x]
                 i+=1
+                
         elif types.lower() == "rising":
             memes=[]
             i=1
@@ -93,8 +109,11 @@ class Meme(commands.Cog):
                     x+=[j]
                 x=x[-1]
                 if not x.stickied:
-                    memes += [x]
+                    if x.over_18:
+                        if is_channel_nsfw:
+                            memes += [x]
                 i+=1
+                
         else:
             await ctx.send("No Boi, I only see 'Hot','Top','New'.'Controversial','Rising'.")
             return

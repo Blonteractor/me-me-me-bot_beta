@@ -24,6 +24,8 @@ def vc_check():
     return commands.check(predicate)
 
 class Queue(commands.Cog):
+    ":notebook_with_decorative_cover: Queue modification and veiwing"
+    
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
    
     def __init__(self, client):

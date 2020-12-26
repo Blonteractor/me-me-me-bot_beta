@@ -141,8 +141,7 @@ class MyHelpCommand(commands.HelpCommand):
                 reaction, user = await ctx.bot.wait_for('reaction_add', timeout=wait_time, check=check)
             
             except TimeoutError:
-                await ctx.send(f">>> Deleted Help Command due to inactivity.")
-                await embed_msg.delete()
+                await embed_msg.clear_reactions()
 
                 return
 

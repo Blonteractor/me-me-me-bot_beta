@@ -20,6 +20,8 @@ genius = lyricsgenius.Genius(os.environ.get("LYRICS_GENIUS_KEY"))
 genius.verbose = False
 
 class Misc(commands.Cog):
+    ":track_next: Miscellaneous commands related to music and stuff"
+    
     music_logo = "https://cdn.discordapp.com/attachments/623969275459141652/664923694686142485/vee_tube.png"
     DPATH = os.path.join(
         os.path.dirname(__file__), '../../../cache.bot/Download')
@@ -228,6 +230,11 @@ class Misc(commands.Cog):
             vid = TempState(ctx.guild).queue[0]
         if not os.path.exists(self.DPATH):
             os.makedirs(self.DPATH)
+            
+        if vid.seconds > 420:
+            await ctx.send("Song you requested was too mega for me uwu.")
+            return
+            
         async with aiohttp.ClientSession() as cs:
             async with cs.get(vid.audio_url) as r:
 

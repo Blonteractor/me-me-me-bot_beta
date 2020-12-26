@@ -120,6 +120,7 @@ def vote(votes_required: float, vote_msg: str, yes_msg: str, no_msg: str, vote_d
     return commands.check(predicate=predicate)
     
 class Voice(commands.Cog):
+    ":speaker: Controling the currently playing song, restart, pause etc."
     
     def __init__(self, client):
         self.client = client      
@@ -169,6 +170,8 @@ class Voice(commands.Cog):
                         state.voice_handler_time += 1
                         if state.voice_handler_time == int(GuildState(guild).auto_pause_time):
                             voice.pause()
+                            if guild in gen.time_l:
+                                gen.time_l.remove(guild)
                             self.log("Player AUTO paused")
                             state.paused_by_handler = True
                             if awoo_channel:
@@ -190,6 +193,8 @@ class Voice(commands.Cog):
                     if state.paused_by_handler:
                         state.voice_handler_time = 0
                         voice.resume()
+                        if guild not in gen.time_l:
+                            gen.time_l.append(guild)
                         state.paused_by_handler = False
                 
 

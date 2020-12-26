@@ -55,8 +55,8 @@ class Currency(commands.Cog):
             cpu_dye = random.randint(1,6)
             if player_dye > cpu_dye:
                 won_lost = "Bet Won"
-                amount_rec = int((amount)*(((player_dye-cpu_dye-0.9)**(1/3))-1))
-                Multiplier = 100 + int((((player_dye-cpu_dye-0.9)**(1/3))-1)*100)
+                amount_rec = int((amount)*(0.6-(0.55**(player_dye-cpu_dye))))
+                Multiplier = 100 + int((0.6-(0.55**(player_dye-cpu_dye)))*100)
             elif player_dye==cpu_dye:
                 won_lost = "Bet Won"
                 amount_rec=(amount)
@@ -71,9 +71,11 @@ class Currency(commands.Cog):
             ctx.States.User.souls = coins
             
         elif amount<= 0:
-            await ctx.send(f">>> You are a little daring today, aren't you, {ctx.author.name}.")
+            await ctx.send(f">>> You are a little daring today, aren't you")
+            return
         else:
             await ctx.send(">>> Not enough SOULS man, go hunt.")
+            return
 
         #! EMBED
         if won_lost == "Bet Won":

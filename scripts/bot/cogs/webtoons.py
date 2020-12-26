@@ -9,6 +9,7 @@ from random import choice
 from fuzzywuzzy import fuzz
 
 class Webtoons(commands.Cog):
+    ":green_book: Commands about webtoons, specifically from [this site](https://www.webtoons.com/en/)"
     
     webtoon_logo = "https://upload.wikimedia.org/wikipedia/commons/0/09/Naver_Line_Webtoon_logo.png"
     site_url = "https://www.webtoons.com/en/"
@@ -61,6 +62,10 @@ class Webtoons(commands.Cog):
     @webtoon.command(name="name")
     async def webtoon_name(self, ctx, *, query):
         webtoons = Webtoon.search(query)
+        
+        if webtoons == []:
+            await ctx.send("No webtoons found.")
+            return
         
         webtoons_to_ratio = {webtoon: fuzz.ratio(webtoon.title.lower(), query) for webtoon in webtoons}
         max_match = max(list(webtoons_to_ratio.values()))

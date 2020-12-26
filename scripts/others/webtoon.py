@@ -167,11 +167,12 @@ class Webtoon:
             
             cls.cache[clean_title] = url 
             webtoon["thumbnail"] = url
+            
+            BotState("w").webtoon_cache = cls.cache
         else:
             url = cls.cache[clean_title]
             webtoon["thumbnail"] = url
             
-        BotState("w").webtoon_cache = cls.cache
         
                 
         webtoon["clean_title"] = clean_title
@@ -234,7 +235,12 @@ class Webtoon:
         html = requests.get(url, headers=cls.HEADERS).text
         soup = BeautifulSoup(html, "lxml")
         
-        cards = soup.find("ul", class_="card_lst").find_all("li")              
+        m = soup.find("ul", class_="card_lst")
+        
+        if m is None:
+            return []
+        
+        cards = m.find_all("li")              
         
         search_result = []
         with concurrent.futures.ThreadPoolExecutor() as executor:

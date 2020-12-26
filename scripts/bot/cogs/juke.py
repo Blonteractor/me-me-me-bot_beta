@@ -154,9 +154,11 @@ class Juke(commands.Cog):
                     if dj_role is None:
                         dj_flag = True
 
-                    for role in user.roles:
-                        if role.id == dj_role.id:
-                            dj_flag =  True
+                    else:
+                        for role in user.roles:
+                            if role.id == dj_role.id:
+                                dj_flag =  True
+                                
                     if user != self.client.user and reaction.message.id == int(state.jb_embed_id) and dj_flag:
                         reactions = {"⏯️": "play/pause", "⏹️": "stop", "⏮️": "previous",
                                     "⏭️": "forward", "🔁": "loop", "🔀": "shuffle"}
